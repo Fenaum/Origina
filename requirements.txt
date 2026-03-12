@@ -1,1 +1,20 @@
-Flask>=2.0,<3
+
+# Web framework
+fastapi
+
+# ASGI server
+uvicorn[standard]
+
+# ORM / DB
+sqlalchemy>=2.0
+psycopg2-binary
+
+# Migrations
+alembic
+
+# Validation / settings
+pydantic
+python-dotenv
+
+# Optional but recommended (logging & typing helpers)
+typing-extensions
