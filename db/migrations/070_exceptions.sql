@@ -10,8 +10,8 @@ create table if not exists exceptions (
   title text not null,
   description text,
 
-  status text not null default 'open' check (status in ('open','approved','denied','withdrawn','closed')),
-  severity text not null default 'medium' check (severity in ('low','medium','high','critical')),
+  status exception_status not null default 'open',
+  severity exception_severity not null default 'medium',
 
   requested_by uuid references users(id) on delete set null,
   decided_by uuid references users(id) on delete set null,
@@ -22,3 +22,9 @@ create table if not exists exceptions (
 );
 
 create index if not exists idx_exceptions_open on exceptions (tenant_id, loan_id, status);
+
+drop trigger if exists update_exceptions_updated_at on exceptions;
+create trigger update_exceptions_updated_at
+before update on exceptions
+for each row
+execute procedure update_updated_at_column();

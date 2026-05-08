@@ -21,10 +21,6 @@ import os
 from sqlalchemy import engine_from_config, pool
 # Import Alembic context to manage migration configuration and execution
 from alembic import context
-from app.db.base import Base
-from app.models import *  # ensures models are imported so Base.metadata is complete
-
-target_metadata = Base.metadata
 
 
 # ============================================================================

@@ -22,6 +22,12 @@ create table if not exists roles (
   unique (tenant_id, name)
 );
 
+drop trigger if exists update_users_updated_at on users;
+create trigger update_users_updated_at
+before update on users
+for each row
+execute procedure update_updated_at_column();
+
 create table if not exists user_roles (
   tenant_id uuid not null references tenants(id) on delete restrict,
   user_id uuid not null references users(id) on delete cascade,

@@ -156,9 +156,13 @@ where not exists (
 );
 
 -- Seed loan conditions (underwriting requirements).
-insert into conditions (id, loan_id, name, description, condition_number, status)
-select c.id, c.loan_id, c.name, c.description, c.condition_number, c.status
-from (values
+with tenant as (
+  select id from tenants where name = 'origina-dev'
+)
+insert into conditions (id, tenant_id, loan_id, name, description, condition_number, status)
+select c.id, t.id, c.loan_id, c.name, c.description, c.condition_number, c.status
+from tenant t
+cross join (values
   ('cccc1111-1111-1111-1111-111111111111', '11111111-1111-1111-1111-111111111111', 'Proof of Income', 'Provide most recent pay stubs.', 1, 'open'::condition_status),
   ('cccc2222-2222-2222-2222-222222222222', '11111111-1111-1111-1111-111111111111', 'Bank Statements', 'Most recent 2 months of statements.', 2, 'submitted'::condition_status),
   ('cccc3333-3333-3333-3333-333333333333', '22222222-2222-2222-2222-222222222222', 'Title Report', 'Order updated title report.', 1, 'open'::condition_status)
@@ -372,12 +376,12 @@ with tenant as (
 )
 insert into borrowers (
   id, tenant_id, loan_id, type, first_name, last_name, ssn_last4, dob, phone, email,
-  current_address_id, mailing_address_id, relationship, income_type, income_amount,
+  current_address_id, mailing_address_id, borrower_relationship, income_type, income_amount,
   ethnicity, race, gender, marital_status, dependents, employment_status, employer_name,
   job_title, years_on_job, years_in_profession, work_phone, work_email
 )
 select b.id, t.id, b.loan_id, b.type, b.first_name, b.last_name, b.ssn_last4, b.dob, b.phone, b.email,
-  b.current_address_id, b.mailing_address_id, b.relationship, b.income_type, b.income_amount,
+  b.current_address_id, b.mailing_address_id, b.borrower_relationship, b.income_type, b.income_amount,
   b.ethnicity, b.race, b.gender, b.marital_status, b.dependents, b.employment_status, b.employer_name,
   b.job_title, b.years_on_job, b.years_in_profession, b.work_phone, b.work_email
 from tenant t
@@ -390,7 +394,7 @@ cross join (values
    'not_hispanic', 'asian', 'female', 'married', 1, 'employed', 'Cascade Health', 'Analyst', 4, 8, '555-0106', 'taylor.reed@work.example')
 ) as b(
   id, loan_id, type, first_name, last_name, ssn_last4, dob, phone, email,
-  current_address_id, mailing_address_id, relationship, income_type, income_amount,
+  current_address_id, mailing_address_id, borrower_relationship, income_type, income_amount,
   ethnicity, race, gender, marital_status, dependents, employment_status, employer_name,
   job_title, years_on_job, years_in_profession, work_phone, work_email
 )

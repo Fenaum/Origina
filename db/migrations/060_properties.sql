@@ -22,3 +22,9 @@ create table if not exists properties (
 );
 
 create index if not exists idx_properties_loan on properties (tenant_id, loan_id);
+
+drop trigger if exists update_properties_updated_at on properties;
+create trigger update_properties_updated_at
+before update on properties
+for each row
+execute procedure update_updated_at_column();

@@ -5,7 +5,7 @@ create table if not exists parties (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null references tenants(id) on delete restrict,
 
-  party_type text not null check (party_type in ('person','company')),
+  party_type party_type not null,
   display_name text not null,
 
   -- Person fields (nullable for company)
@@ -25,3 +25,9 @@ create table if not exists parties (
 );
 
 create index if not exists idx_parties_tenant_display on parties (tenant_id, display_name);
+
+drop trigger if exists update_parties_updated_at on parties;
+create trigger update_parties_updated_at
+before update on parties
+for each row
+execute procedure update_updated_at_column();
