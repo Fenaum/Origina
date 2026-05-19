@@ -26,7 +26,6 @@ create table if not exists loans (
   monthly_debt numeric(14,2),
   other_income numeric(14,2),
   other_debt numeric(14,2),
-  credit_score integer,
   principal_and_interest numeric(14,2),
   current_balance numeric(14,2),
   escrow_amount numeric(14,2),
@@ -45,7 +44,6 @@ create table if not exists loans (
   initial_disclosure_date date,
   closing_disclosure_date date,
   closing_redisclosure_date date,
-  rate_lock date,
   lock_expiration_date date,
   le_redisclosure_date date,
 
@@ -76,15 +74,24 @@ create table if not exists loans (
   updated_at timestamptz not null default now()
 );
 
+create unique index if not exists idx_loans_tenant_loan_number
+  on loans (tenant_id, loan_number) where loan_number is not null;
+
 create index if not exists idx_loans_tenant_status on loans (tenant_id, status);
 create index if not exists idx_loans_tenant_assigned on loans (tenant_id, assigned_to);
 create index if not exists idx_loans_tenant_created on loans (tenant_id, created_at desc);
+
+drop trigger if exists update_loans_updated_at on loans;
+create trigger update_loans_updated_at
+before update on loans
+for each row
+execute procedure update_updated_at_column();
 
 create table if not exists loan_parties (
   tenant_id uuid not null references tenants(id) on delete restrict,
   loan_id uuid not null references loans(id) on delete cascade,
   party_id uuid not null references parties(id) on delete restrict,
-  role text not null check (role in ('borrower','co_borrower','broker','seller','realtor','loan_officer','processor','underwriter','other')),
+  role loan_party_role not null,
   is_primary boolean not null default false,
   created_at timestamptz not null default now(),
   primary key (tenant_id, loan_id, party_id, role)

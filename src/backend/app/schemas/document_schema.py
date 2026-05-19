@@ -1,14 +1,41 @@
-#Document Schema Python Schema
+from datetime import datetime
 from typing import Any, Dict, Optional
-from uuid import UUID   
-from pydantic import BaseModel, Field #Importing BaseModel and Field from pydantic for data validation and model definition. BaseModel is the base class for creating data models, and Field is used to provide additional metadata and validation rules for model fields.
+from uuid import UUID
 
-class DocumentBase(BaseModel): #Document Schema is for representing documents associated with loans. It includes fields for identifying the document, its type, and metadata. The flexible metadata field allows for storing additional information about the document without needing to change the schema structure.
-    tenant_id: Optional[UUID] = None
-    loan_id: Optional[UUID] = None
-    document_type: Optional[str] = None
-    document_name: Optional[str] = None
-    document_url: Optional[str] = None
-    uploaded_at: Optional[str] = None
-    metadata: Dict[str, Any] = Field(default_factory=dict)  
+from pydantic import BaseModel, ConfigDict, Field
 
+
+class DocumentBase(BaseModel):
+    doc_type: Optional[str] = None
+    file_name: str
+    mime_type: Optional[str] = None
+    file_size_bytes: Optional[int] = None
+    storage_key: str
+    sha256: Optional[str] = None
+    uploaded_by: Optional[UUID] = None
+    tags: Dict[str, Any] = Field(default_factory=dict)
+
+
+class DocumentCreate(DocumentBase):
+    tenant_id: UUID
+    loan_id: UUID
+
+
+class DocumentUpdate(BaseModel):
+    doc_type: Optional[str] = None
+    file_name: Optional[str] = None
+    mime_type: Optional[str] = None
+    file_size_bytes: Optional[int] = None
+    storage_key: Optional[str] = None
+    sha256: Optional[str] = None
+    uploaded_by: Optional[UUID] = None
+    tags: Optional[Dict[str, Any]] = None
+
+
+class DocumentOut(DocumentBase):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    tenant_id: UUID
+    loan_id: UUID
+    uploaded_at: datetime

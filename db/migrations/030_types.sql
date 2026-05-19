@@ -31,7 +31,7 @@ begin
       'insurance_agent',
       'home_inspector',
       'contractor',
-      'shippper',
+      'shipper',
       'servicer',
       'it_admin',
       'other'
@@ -90,6 +90,73 @@ begin
       'cleared',
       'waived',
       'rejected'
+    );
+  end if;
+end $$;
+
+do $$
+begin
+  if not exists (select 1 from pg_type where typname = 'exception_status') then
+    create type exception_status as enum (
+      'open',
+      'approved',
+      'denied',
+      'withdrawn',
+      'closed'
+    );
+  end if;
+end $$;
+
+do $$
+begin
+  if not exists (select 1 from pg_type where typname = 'exception_severity') then
+    create type exception_severity as enum (
+      'low',
+      'medium',
+      'high',
+      'critical'
+    );
+  end if;
+end $$;
+
+do $$
+begin
+  if not exists (select 1 from pg_type where typname = 'task_status') then
+    create type task_status as enum (
+      'todo',
+      'in_progress',
+      'blocked',
+      'done',
+      'cancelled'
+    );
+  end if;
+end $$;
+
+do $$
+begin
+  if not exists (select 1 from pg_type where typname = 'task_priority') then
+    create type task_priority as enum (
+      'low',
+      'normal',
+      'high',
+      'urgent'
+    );
+  end if;
+end $$;
+
+do $$
+begin
+  if not exists (select 1 from pg_type where typname = 'loan_party_role') then
+    create type loan_party_role as enum (
+      'borrower',
+      'co_borrower',
+      'broker',
+      'seller',
+      'realtor',
+      'loan_officer',
+      'processor',
+      'underwriter',
+      'other'
     );
   end if;
 end $$;

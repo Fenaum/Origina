@@ -59,9 +59,16 @@ create table if not exists addresses (
   updated_at timestamptz not null default now()
 );
 
+create index if not exists idx_addresses_tenant on addresses (tenant_id);
+
+drop trigger if exists update_addresses_updated_at on addresses;
+create trigger update_addresses_updated_at
+before update on addresses
+for each row
+execute procedure update_updated_at_column();
+
 
 create table if not exists borrowers (
-    
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null references tenants(id) on delete restrict,
   loan_id uuid not null references loans(id) on delete cascade,
@@ -77,25 +84,33 @@ create table if not exists borrowers (
   email text,
   current_address_id uuid references addresses(id) on delete set null,
   mailing_address_id uuid references addresses(id) on delete set null,
-  relationship borrower_relationship,
+  borrower_relationship borrower_relationship,
   income_type borrower_income_type,
   income_amount numeric,
 
   --- Demographic info
-    ethnicity text,
-    race text,
-    gender text,
-    marital_status text,
-    dependents integer,
-    employment_status text,
-    employer_name text,
-    job_title text,
-    years_on_job integer,
-    years_in_profession integer,
-    work_phone text,
-    work_email text,
+  ethnicity text,
+  race text,
+  gender text,
+  marital_status text,
+  dependents integer,
+  employment_status text,
+  employer_name text,
+  job_title text,
+  years_on_job integer,
+  years_in_profession integer,
+  work_phone text,
+  work_email text,
 
-    --- Timestamps
+  --- Timestamps
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+create index if not exists idx_borrowers_tenant_loan on borrowers (tenant_id, loan_id);
+
+drop trigger if exists update_borrowers_updated_at on borrowers;
+create trigger update_borrowers_updated_at
+before update on borrowers
+for each row
+execute procedure update_updated_at_column();

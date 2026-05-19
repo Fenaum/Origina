@@ -1,11 +1,11 @@
 
-# Web framework
+# Web framework: this module is for building the FastAPI application
 fastapi
 
-# ASGI server
+# ASGI server: this module is required to run the FastAPI application
 uvicorn[standard]
 
-# ORM / DB
+# ORM / DB: these modules are for interacting with the database and managing database connections. SQLAlchemy is the ORM (Object-Relational Mapping) library, and psycopg2-binary is the PostgreSQL adapter for Python.
 sqlalchemy>=2.0
 psycopg2-binary
 

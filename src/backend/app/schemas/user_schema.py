@@ -1,15 +1,64 @@
-# User Schema Python Schema
+from datetime import datetime
 from typing import Optional
 from uuid import UUID
-from pydantic import BaseModel, Field #Importing BaseModel and Field from pydantic for data validation and model definition. BaseModel is the base class for creating data models, and Field is used to provide additional metadata and validation rules for model fields.
+
+from pydantic import BaseModel, ConfigDict
+
+
+class TenantBase(BaseModel):
+    name: str
+
+
+class TenantCreate(TenantBase):
+    pass
+
+
+class TenantOut(TenantBase):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    created_at: datetime
+
 
 class UserBase(BaseModel):
-    tenant_id: Optional[UUID] = None
-    email: Optional[str] = None
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    role: Optional[str] = None
+    email: str
+    full_name: Optional[str] = None
     is_active: Optional[bool] = None
-    created_at: Optional[str] = None
-    updated_at: Optional[str] = None
 
+
+class UserCreate(UserBase):
+    tenant_id: UUID
+    password: str
+
+
+class UserUpdate(BaseModel):
+    email: Optional[str] = None
+    full_name: Optional[str] = None
+    password: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+class UserOut(UserBase):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    tenant_id: UUID
+    created_at: datetime
+    updated_at: datetime
+
+
+class RoleBase(BaseModel):
+    name: str
+    description: Optional[str] = None
+
+
+class RoleCreate(RoleBase):
+    tenant_id: UUID
+
+
+class RoleOut(RoleBase):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    tenant_id: UUID
+    created_at: datetime

@@ -1,16 +1,12 @@
-# Loan Model
-
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Any, Dict, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field #Importing BaseModel and Field from pydantic for data validation and model definition. BaseModel is the base class for creating data models, and Field is used to provide additional metadata and validation rules for model fields.
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class LoanBase(BaseModel):
-    # Core figures
-    tenant_id: Optional[UUID] = None
     loan_number: Optional[str] = None
     status: Optional[str] = None
     assigned_to: Optional[UUID] = None
@@ -29,7 +25,6 @@ class LoanBase(BaseModel):
     monthly_debt: Optional[Decimal] = None
     other_income: Optional[Decimal] = None
     other_debt: Optional[Decimal] = None
-    credit_score: Optional[int] = None
     principal_and_interest: Optional[Decimal] = None
     current_balance: Optional[Decimal] = None
     escrow_amount: Optional[Decimal] = None
@@ -48,7 +43,6 @@ class LoanBase(BaseModel):
     initial_disclosure_date: Optional[date] = None
     closing_disclosure_date: Optional[date] = None
     closing_redisclosure_date: Optional[date] = None
-    rate_lock: Optional[date] = None
     lock_expiration_date: Optional[date] = None
     le_redisclosure_date: Optional[date] = None
 
@@ -72,7 +66,6 @@ class LoanBase(BaseModel):
     property_use: Optional[str] = None
     construction_type: Optional[str] = None
 
-    # Flexible product fields: These fields allow for dynamic storage of additional product-specific data without needing to modify the schema for every new product. This design provides flexibility to accommodate various loan products with different attributes.
     product_data: Dict[str, Any] = Field(default_factory=dict)
 
 
@@ -85,6 +78,28 @@ class LoanUpdate(LoanBase):
 
 
 class LoanOut(LoanBase):
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
+    tenant_id: UUID
     created_at: datetime
     updated_at: datetime
+
+
+class LoanPartyBase(BaseModel):
+    party_id: UUID
+    role: str
+    is_primary: bool = False
+
+
+class LoanPartyCreate(LoanPartyBase):
+    tenant_id: UUID
+    loan_id: UUID
+
+
+class LoanPartyOut(LoanPartyBase):
+    model_config = ConfigDict(from_attributes=True)
+
+    tenant_id: UUID
+    loan_id: UUID
+    created_at: datetime

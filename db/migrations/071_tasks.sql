@@ -8,8 +8,8 @@ create table if not exists tasks (
 
   title text not null,
   description text,
-  status text not null default 'todo' check (status in ('todo','in_progress','blocked','done','cancelled')),
-  priority text not null default 'normal' check (priority in ('low','normal','high','urgent')),
+  status task_status not null default 'todo',
+  priority task_priority not null default 'normal',
 
   assigned_to uuid references users(id) on delete set null,
   due_at timestamptz,
@@ -20,3 +20,9 @@ create table if not exists tasks (
 );
 
 create index if not exists idx_tasks_status on tasks (tenant_id, loan_id, status);
+
+drop trigger if exists update_tasks_updated_at on tasks;
+create trigger update_tasks_updated_at
+before update on tasks
+for each row
+execute procedure update_updated_at_column();
