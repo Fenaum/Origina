@@ -39,6 +39,13 @@ class BorrowerIncomeType(str, Enum):
     OTHER = "other"
 
 
+# create_type=False: these ENUM types were created by 101_borrowers.sql.
+# SQLAlchemy must not attempt to CREATE them a second time.
+_BORROWER_TYPE = dict(name="borrower_type", values_callable=lambda e: [v.value for v in e], create_type=False)
+_BORROWER_REL = dict(name="borrower_relationship", values_callable=lambda e: [v.value for v in e], create_type=False)
+_BORROWER_INCOME = dict(name="borrower_income_type", values_callable=lambda e: [v.value for v in e], create_type=False)
+
+
 class Address(BaseModel):
     __tablename__ = "addresses"
 
@@ -48,6 +55,11 @@ class Address(BaseModel):
     state: Mapped[str | None] = mapped_column(String)
     postal_code: Mapped[str | None] = mapped_column(String)
     country: Mapped[str | None] = mapped_column(String)
+
+    # Relationships back to borrowers are intentionally omitted: Address does
+    # not know about its owner. Ownership is tracked via Borrower.current_address_id
+    # and Borrower.mailing_address_id. Cleanup when a borrower is deleted is
+    # handled by the DB trigger trg_cleanup_borrower_addresses (migration 104).
 
 
 class Borrower(BaseModel):
@@ -59,11 +71,14 @@ class Borrower(BaseModel):
         nullable=False,
     )
     type: Mapped[BorrowerType] = mapped_column(
-        ENUM(BorrowerType, name="borrower_type", values_callable=lambda enum: [e.value for e in enum]),
+        ENUM(BorrowerType, **_BORROWER_TYPE),
         nullable=False,
     )
     first_name: Mapped[str | None] = mapped_column(String)
     last_name: Mapped[str | None] = mapped_column(String)
+    # ssn_last4 stored as plaintext for display (show last 4 digits in UI).
+    # Full SSN is in ssn_encrypted — application-level encryption; never stored
+    # in plaintext. The encrypted column type is BYTEA (raw bytes), not TEXT.
     ssn_last4: Mapped[str | None] = mapped_column(String(4))
     ssn_encrypted: Mapped[bytes | None] = mapped_column(LargeBinary)
     dob: Mapped[date | None] = mapped_column(Date)
@@ -71,6 +86,9 @@ class Borrower(BaseModel):
     email: Mapped[str | None] = mapped_column(String)
     current_address_id: Mapped[UUID | None] = mapped_column(
         PG_UUID(as_uuid=True),
+        # SET NULL: if the address row is deleted, null the FK rather than
+        # cascade-deleting the borrower. The trigger on borrowers handles the
+        # reverse: deleting a borrower deletes its owned address rows.
         ForeignKey("addresses.id", ondelete="SET NULL"),
     )
     mailing_address_id: Mapped[UUID | None] = mapped_column(
@@ -78,17 +96,16 @@ class Borrower(BaseModel):
         ForeignKey("addresses.id", ondelete="SET NULL"),
     )
     borrower_relationship: Mapped[BorrowerRelationship | None] = mapped_column(
-        ENUM(
-            BorrowerRelationship,
-            name="borrower_relationship",
-            values_callable=lambda enum: [e.value for e in enum],
-        )
+        ENUM(BorrowerRelationship, **_BORROWER_REL),
     )
     income_type: Mapped[BorrowerIncomeType | None] = mapped_column(
-        ENUM(BorrowerIncomeType, name="borrower_income_type", values_callable=lambda enum: [e.value for e in enum])
+        ENUM(BorrowerIncomeType, **_BORROWER_INCOME),
     )
     income_amount: Mapped[Decimal | None] = mapped_column(Numeric)
 
+    # ── URLA demographic fields ───────────────────────────────────────────────
+    # Stored as TEXT to accommodate evolving regulatory classifications without
+    # requiring ENUM migrations. Validated at the API layer via Pydantic.
     ethnicity: Mapped[str | None] = mapped_column(String)
     race: Mapped[str | None] = mapped_column(String)
     gender: Mapped[str | None] = mapped_column(String)

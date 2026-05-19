@@ -45,21 +45,47 @@ class LoanPartyRole(str, Enum):
     OTHER = "other"
 
 
+# WHY _ENUM_KWARGS pattern:
+#   create_type=False tells SQLAlchemy "this ENUM type already exists in the
+#   database — do not try to CREATE it." Without this flag, SQLAlchemy would
+#   attempt to CREATE TYPE loan_status ... when create_all() or Alembic runs,
+#   and fail with "type already exists" because 030_types.sql already defined
+#   it. Every ENUM column that references a type from 030_types.sql needs this.
+_LOAN_STATUS_COL = dict(
+    name="loan_status",
+    values_callable=lambda e: [v.value for v in e],
+    create_type=False,
+)
+_LOAN_PURPOSE_COL = dict(
+    name="loan_purpose",
+    values_callable=lambda e: [v.value for v in e],
+    create_type=False,
+)
+_LOAN_PARTY_ROLE_COL = dict(
+    name="loan_party_role",
+    values_callable=lambda e: [v.value for v in e],
+    create_type=False,
+)
+
+
 class Loan(BaseModel):
     __tablename__ = "loans"
 
     loan_number: Mapped[str | None] = mapped_column(String)
     status: Mapped[LoanStatus] = mapped_column(
-        ENUM(LoanStatus, name="loan_status", values_callable=lambda enum: [e.value for e in enum]), # Use ENUM type for status to enforce valid values and improve query performance
+        ENUM(LoanStatus, **_LOAN_STATUS_COL),
         nullable=False,
         server_default=LoanStatus.NEW_DRAFT.value,
     )
     assigned_to: Mapped[UUID | None] = mapped_column(
-        PG_UUID(as_uuid=True), # Use PostgreSQL UUID type for better performance and native support
+        PG_UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="SET NULL"),
     )
 
-    loan_amount: Mapped[Decimal | None] = mapped_column(Numeric(14, 2)) 
+    # ── Financial figures ─────────────────────────────────────────────────────
+    # Numeric(14, 2): up to $999,999,999,999.99 — covers the largest Non-QM
+    # loans. Never use Float for money — floats cannot represent 0.10 exactly.
+    loan_amount: Mapped[Decimal | None] = mapped_column(Numeric(14, 2))
     purchase_price: Mapped[Decimal | None] = mapped_column(Numeric(14, 2))
     appraised_value: Mapped[Decimal | None] = mapped_column(Numeric(14, 2))
     down_payment: Mapped[Decimal | None] = mapped_column(Numeric(14, 2))
@@ -83,6 +109,7 @@ class Loan(BaseModel):
     hoa_fees: Mapped[Decimal | None] = mapped_column(Numeric(14, 2))
     other_expenses: Mapped[Decimal | None] = mapped_column(Numeric(14, 2))
 
+    # ── Key dates ─────────────────────────────────────────────────────────────
     submitted_at: Mapped[date | None] = mapped_column(Date)
     application_date: Mapped[date | None] = mapped_column(Date)
     closing_date: Mapped[date | None] = mapped_column(Date)
@@ -94,9 +121,11 @@ class Loan(BaseModel):
     lock_expiration_date: Mapped[date | None] = mapped_column(Date)
     le_redisclosure_date: Mapped[date | None] = mapped_column(Date)
 
+    # ── Loan terms ────────────────────────────────────────────────────────────
     interest_rate_locked: Mapped[bool | None] = mapped_column(Boolean, server_default="false")
     rate_lock_date: Mapped[date | None] = mapped_column(Date)
     rate_lock_days: Mapped[int | None] = mapped_column(Integer)
+    # Numeric(5, 3): three decimal places covers rates like 6.875%
     initial_rate: Mapped[Decimal | None] = mapped_column(Numeric(5, 3))
     interest_rate: Mapped[Decimal | None] = mapped_column(Numeric(5, 3))
     term_months: Mapped[int | None] = mapped_column(Integer)
@@ -109,7 +138,7 @@ class Loan(BaseModel):
     rate_type: Mapped[str | None] = mapped_column(String)
     payment_type: Mapped[str | None] = mapped_column(String)
     purpose: Mapped[LoanPurpose] = mapped_column(
-        ENUM(LoanPurpose, name="loan_purpose", values_callable=lambda enum: [e.value for e in enum]),
+        ENUM(LoanPurpose, **_LOAN_PURPOSE_COL),
         nullable=False,
         server_default=LoanPurpose.PURCHASE.value,
     )
@@ -165,7 +194,7 @@ class LoanParty(Base):
         primary_key=True,
     )
     role: Mapped[LoanPartyRole] = mapped_column(
-        ENUM(LoanPartyRole, name="loan_party_role", values_callable=lambda enum: [e.value for e in enum]),
+        ENUM(LoanPartyRole, **_LOAN_PARTY_ROLE_COL),
         primary_key=True,
     )
     is_primary: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")

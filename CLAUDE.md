@@ -29,10 +29,9 @@ npm run build   # Production build
 
 ```bash
 docker-compose up -d          # Start PostgreSQL (localhost:5432, db: originadb, user: origina, pass: origina123)
-scripts/db_init.sh            # Initialize schema (runs all db/migrations/*.sql in order)
-scripts/db_migrate.sh         # Apply Alembic migrations
+scripts/db_init.sh            # Initialize schema (applies pending numbered SQL migrations)
+scripts/db_migrate.sh         # Apply pending numbered SQL migrations
 scripts/db_reset.sh           # Reset database (dev only)
-alembic upgrade head          # Alembic migration directly
 ```
 
 ### Python environment
@@ -64,18 +63,23 @@ Clean layered architecture:
 
 **DB session**: All endpoints get a `Session` via `Depends(get_db)` from `core/db.py`. Never instantiate sessions directly.
 
-**Base model**: All ORM models inherit from `BaseModel` in `models/base.py`, which provides UUID primary key, `created_at`/`updated_at` timestamps, and `tenant_id` for multi-tenancy. Every query must scope to `tenant_id`.
+**Base model**: Mutable ORM models inherit from `BaseModel` in `models/base.py`, which provides UUID primary key, `created_at`/`updated_at` timestamps, and `tenant_id` for multi-tenancy. Append-only records should use `AppendOnlyModel` or an explicit timestamp shape. Every query must scope to `tenant_id`.
 
 **Schemas**: Pydantic schemas use `ConfigDict(from_attributes=True)` for ORM compatibility. The pattern is `<Domain>Base` → `<Domain>Create` / `<Domain>Update` → `<Domain>Out`.
 
 ### Database (`db/`)
 
-Raw SQL migrations live in `db/migrations/` with sequential numbering (001–101). These are separate from Alembic — `scripts/db_init.sh` runs them directly against PostgreSQL. Alembic in `migrations/` tracks schema version separately.
+Raw SQL migrations live in `db/migrations/` with sequential numbering. These are the schema-change source of truth. `scripts/db_init.sh` and `scripts/db_migrate.sh` run pending numbered SQL files directly against PostgreSQL and record applied files in `schema_migrations`.
+
+SQLAlchemy models in `src/backend/app/models/` are the application mapping, not the migration engine. Keep them in sync with the SQL schema, but do not use `Base.metadata.create_all()` for database initialization. `create_all()` cannot safely manage this project's PostgreSQL enum types, triggers, trigger functions, partial indexes, or historical production changes.
+
+Alembic is currently scaffolded only (`alembic.ini`, `migrations/env.py`) and should not be used for schema changes unless the project intentionally migrates to Alembic as the single source of truth. Do not run both Alembic revisions and raw SQL migrations for the same schema.
 
 Domain grouping in migrations:
 - 010 tenants → 020 users/RBAC → 030 types → 040 parties → 050 loans → 060 properties
 - 070–073 workflow (exceptions, tasks, notes, loan_status_events)
 - 080 documents → 090 decisions → 100 audit snapshots → 101 borrowers
+- 102+ optimization/hardening migrations
 
 `db/functions/`, `db/triggers/`, and `db/views/` hold SQL stored logic. Audit logging is handled by triggers using functions in `db/functions/audit/`; snapshots go to `audit_snapshots`.
 

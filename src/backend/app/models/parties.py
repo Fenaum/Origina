@@ -16,17 +16,20 @@ class PartyType(str, Enum):
 class Party(BaseModel):
     __tablename__ = "parties"
 
-    # This matches the PostgreSQL enum created in 030_types.sql.
     party_type: Mapped[PartyType] = mapped_column(
-        ENUM(PartyType, name="party_type", values_callable=lambda enum: [e.value for e in enum]),
+        # party_type ENUM was created by 030_types.sql.
+        # create_type=False tells SQLAlchemy not to try creating it again.
+        ENUM(PartyType, name="party_type", values_callable=lambda e: [v.value for v in e], create_type=False),
         nullable=False,
     )
     display_name: Mapped[str] = mapped_column(String, nullable=False)
 
+    # first_name/last_name apply to persons; legal_name applies to companies.
+    # Both are nullable so the same table serves both party types without
+    # having a separate column for every possible combination.
     first_name: Mapped[str | None] = mapped_column(String)
     last_name: Mapped[str | None] = mapped_column(String)
     dob: Mapped[date | None] = mapped_column(Date)
-
     legal_name: Mapped[str | None] = mapped_column(String)
 
     phone: Mapped[str | None] = mapped_column(String)

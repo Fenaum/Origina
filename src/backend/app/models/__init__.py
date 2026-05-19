@@ -1,13 +1,14 @@
-# __init__.py
+# __init__.py — imports all model classes so they are registered with SQLAlchemy.
+# Import order matters: base classes must come before any class that references them.
 
-from app.models.base import Base, BaseModel, TenantMixin, TimestampMixin, UUIDMixin
+from app.models.base import AppendOnlyModel, Base, BaseModel, TenantMixin, TimestampMixin, UUIDMixin
 from app.models.audit import AuditLog, Snapshot
-from app.models.borrowers import Address, Borrower
-from app.models.conditions import Condition
+from app.models.borrowers import Address, Borrower, BorrowerIncomeType, BorrowerRelationship, BorrowerType
+from app.models.conditions import Condition, ConditionStatus
 from app.models.decisioning import EligibilityRun, PricingRun
 from app.models.document import Document
 from app.models.loan import Loan, LoanParty, LoanPartyRole, LoanPurpose, LoanStatus
-from app.models.parties import Party
+from app.models.parties import Party, PartyType
 from app.models.properties import Property
 from app.models.user import Role, Tenant, User, UserParty, UserRole
 from app.models.workflow import (
@@ -20,15 +21,23 @@ from app.models.workflow import (
     TaskPriority,
     TaskStatus,
 )
-from app.models.conditions import ConditionStatus
 
 
 __all__ = [
-    "Address",
-    "AuditLog",
+    # Base classes — import these when defining new models
+    "AppendOnlyModel",
     "Base",
     "BaseModel",
+    "TenantMixin",
+    "TimestampMixin",
+    "UUIDMixin",
+    # Entities
+    "Address",
+    "AuditLog",
     "Borrower",
+    "BorrowerIncomeType",
+    "BorrowerRelationship",
+    "BorrowerType",
     "Condition",
     "ConditionStatus",
     "Document",
@@ -44,6 +53,7 @@ __all__ = [
     "LoanStatusEvent",
     "Note",
     "Party",
+    "PartyType",
     "PricingRun",
     "Property",
     "Role",
@@ -52,12 +62,7 @@ __all__ = [
     "TaskPriority",
     "TaskStatus",
     "Tenant",
-    "TenantMixin",
-    "TimestampMixin",
     "User",
     "UserParty",
     "UserRole",
-    "UUIDMixin",
-] # This list is optional but can help with IDE autocompletion and makes it clear what models are available in this module.
-
-# This file imports all the model classes so that they are registered with SQLAlchemy.
+]

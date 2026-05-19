@@ -40,6 +40,17 @@ class TaskPriority(str, Enum):
     URGENT = "urgent"
 
 
+# create_type=False on every ENUM column: these types were created by
+# 030_types.sql. SQLAlchemy must not try to CREATE them a second time.
+_EXCEPTION_STATUS = dict(name="exception_status", values_callable=lambda e: [v.value for v in e], create_type=False)
+_EXCEPTION_SEVERITY = dict(name="exception_severity", values_callable=lambda e: [v.value for v in e], create_type=False)
+_TASK_STATUS = dict(name="task_status", values_callable=lambda e: [v.value for v in e], create_type=False)
+_TASK_PRIORITY = dict(name="task_priority", values_callable=lambda e: [v.value for v in e], create_type=False)
+# loan_status is used by LoanStatusEvent but defined in loan.py — reuse that
+# constant here. create_type=False is already set on both columns there.
+_LOAN_STATUS = dict(name="loan_status", values_callable=lambda e: [v.value for v in e], create_type=False)
+
+
 class LoanException(BaseModel):
     __tablename__ = "exceptions"
 
@@ -52,12 +63,12 @@ class LoanException(BaseModel):
     title: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
     status: Mapped[ExceptionStatus] = mapped_column(
-        ENUM(ExceptionStatus, name="exception_status", values_callable=lambda enum: [e.value for e in enum]),
+        ENUM(ExceptionStatus, **_EXCEPTION_STATUS),
         nullable=False,
         server_default=ExceptionStatus.OPEN.value,
     )
     severity: Mapped[ExceptionSeverity] = mapped_column(
-        ENUM(ExceptionSeverity, name="exception_severity", values_callable=lambda enum: [e.value for e in enum]),
+        ENUM(ExceptionSeverity, **_EXCEPTION_SEVERITY),
         nullable=False,
         server_default=ExceptionSeverity.MEDIUM.value,
     )
@@ -95,12 +106,12 @@ class Task(BaseModel):
     title: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
     status: Mapped[TaskStatus] = mapped_column(
-        ENUM(TaskStatus, name="task_status", values_callable=lambda enum: [e.value for e in enum]),
+        ENUM(TaskStatus, **_TASK_STATUS),
         nullable=False,
         server_default=TaskStatus.TODO.value,
     )
     priority: Mapped[TaskPriority] = mapped_column(
-        ENUM(TaskPriority, name="task_priority", values_callable=lambda enum: [e.value for e in enum]),
+        ENUM(TaskPriority, **_TASK_PRIORITY),
         nullable=False,
         server_default=TaskPriority.NORMAL.value,
     )
@@ -128,6 +139,9 @@ class Task(BaseModel):
 
 
 class Note(TenantMixin, UUIDMixin, Base):
+    # Notes are append-only — once written they should not be edited.
+    # No updated_at by design: omitting it makes the immutability intent
+    # visible in the schema. Use BaseModel only for mutable entities.
     __tablename__ = "notes"
 
     loan_id: Mapped[UUID] = mapped_column(
@@ -155,6 +169,8 @@ class Note(TenantMixin, UUIDMixin, Base):
 
 
 class LoanStatusEvent(TenantMixin, UUIDMixin, Base):
+    # Status events are immutable history records — never update them.
+    # No updated_at for the same reason as Note above.
     __tablename__ = "loan_status_events"
 
     loan_id: Mapped[UUID] = mapped_column(
@@ -163,10 +179,10 @@ class LoanStatusEvent(TenantMixin, UUIDMixin, Base):
         nullable=False,
     )
     from_status: Mapped[LoanStatus | None] = mapped_column(
-        ENUM(LoanStatus, name="loan_status", values_callable=lambda enum: [e.value for e in enum], create_type=False),
+        ENUM(LoanStatus, **_LOAN_STATUS),
     )
     to_status: Mapped[LoanStatus] = mapped_column(
-        ENUM(LoanStatus, name="loan_status", values_callable=lambda enum: [e.value for e in enum], create_type=False),
+        ENUM(LoanStatus, **_LOAN_STATUS),
         nullable=False,
     )
     reason: Mapped[str | None] = mapped_column(Text)
