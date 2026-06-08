@@ -10,3 +10,4 @@
 #
 # That script runs every file in db/migrations/ in order, tracks which files
 # have been applied in a schema_migrations table, and is safe to re-run.
+

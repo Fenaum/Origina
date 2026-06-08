@@ -7,7 +7,7 @@ from app.models.borrowers import Address, Borrower, BorrowerIncomeType, Borrower
 from app.models.conditions import Condition, ConditionStatus
 from app.models.decisioning import EligibilityRun, PricingRun
 from app.models.document import Document
-from app.models.loan import Loan, LoanParty, LoanPartyRole, LoanPurpose, LoanStatus
+from app.models.loan import Loan, LoanFinancials, LoanParty, LoanPartyRole, LoanPurpose, LoanStatus, LoanTerms
 from app.models.parties import Party, PartyType
 from app.models.properties import Property
 from app.models.user import Role, Tenant, User, UserParty, UserRole
@@ -46,10 +46,12 @@ __all__ = [
     "ExceptionStatus",
     "Loan",
     "LoanException",
+    "LoanFinancials",
     "LoanParty",
     "LoanPartyRole",
     "LoanPurpose",
     "LoanStatus",
+    "LoanTerms",
     "LoanStatusEvent",
     "Note",
     "Party",
