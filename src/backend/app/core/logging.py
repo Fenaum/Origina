@@ -6,7 +6,7 @@ from app.core.config import LOG_LEVEL
 def setup_logger() -> logging.Logger:
 # Create a custom logger and name it "origina_backend"
     logger = logging.getLogger("origina_backend")
-    logger.setLevel(LOG_LEVEL) # Set the logging level based on configuration
+    logger.setLevel(LOG_LEVEL.upper())  # logging requires uppercase: DEBUG, INFO, etc.
 
     if logger.handlers: #if handlers already exist,
         return logger  # Prevent duplicate handlers

@@ -1,0 +1,12 @@
+export type DashboardMetric = {
+  label: string;
+  value: string;
+  detail: string;
+  tone?: "default" | "success" | "warning";
+};
+
+export type StatusItem = {
+  label: string;
+  value: string;
+  meta: string;
+};

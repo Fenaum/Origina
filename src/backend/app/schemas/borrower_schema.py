@@ -58,7 +58,8 @@ class BorrowerBase(BaseModel):
 class BorrowerCreate(BorrowerBase):
     tenant_id: UUID
     loan_id: UUID
-    ssn_encrypted: Optional[bytes] = None
+    # ssn_encrypted is intentionally excluded from the API surface.
+    # Encryption must happen at the service layer before DB write.
 
 
 class BorrowerUpdate(BaseModel):
@@ -66,7 +67,6 @@ class BorrowerUpdate(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     ssn_last4: Optional[str] = None
-    ssn_encrypted: Optional[bytes] = None
     dob: Optional[date] = None
     phone: Optional[str] = None
     email: Optional[str] = None

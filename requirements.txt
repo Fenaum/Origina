@@ -14,7 +14,13 @@ alembic
 
 # Validation / settings
 pydantic
+pydantic-settings
 python-dotenv
+
+# Auth
+python-jose[cryptography]
+passlib[bcrypt]
+python-multipart
 
 # Optional but recommended (logging & typing helpers)
 typing-extensions

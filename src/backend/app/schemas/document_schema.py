@@ -5,7 +5,24 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class DocumentBase(BaseModel):
+class DocumentCreate(BaseModel):
+    loan_id: UUID
+    doc_type: Optional[str] = None
+    file_name: str
+    mime_type: Optional[str] = None
+    file_size_bytes: Optional[int] = None
+    storage_key: str
+    sha256: Optional[str] = None
+    tags: Dict[str, Any] = Field(default_factory=dict)
+    # tenant_id and uploaded_by are injected from auth — never from the client
+
+
+class DocumentOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    tenant_id: UUID
+    loan_id: UUID
     doc_type: Optional[str] = None
     file_name: str
     mime_type: Optional[str] = None
@@ -13,29 +30,5 @@ class DocumentBase(BaseModel):
     storage_key: str
     sha256: Optional[str] = None
     uploaded_by: Optional[UUID] = None
-    tags: Dict[str, Any] = Field(default_factory=dict)
-
-
-class DocumentCreate(DocumentBase):
-    tenant_id: UUID
-    loan_id: UUID
-
-
-class DocumentUpdate(BaseModel):
-    doc_type: Optional[str] = None
-    file_name: Optional[str] = None
-    mime_type: Optional[str] = None
-    file_size_bytes: Optional[int] = None
-    storage_key: Optional[str] = None
-    sha256: Optional[str] = None
-    uploaded_by: Optional[UUID] = None
-    tags: Optional[Dict[str, Any]] = None
-
-
-class DocumentOut(DocumentBase):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: UUID
-    tenant_id: UUID
-    loan_id: UUID
     uploaded_at: datetime
+    tags: Dict[str, Any]
