@@ -10,9 +10,11 @@ type ProtectedRouteProps = {
 
 export function ProtectedRoute({ allowedRoles, children }: ProtectedRouteProps) {
   const router = useRouter();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
 
   useEffect(() => {
+    if (isLoading) return;
+
     if (!isAuthenticated) {
       void router.replace("/login");
       return;
@@ -21,9 +23,9 @@ export function ProtectedRoute({ allowedRoles, children }: ProtectedRouteProps) 
     if (user && allowedRoles && !allowedRoles.includes(user.role)) {
       void router.replace(roleDashboardPaths[user.role]);
     }
-  }, [allowedRoles, isAuthenticated, router, user]);
+  }, [allowedRoles, isAuthenticated, isLoading, router, user]);
 
-  if (!isAuthenticated || !user) {
+  if (isLoading || !isAuthenticated || !user) {
     return <div className="centered-screen">Checking session...</div>;
   }
 

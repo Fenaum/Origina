@@ -9,20 +9,30 @@ export async function apiRequest<T>(
   path: string,
   options: RequestOptions = {},
 ): Promise<T> {
-  const headers = new Headers(options.headers);
-  headers.set("Content-Type", "application/json");
+  const { token, headers: rawHeaders, ...rest } = options;
 
-  if (options.token) {
-    headers.set("Authorization", `Bearer ${options.token}`);
+  const headers = new Headers(rawHeaders as HeadersInit | undefined);
+
+  // Don't override Content-Type for form submissions — caller sets it explicitly.
+  if (!headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
   }
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...options,
+    ...rest,
     headers,
   });
 
   if (!response.ok) {
-    throw new Error(`API request failed: ${response.status}`);
+    const detail = await response
+      .json()
+      .then((body: { detail?: string }) => body.detail)
+      .catch(() => null);
+    throw new Error(detail ?? `API ${response.status}`);
   }
 
   return response.json() as Promise<T>;

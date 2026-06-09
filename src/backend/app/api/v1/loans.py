@@ -1,6 +1,8 @@
+from decimal import Decimal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
@@ -14,6 +16,7 @@ from app.schemas.loan_schema import (
     LoanOut,
     LoanPartyCreate,
     LoanPartyOut,
+    LoanPipelineSummaryOut,
     LoanTermsOut,
     LoanTermsUpdate,
     LoanUpdate,
@@ -62,6 +65,68 @@ def list_loans(
     if assigned_to:
         query = query.filter(Loan.assigned_to == assigned_to)
     return query.order_by(Loan.created_at.desc()).offset(skip).limit(limit).all()
+
+
+_PIPELINE_SQL = text("""
+    SELECT
+        l.id,
+        l.loan_number,
+        l.status,
+        l.loan_program,
+        l.submitted_at,
+        l.updated_at,
+        lf.loan_amount,
+        COALESCE(
+            NULLIF(TRIM(COALESCE(b.first_name, '') || ' ' || COALESCE(b.last_name, '')), ''),
+            'Unnamed Borrower'
+        ) AS borrower_name,
+        p.state AS property_state,
+        COALESCE(open_ct.cnt, 0)  AS conditions_open,
+        COALESCE(sub_ct.cnt, 0)   AS conditions_submitted,
+        COALESCE(open_ct.cnt, 0) + COALESCE(sub_ct.cnt, 0) AS actions_needed
+    FROM loans l
+    LEFT JOIN loan_financials lf ON lf.loan_id = l.id
+    LEFT JOIN LATERAL (
+        SELECT first_name, last_name
+        FROM borrowers
+        WHERE loan_id = l.id AND type = 'primary_borrower'
+        LIMIT 1
+    ) b ON true
+    LEFT JOIN LATERAL (
+        SELECT state
+        FROM properties
+        WHERE loan_id = l.id AND is_subject = true
+        LIMIT 1
+    ) p ON true
+    LEFT JOIN LATERAL (
+        SELECT COUNT(*) AS cnt
+        FROM conditions
+        WHERE loan_id = l.id AND tenant_id = l.tenant_id AND status = 'open'
+    ) open_ct ON true
+    LEFT JOIN LATERAL (
+        SELECT COUNT(*) AS cnt
+        FROM conditions
+        WHERE loan_id = l.id AND tenant_id = l.tenant_id AND status = 'submitted'
+    ) sub_ct ON true
+    WHERE l.tenant_id = :tenant_id
+      AND l.status NOT IN ('archived', 'cancelled')
+    ORDER BY l.updated_at DESC
+    LIMIT :limit OFFSET :skip
+""")
+
+
+@router.get("/pipeline", response_model=list[LoanPipelineSummaryOut])
+def get_pipeline(
+    skip: int = 0,
+    limit: int = 200,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    rows = db.execute(
+        _PIPELINE_SQL,
+        {"tenant_id": current_user.tenant_id, "limit": limit, "skip": skip},
+    ).mappings().all()
+    return [LoanPipelineSummaryOut(**dict(row)) for row in rows]
 
 
 @router.get("/{loan_id}", response_model=LoanOut)

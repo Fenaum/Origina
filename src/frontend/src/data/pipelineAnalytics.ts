@@ -45,7 +45,9 @@ export function buildPipelineKpis(loans: LoanSummary[]): PipelineKpi[] {
   const totalVolume = activeLoans.reduce((sum, loan) => sum + loan.loanAmount, 0);
   const averageAmount = activeLoans.length ? totalVolume / activeLoans.length : 0;
   const actionsNeeded = loans.reduce((sum, loan) => sum + loan.actionsNeeded, 0);
-  const submittedThisMonth = loans.filter((loan) => isSameMonth(loan.submittedAt)).length;
+  const submittedThisMonth = loans.filter(
+    (loan) => loan.submittedAt && isSameMonth(loan.submittedAt),
+  ).length;
 
   return [
     {
@@ -124,6 +126,7 @@ export function buildMonthlySubmissionData(
   const monthBuckets = new Map<string, MonthlySubmissionDatum>();
 
   loans.forEach((loan) => {
+    if (!loan.submittedAt) return;
     const date = new Date(`${loan.submittedAt}T00:00:00`);
     const key = `${date.getFullYear()}-${String(date.getMonth()).padStart(2, "0")}`;
     const current = monthBuckets.get(key) ?? {
