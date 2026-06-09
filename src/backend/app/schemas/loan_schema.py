@@ -155,3 +155,22 @@ class LoanPartyOut(LoanPartyBase):
     tenant_id: UUID
     loan_id: UUID
     created_at: datetime
+
+
+# ── LoanPipelineSummary ────────────────────────────────────────────────────────
+
+class LoanPipelineSummaryOut(BaseModel):
+    """Flat summary row for the pipeline view — one query per page, no N+1."""
+
+    id: UUID
+    loan_number: Optional[str]
+    status: str
+    loan_program: Optional[str]
+    submitted_at: Optional[date]
+    updated_at: datetime
+    loan_amount: Optional[Decimal]
+    borrower_name: str
+    property_state: Optional[str]
+    conditions_open: int
+    conditions_submitted: int
+    actions_needed: int

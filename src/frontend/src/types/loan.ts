@@ -1,11 +1,54 @@
+// Matches the loan_status enum in PostgreSQL (all values)
 export type LoanStatus =
   | "new_draft"
   | "submitted"
   | "conditions_review"
+  | "approved_pending"
   | "approved"
+  | "denied"
+  | "closed"
   | "funded"
-  | "closed";
+  | "post_closing"
+  | "archived"
+  | "withdrawn"
+  | "cancelled";
 
+export type LoanPurpose = "purchase" | "refinance" | "cash_out" | "other";
+
+export type LoanProgram =
+  | "dscr"
+  | "bank_statement"
+  | "asset_depletion"
+  | "interest_only"
+  | "jumbo_nonqm"
+  | "conventional"
+  | "other";
+
+// Active pipeline statuses (shown in the main pipeline view)
+export const PIPELINE_STATUSES: LoanStatus[] = [
+  "new_draft",
+  "submitted",
+  "conditions_review",
+  "approved_pending",
+  "approved",
+];
+
+export const loanStatusLabels: Record<LoanStatus, string> = {
+  new_draft:         "New Draft",
+  submitted:         "Submitted",
+  conditions_review: "Conditions Review",
+  approved_pending:  "Approved – Pending",
+  approved:          "Approved",
+  denied:            "Denied",
+  closed:            "Closed",
+  funded:            "Funded",
+  post_closing:      "Post Closing",
+  archived:          "Archived",
+  withdrawn:         "Withdrawn",
+  cancelled:         "Cancelled",
+};
+
+// Frontend view model — used by pipeline table and dashboard
 export type LoanSummary = {
   id: string;
   borrowerName: string;
@@ -13,22 +56,14 @@ export type LoanSummary = {
   channel: "Broker" | "Retail" | "Correspondent";
   status: LoanStatus;
   loanAmount: number;
+  loanProgram: LoanProgram;
   propertyState: string;
-  submittedAt: string;
+  submittedAt: string | null;
   updatedAt: string;
   owner: string;
   conditionsOpen: number;
   conditionsSubmitted: number;
   actionsNeeded: number;
-};
-
-export const loanStatusLabels: Record<LoanStatus, string> = {
-  new_draft: "New Draft",
-  submitted: "Submitted",
-  conditions_review: "Conditions Review",
-  approved: "Approved",
-  funded: "Funded",
-  closed: "Closed",
 };
 
 export type PipelineKpi = {
