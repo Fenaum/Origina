@@ -20,6 +20,7 @@ python-dotenv
 # Auth
 python-jose[cryptography]
 passlib[bcrypt]
+bcrypt==4.0.1
 python-multipart
 
 # Optional but recommended (logging & typing helpers)
