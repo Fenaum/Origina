@@ -53,7 +53,7 @@ export function buildPipelineKpis(loans: LoanSummary[]): PipelineKpi[] {
     {
       label: "Total Active Loans",
       value: String(activeLoans.length),
-      detail: `${loans.length} total mock files`,
+      detail: `${loans.length} total in pipeline`,
     },
     {
       label: "Pipeline Volume",

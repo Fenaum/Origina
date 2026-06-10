@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { OriginaLogo } from "@/components/brand/OriginaLogo";
 import { roleDashboardPaths, roleLabels, type UserRole } from "@/types/auth";
 import { useAuth } from "@/state/auth";
 
@@ -51,13 +52,7 @@ export function Sidebar() {
 
   return (
     <aside className="app-sidebar">
-      <Link className="brand" href={roleDashboardPaths[user.role]}>
-        <span className="brand-mark">O</span>
-        <span>
-          <strong>Origina</strong>
-          <small>LOS / TPO</small>
-        </span>
-      </Link>
+      <OriginaLogo href={roleDashboardPaths[user.role]} subtitle="LOS / TPO" />
 
       <nav className="nav-list" aria-label="Primary navigation">
         {visibleItems.map((item) => {

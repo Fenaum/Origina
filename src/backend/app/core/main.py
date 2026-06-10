@@ -11,6 +11,7 @@ from app.api.v1 import (
     decisioning,
     documents,
     health,
+    intake,
     loans,
     parties,
     properties,
@@ -58,6 +59,7 @@ async def server_error_handler(request: Request, exc):
 _V1 = "/api/v1"
 
 app.include_router(health.router,       prefix=_V1)
+app.include_router(intake.router,       prefix=_V1)
 app.include_router(auth.router,         prefix=_V1)
 app.include_router(tenants.router,      prefix=_V1)
 app.include_router(users.router,        prefix=_V1)

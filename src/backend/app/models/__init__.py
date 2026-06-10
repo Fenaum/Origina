@@ -7,6 +7,7 @@ from app.models.borrowers import Address, Borrower, BorrowerIncomeType, Borrower
 from app.models.conditions import Condition, ConditionStatus
 from app.models.decisioning import EligibilityRun, PricingRun
 from app.models.document import Document
+from app.models.intake import IntakeAnswer, IntakeHandoff, IntakeSession
 from app.models.loan import Loan, LoanFinancials, LoanParty, LoanPartyRole, LoanPurpose, LoanStatus, LoanTerms
 from app.models.parties import Party, PartyType
 from app.models.properties import Property
@@ -42,6 +43,9 @@ __all__ = [
     "ConditionStatus",
     "Document",
     "EligibilityRun",
+    "IntakeAnswer",
+    "IntakeHandoff",
+    "IntakeSession",
     "ExceptionSeverity",
     "ExceptionStatus",
     "Loan",

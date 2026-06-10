@@ -49,24 +49,24 @@ export function LoanDetailSummary({ loan }: { loan: LoanSummary }) {
         <div className="status-list">
           <div className="status-row">
             <div>
-              <strong>Conditions</strong>
-              <span>Backend integration pending</span>
+              <strong>Open Conditions</strong>
+              <span>Awaiting borrower or team response</span>
             </div>
-            <p>3 open</p>
+            <p>{loan.conditionsOpen} open</p>
+          </div>
+          <div className="status-row">
+            <div>
+              <strong>Submitted Conditions</strong>
+              <span>Under review</span>
+            </div>
+            <p>{loan.conditionsSubmitted} submitted</p>
           </div>
           <div className="status-row">
             <div>
               <strong>Documents</strong>
-              <span>Document API pending</span>
+              <span>Document detail page coming soon</span>
             </div>
-            <p>2 requested</p>
-          </div>
-          <div className="status-row">
-            <div>
-              <strong>Decisioning</strong>
-              <span>Underwriting workflow pending</span>
-            </div>
-            <p>In review</p>
+            <p>—</p>
           </div>
         </div>
       </div>

@@ -208,8 +208,8 @@ export const useLoanSubmissionStore = create<SubmissionStore>()(
           draft: {
             ...state.draft,
             // SSN must never be written to localStorage — cleared on hydration, must be re-entered
-            borrowers: state.draft.borrowers.map(({ ssn: _ssn, ...rest }) => ({
-              ...rest,
+            borrowers: state.draft.borrowers.map((borrower) => ({
+              ...borrower,
               ssn: "",
             })),
           },
