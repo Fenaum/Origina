@@ -1,3 +1,10 @@
+"""Condition models for loan file requirements and underwriting follow-up.
+
+Conditions are work items tied to a loan. They can be submitted, cleared,
+waived, or rejected, and their resolution fields are intentionally explicit
+because waivers and clearances have different compliance meaning.
+"""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -64,6 +71,9 @@ class Condition(BaseModel):
         ForeignKey("users.id", ondelete="SET NULL"),
     )
     waived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    waive_reason: Mapped[str | None] = mapped_column(String)
+
+    stage: Mapped[str] = mapped_column(String, nullable=False, server_default="prior_to_approval")
 
     loan: Mapped["Loan"] = relationship("Loan", back_populates="conditions")
     clearer: Mapped["User | None"] = relationship("User", foreign_keys=[cleared_by])

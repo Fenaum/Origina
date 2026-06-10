@@ -1,9 +1,8 @@
 import { useRouter } from "next/router";
-import { AppLayout } from "@/components/app/AppLayout";
-import { PageHeader } from "@/components/dashboard/PageHeader";
+import { LoanWorkspaceLayout } from "@/components/app/LoanWorkspaceLayout";
+import { LoanWorkspaceShell } from "@/components/loans/LoanWorkspaceShell";
 import { ErrorState } from "@/components/feedback/ErrorState";
 import { LoadingSpinner } from "@/components/feedback/LoadingSpinner";
-import { LoanDetailSummary } from "@/components/loans/LoanDetailSummary";
 import { useLoan } from "@/hooks/useLoans";
 
 export default function LoanDetailPage() {
@@ -12,7 +11,7 @@ export default function LoanDetailPage() {
   const { loan, loading, error } = useLoan(loanId);
 
   return (
-    <AppLayout allowedRoles={["account_executive", "broker", "underwriter"]}>
+    <LoanWorkspaceLayout allowedRoles={["account_executive", "broker", "underwriter"]}>
       {loading ? (
         <LoadingSpinner />
       ) : error ? (
@@ -22,21 +21,13 @@ export default function LoanDetailPage() {
           onRetry={() => router.reload()}
         />
       ) : loan ? (
-        <>
-          <PageHeader
-            eyebrow="Loan Detail"
-            title={`${loan.borrowerName} — ${loan.loanNumber}`}
-            description="Core file context with space reserved for conditions, documents, status history, and decisions."
-          />
-          <LoanDetailSummary loan={loan} />
-        </>
+        <LoanWorkspaceShell loan={loan} />
       ) : (
-        <PageHeader
-          eyebrow="Loan Detail"
-          title="Loan not found"
-          description="This loan ID does not exist or is not accessible with your current role."
-        />
+        <div className="workspace-placeholder">
+          <h2>Loan not found</h2>
+          <p>This loan ID does not exist or is not accessible with your current role.</p>
+        </div>
       )}
-    </AppLayout>
+    </LoanWorkspaceLayout>
   );
 }

@@ -1,3 +1,10 @@
+"""Decisioning run models.
+
+Pricing and eligibility runs are append-style records that preserve the input
+payload, output payload, and runner metadata for later audit/replay. The live
+pricing/AUS integrations can change, but these rows keep the historical result.
+"""
+
 from datetime import datetime
 from typing import Any
 from uuid import UUID

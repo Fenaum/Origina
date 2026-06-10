@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.core.db import get_db
 from app.models.conditions import Condition
 from app.models.user import User
-from app.schemas.condition_schema import ConditionCreate, ConditionOut, ConditionUpdate
+from app.schemas.condition_schema import ConditionCreate, ConditionOut, ConditionUpdate, WaiveRequest
 from app.security.security import get_audited_db, get_current_user
 
 router = APIRouter(prefix="/conditions", tags=["conditions"])
@@ -95,6 +95,7 @@ def clear_condition(
 @router.post("/{condition_id}/waive", response_model=ConditionOut)
 def waive_condition(
     condition_id: UUID,
+    payload: WaiveRequest = WaiveRequest(),
     db: Session = Depends(get_audited_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -102,6 +103,7 @@ def waive_condition(
     condition.status = "waived"
     condition.waived_by = current_user.id
     condition.waived_at = datetime.now(timezone.utc)
+    condition.waive_reason = payload.reason
     db.commit()
     db.refresh(condition)
     return condition

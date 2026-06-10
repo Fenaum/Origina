@@ -33,6 +33,16 @@ export const PIPELINE_STATUSES: LoanStatus[] = [
   "approved",
 ];
 
+export const loanProgramLabels: Record<LoanProgram, string> = {
+  dscr:             "DSCR",
+  bank_statement:   "Bank Statement",
+  asset_depletion:  "Asset Depletion",
+  interest_only:    "Interest Only",
+  jumbo_nonqm:      "Jumbo Non-QM",
+  conventional:     "Conventional",
+  other:            "Other",
+};
+
 export const loanStatusLabels: Record<LoanStatus, string> = {
   new_draft:         "New Draft",
   submitted:         "Submitted",

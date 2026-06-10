@@ -1,3 +1,4 @@
+import { NotificationBell } from "@/components/app/NotificationBell";
 import { roleLabels } from "@/types/auth";
 import { useAuth } from "@/state/auth";
 
@@ -8,6 +9,13 @@ export function TopHeader() {
     return null;
   }
 
+  const initials = user.name
+    .split(" ")
+    .map((p: string) => p[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+
   return (
     <header className="top-header">
       <div>
@@ -16,7 +24,11 @@ export function TopHeader() {
       </div>
 
       <div className="user-block">
-        <span>{user.name}</span>
+        <NotificationBell />
+        <div className="user-avatar" aria-label={user.name} title={user.name}>
+          {initials}
+        </div>
+        <span className="user-name">{user.name}</span>
         <button className="ghost-button" type="button" onClick={logout}>
           Sign out
         </button>
