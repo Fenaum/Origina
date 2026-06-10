@@ -1,22 +1,32 @@
-import { useRouter } from "next/router";
-import { useEffect } from "react";
-import { useAuth } from "@/state/auth";
-import { roleDashboardPaths } from "@/types/auth";
+import Head from "next/head";
+import { BorrowerSection } from "@/components/marketing/BorrowerSection";
+import { BrokerSection } from "@/components/marketing/BrokerSection";
+import { FinalCtaSection } from "@/components/marketing/FinalCtaSection";
+import { HeroSection } from "@/components/marketing/HeroSection";
+import { HowItWorksSection } from "@/components/marketing/HowItWorksSection";
+import { MarketingFooter } from "@/components/marketing/MarketingFooter";
+import { MarketingNav } from "@/components/marketing/MarketingNav";
 
-export default function HomePage() {
-  const router = useRouter();
-  const { isAuthenticated, isLoading, user } = useAuth();
+export default function MarketingHomePage() {
+  return (
+    <>
+      <Head>
+        <title>Origina — Non-QM Mortgage Platform</title>
+        <meta
+          name="description"
+          content="Origina helps borrowers explore Non-QM loan options and gives mortgage brokers a modern TPO platform for streamlined submission, pricing, and loan tracking."
+        />
+      </Head>
 
-  useEffect(() => {
-    if (isLoading) return;
-
-    if (isAuthenticated && user) {
-      void router.replace(roleDashboardPaths[user.role]);
-      return;
-    }
-
-    void router.replace("/login");
-  }, [isAuthenticated, isLoading, router, user]);
-
-  return <div className="centered-screen">Loading Origina...</div>;
+      <div className="mkt-page">
+        <MarketingNav />
+        <HeroSection />
+        <BorrowerSection />
+        <BrokerSection />
+        <HowItWorksSection />
+        <FinalCtaSection />
+        <MarketingFooter />
+      </div>
+    </>
+  );
 }

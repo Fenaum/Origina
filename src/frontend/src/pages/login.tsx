@@ -1,5 +1,6 @@
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
+import { OriginaLogo } from "@/components/brand/OriginaLogo";
 import { useAuth } from "@/state/auth";
 import { roleDashboardPaths } from "@/types/auth";
 
@@ -34,7 +35,7 @@ export default function LoginPage() {
     <main className="login-page">
       <section className="login-panel">
         <div>
-          <span className="brand-mark large">O</span>
+          <OriginaLogo className="login-logo" mode="with-title" />
           <p className="eyebrow">Origina LOS / TPO</p>
           <h1>Sign in to your workspace</h1>
         </div>
