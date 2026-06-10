@@ -79,25 +79,43 @@ export type BorrowerOut = {
   last_name: string | null;
   email: string | null;
   phone: string | null;
+  ssn_last4: string | null;
+  dob: string | null;
+  relationship: string | null;
   income_type: string | null;
   income_amount: number | null;
   employment_status: string | null;
   employer_name: string | null;
+  job_title: string | null;
+  years_on_job: number | null;
+  years_in_profession: number | null;
+  work_phone: string | null;
+  marital_status: string | null;
+  dependents: number | null;
+  ethnicity: string | null;
+  race: string | null;
+  gender: string | null;
   created_at: string;
+  updated_at: string;
 };
 
 // ── Conditions ────────────────────────────────────────────────────────────────
+export type ConditionStage = "prior_to_docs" | "prior_to_approval" | "prior_to_funding";
+export type ConditionStatus = "open" | "submitted" | "cleared" | "waived" | "rejected";
+
 export type ConditionOut = {
   id: string;
   loan_id: string;
   name: string;
   description: string | null;
   condition_number: number;
-  status: "open" | "submitted" | "cleared" | "waived" | "rejected";
+  status: ConditionStatus;
+  stage: ConditionStage;
   cleared_by: string | null;
   cleared_at: string | null;
   waived_by: string | null;
   waived_at: string | null;
+  waive_reason: string | null;
   created_at: string;
   updated_at: string;
 };

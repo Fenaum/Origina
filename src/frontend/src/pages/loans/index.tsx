@@ -1,89 +1,87 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { AppLayout } from "@/components/app/AppLayout";
-import { PageHeader } from "@/components/dashboard/PageHeader";
-import { EmptyState } from "@/components/feedback/EmptyState";
 import { ErrorState } from "@/components/feedback/ErrorState";
-import { PipelineCharts } from "@/components/loans/PipelineCharts";
-import { PipelineKpiGrid } from "@/components/loans/PipelineKpiGrid";
 import { PipelinePageSkeleton } from "@/components/loans/PipelinePageSkeleton";
-import { LoanPipelineTable } from "@/components/loans/LoanPipelineTable";
-import { buildPipelineKpis } from "@/data/pipelineAnalytics";
+import { PipelineFilterPanel } from "@/components/loans/pipeline/PipelineFilterPanel";
+import { PipelineGrid } from "@/components/loans/pipeline/PipelineGrid";
+import { PipelineKpis } from "@/components/loans/pipeline/PipelineKpis";
+import { PipelineToolbar } from "@/components/loans/pipeline/PipelineToolbar";
+import { applyPipelineFilters, applyPipelineSort } from "@/data/pipelineFilters";
 import { listLoans } from "@/services/loanService";
+import { usePipelineStore } from "@/state/pipelineStore";
 import { useAuth } from "@/state/auth";
 import type { LoanSummary } from "@/types/loan";
 
 export default function LoanPipelinePage() {
   const { token } = useAuth();
+  const store = usePipelineStore();
   const [loans, setLoans] = useState<LoanSummary[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isRetrying, setIsRetrying] = useState(false);
+  const [retrying, setRetrying] = useState(false);
 
-  const loadLoans = useCallback(async (retrying = false) => {
-    setError(null);
-    setIsRetrying(retrying);
-    setIsLoading(!retrying);
+  const loadLoans = useCallback(
+    async (isRetry = false) => {
+      setError(null);
+      setRetrying(isRetry);
+      if (!isRetry) setLoading(true);
 
-    try {
-      const nextLoans = await listLoans(token ?? undefined);
-      setLoans(nextLoans);
-    } catch (loadError) {
-      setError(
-        loadError instanceof Error
-          ? loadError.message
-          : "Unable to load loan pipeline data.",
-      );
-    } finally {
-      setIsLoading(false);
-      setIsRetrying(false);
-    }
-  }, [token]);
+      try {
+        const data = await listLoans(token ?? undefined);
+        setLoans(data);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Unable to load pipeline data.");
+      } finally {
+        setLoading(false);
+        setRetrying(false);
+      }
+    },
+    [token],
+  );
 
   useEffect(() => {
     void loadLoans();
   }, [loadLoans]);
 
-  const kpis = useMemo(() => buildPipelineKpis(loans), [loans]);
+  const filtered = useMemo(
+    () => applyPipelineFilters(loans, store.filters),
+    [loans, store.filters],
+  );
+
+  const sorted = useMemo(
+    () => applyPipelineSort(filtered, store.sortField, store.sortDir),
+    [filtered, store.sortField, store.sortDir],
+  );
 
   return (
     <AppLayout allowedRoles={["account_executive", "broker", "underwriter"]}>
-      <div className="page-action-row">
-        <PageHeader
-          eyebrow="Pipeline"
-          title="Loan Pipeline"
-          description="A simple starting view for active files, prepared for filters, exports, and richer pipeline states."
+      <div className="pipeline-workspace">
+        <PipelineToolbar
+          totalCount={loans.length}
+          exportLoans={sorted}
+          onRefresh={() => void loadLoans(true)}
         />
-        <Link className="primary-button" href="/loans/new">
-          + New Loan
-        </Link>
+
+        {loading ? (
+          <PipelinePageSkeleton />
+        ) : error ? (
+          <div className="pipeline-workspace-body">
+            <ErrorState
+              title="Pipeline unavailable"
+              description={error}
+              isRetrying={retrying}
+              onRetry={() => void loadLoans(true)}
+            />
+          </div>
+        ) : (
+          <>
+            <PipelineKpis loans={loans} />
+            <PipelineGrid loans={sorted} />
+          </>
+        )}
+
+        {store.filterPanelOpen && <PipelineFilterPanel />}
       </div>
-
-      {isLoading ? <PipelinePageSkeleton /> : null}
-
-      {!isLoading && error ? (
-        <ErrorState
-          title="Loan data unavailable"
-          description={error}
-          isRetrying={isRetrying}
-          onRetry={() => void loadLoans(true)}
-        />
-      ) : null}
-
-      {!isLoading && !error && loans.length === 0 ? (
-        <EmptyState
-          title="No pipeline data"
-          description="Loan pipeline analytics and table rows will appear after the API returns files."
-        />
-      ) : null}
-
-      {!isLoading && !error && loans.length > 0 ? (
-        <>
-          <PipelineKpiGrid kpis={kpis} />
-          <PipelineCharts loans={loans} />
-          <LoanPipelineTable loans={loans} />
-        </>
-      ) : null}
     </AppLayout>
   );
 }
