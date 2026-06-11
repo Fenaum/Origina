@@ -3,266 +3,312 @@ import { useRouter } from "next/router";
 import { LoadingSpinner } from "@/components/feedback/LoadingSpinner";
 import { useLoanDetail } from "@/hooks/useLoanDetail";
 import { useRecentLoansStore } from "@/state/recentLoansStore";
-import { loanStatusLabels, type LoanSummary } from "@/types/loan";
+import { loanProgramLabels, loanStatusLabels, type LoanSummary } from "@/types/loan";
 import type { BorrowerOut } from "@/types/api";
-
-const fmt = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
-const fmtPct = (v: number | null | undefined) => (v != null ? `${(v * 100).toFixed(1)}%` : "—");
 
 type Props = { loan: LoanSummary };
 
+const money = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  maximumFractionDigits: 0,
+});
+
 const PURPOSE_LABELS: Record<string, string> = {
   purchase: "Purchase",
-  refinance: "Rate & Term Refinance",
+  refinance: "Rate-Term Refinance",
   cash_out: "Cash-Out Refinance",
   other: "Other",
 };
 
 const INCOME_LABELS: Record<string, string> = {
-  w2: "W-2 Employee", self_employed: "Self-Employed", bank_statement: "Bank Statement",
-  "1099": "1099 Contractor", rental: "Rental (DSCR)", assets: "Asset Depletion",
+  w2: "W-2",
+  self_employed: "Self-Employed",
+  bank_statement: "Bank Statement",
+  "1099": "1099",
+  rental: "Rental",
+  assets: "Asset Depletion",
   pension_retirement: "Pension / Retirement",
 };
 
 const MOCK_TEAM = [
-  { name: "Marcus Webb",  role: "Account Executive", email: "m.webb@origina.dev",   ext: "x201", initials: "MW" },
-  { name: "Priya Nair",   role: "Account Manager",   email: "p.nair@origina.dev",   ext: "x202", initials: "PN" },
-  { name: "Jordan Ramos", role: "Processor",          email: "j.ramos@origina.dev",  ext: "x203", initials: "JR" },
-  { name: "Dana Kim",     role: "Underwriter",        email: "d.kim@origina.dev",    ext: "x205", initials: "DK" },
-  { name: "Alex Torres",  role: "Disclosure Clerk",   email: "a.torres@origina.dev", ext: "x207", initials: "AT" },
-  { name: "Simone Liu",   role: "Funder",             email: "s.liu@origina.dev",    ext: "x210", initials: "SL" },
+  { role: "Account Executive", name: "Marcus Webb", email: "m.webb@origina.dev", status: "Assigned" },
+  { role: "Account Manager", name: "Priya Nair", email: "p.nair@origina.dev", status: "Assigned" },
+  { role: "Processor", name: "Jordan Ramos", email: "j.ramos@origina.dev", status: "Active" },
+  { role: "Underwriter", name: "Dana Kim", email: "d.kim@origina.dev", status: "Queued" },
+  { role: "Disclosure Desk", name: "Alex Torres", email: "a.torres@origina.dev", status: "Pending" },
+  { role: "Closer", name: "Unassigned", email: null, status: "Open" },
+  { role: "Funder", name: "Simone Liu", email: "s.liu@origina.dev", status: "Standby" },
 ];
 
-function kpiFlag(field: string, value: number | null | undefined): "warn" | "danger" | "" {
-  if (value == null) return "";
-  if (field === "ltv")  return value > 0.90 ? "danger" : value > 0.80 ? "warn" : "";
-  if (field === "dti")  return value > 0.50 ? "danger" : value > 0.43 ? "warn" : "";
-  if (field === "fico") return value < 620  ? "danger" : value < 680  ? "warn" : "";
-  if (field === "dscr") return value < 1.00 ? "danger" : value < 1.25 ? "warn" : "";
-  return "";
+function fmtMoney(value: number | null | undefined): string {
+  return value != null ? money.format(value) : "-";
 }
 
-function timeAgo(iso: string): string {
-  const ms = Date.now() - new Date(iso).getTime();
-  const h = Math.floor(ms / 3_600_000);
-  if (h < 1) return "just now";
-  if (h < 24) return `${h}h ago`;
-  const d = Math.floor(h / 24);
-  return d < 30 ? `${d}d ago` : `${Math.floor(d / 30)}mo ago`;
+function fmtPct(value: number | null | undefined): string {
+  return value != null ? `${(value * 100).toFixed(1)}%` : "-";
+}
+
+function fmtRatio(value: number | null | undefined): string {
+  return value != null ? value.toFixed(2) : "-";
+}
+
+function fmtDate(value: string | null | undefined): string {
+  if (!value) return "-";
+  const date = new Date(/^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T12:00:00` : value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("en-US", { dateStyle: "medium" }).format(date);
+}
+
+function timeAgo(value: string): string {
+  const ms = Date.now() - new Date(value).getTime();
+  const hours = Math.floor(ms / 3_600_000);
+  if (hours < 1) return "just now";
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return days < 30 ? `${days}d ago` : `${Math.floor(days / 30)}mo ago`;
+}
+
+function borrowerName(borrower: BorrowerOut | null): string {
+  if (!borrower) return "-";
+  return [borrower.first_name, borrower.last_name].filter(Boolean).join(" ") || "-";
+}
+
+function riskTone(kind: "ltv" | "dti" | "dscr" | "fico", value: number | null | undefined) {
+  if (value == null) return "";
+  if (kind === "ltv") return value > 0.9 ? "danger" : value > 0.8 ? "warn" : "";
+  if (kind === "dti") return value > 0.5 ? "danger" : value > 0.43 ? "warn" : "";
+  if (kind === "dscr") return value < 1 ? "danger" : value < 1.25 ? "warn" : "";
+  return value < 620 ? "danger" : value < 680 ? "warn" : "";
 }
 
 export function WorkspaceHome({ loan }: Props) {
   const router = useRouter();
-  const push = useRecentLoansStore((state) => state.push);
+  const pushRecent = useRecentLoansStore((state) => state.push);
   const { detail, loading } = useLoanDetail(loan.id);
 
   useEffect(() => {
-    push({ id: loan.id, borrowerName: loan.borrowerName, loanNumber: loan.loanNumber });
-  }, [loan.id, loan.borrowerName, loan.loanNumber, push]);
+    pushRecent({ id: loan.id, borrowerName: loan.borrowerName, loanNumber: loan.loanNumber });
+  }, [loan.id, loan.borrowerName, loan.loanNumber, pushRecent]);
 
   function goTo(section: string) {
     void router.push({ query: { loanId: loan.id, section } }, undefined, { shallow: true });
   }
 
-  if (loading) return <div className="urla-loading"><LoadingSpinner /></div>;
+  if (loading) {
+    return (
+      <div className="urla-loading">
+        <LoadingSpinner label="Loading loan dashboard" />
+      </div>
+    );
+  }
 
-  const fin        = detail?.financials;
-  const loanData   = detail?.loan;
-  const property   = detail?.property;
-  const borrowers  = detail?.borrowers ?? [];
-  const primary    = borrowers.find((b) => b.type === "primary_borrower") ?? borrowers[0] ?? null;
-  const coBorrower = borrowers.find((b) => b.type === "co_borrower") ?? null;
+  const loanData = detail?.loan;
+  const financials = detail?.financials;
+  const terms = detail?.terms;
+  const property = detail?.property;
+  const borrowers = detail?.borrowers ?? [];
+  const primary = borrowers.find((item) => item.type === "primary_borrower") ?? borrowers[0] ?? null;
+  const coBorrower = borrowers.find((item) => item.type === "co_borrower") ?? null;
 
-  const propAddress = property
+  const purpose = loanData?.purpose ? (PURPOSE_LABELS[loanData.purpose] ?? loanData.purpose) : "-";
+  const product = loan.loanProgram ? (loanProgramLabels[loan.loanProgram] ?? loan.loanProgram) : "-";
+  const propertyAddress = property
     ? [property.address1, property.city, property.state, property.postal_code].filter(Boolean).join(", ")
-    : null;
+    : "-";
 
-  const monthlyIncome = fin?.monthly_income;
-  const annualIncome  = monthlyIncome != null ? monthlyIncome * 12 : null;
+  const workflow = [
+    {
+      label: "Conditions",
+      status: loan.conditionsOpen > 0 ? "Needs review" : "Clear",
+      count: loan.conditionsOpen,
+      tone: loan.conditionsOpen > 0 ? "warn" : "ok",
+      section: "conditions",
+    },
+    { label: "Exceptions", status: "None open", count: 0, tone: "ok", section: "underwriting" },
+    {
+      label: "Documents",
+      status: loan.actionsNeeded > 0 ? "Items needed" : "Current",
+      count: loan.actionsNeeded,
+      tone: loan.actionsNeeded > 0 ? "warn" : "ok",
+      section: "documents",
+    },
+    { label: "Disclosures", status: "Not started", count: 0, tone: "neutral", section: "disclosures" },
+    { label: "Funding", status: "Pending", count: 0, tone: "neutral", section: "funding" },
+    { label: "Closing", status: "Not scheduled", count: 0, tone: "neutral", section: "closing" },
+    { label: "Conversation", status: "No new messages", count: 0, tone: "neutral", section: "conversation" },
+  ] as const;
 
-  const feed = [
-    { icon: "📋", text: `Loan ${loan.loanNumber} created`, time: loan.updatedAt },
-    { icon: "👤", text: `File assigned to ${loan.owner}`, time: loan.updatedAt },
-    ...(loan.conditionsOpen > 0
-      ? [{ icon: "📌", text: `${loan.conditionsOpen} open condition(s) pending review`, time: loan.updatedAt }]
-      : []),
+  const activity = [
+    { label: `Loan ${loan.loanNumber} created`, detail: "Loan record opened", time: loan.updatedAt },
     ...(loan.submittedAt
-      ? [{ icon: "📤", text: "Loan submitted for underwriting", time: loan.submittedAt }]
+      ? [{ label: "Loan submitted", detail: "Workflow entered submission queue", time: loan.submittedAt }]
       : []),
-    { icon: "🔄", text: `Status: ${loanStatusLabels[loan.status]}`, time: loan.updatedAt },
+    { label: `Status changed to ${loanStatusLabels[loan.status]}`, detail: "System status event", time: loan.updatedAt },
+    ...(loan.conditionsOpen > 0
+      ? [{ label: `${loan.conditionsOpen} conditions open`, detail: "Processor review required", time: loan.updatedAt }]
+      : []),
   ];
 
   return (
-    <div className="home-wrapper">
+    <div className="home-command">
+      <section className="home-hero-bar" aria-label="Loan command center summary">
+        <HeroMetric label="Loan" value={loan.loanNumber} />
+        <HeroMetric label="Status" value={loanStatusLabels[loan.status]} pill />
+        <HeroMetric label="Amount" value={fmtMoney(financials?.loan_amount ?? loan.loanAmount)} />
+        <HeroMetric label="Product" value={product} />
+        <HeroMetric label="Purpose" value={purpose} />
+        <HeroMetric label="LTV" value={fmtPct(financials?.ltv)} tone={riskTone("ltv", financials?.ltv)} />
+        <HeroMetric label="CLTV" value={fmtPct(financials?.cltv)} tone={riskTone("ltv", financials?.cltv)} />
+        <HeroMetric label="DTI" value={fmtPct(financials?.debt_to_income)} tone={riskTone("dti", financials?.debt_to_income)} />
+        <HeroMetric label="DSCR" value={fmtRatio(financials?.dscr)} tone={riskTone("dscr", financials?.dscr)} />
+        <HeroMetric label="Submitted" value={fmtDate(loan.submittedAt)} />
+        <HeroMetric label="Lock" value={terms?.interest_rate_locked ? "Locked" : "Not locked"} />
+      </section>
 
-      {/* Section 1 — Loan Snapshot */}
-      <div className="home-section">
-        <div className="home-section-header">
-          <h3 className="home-section-title">Loan Snapshot</h3>
-          <span className="status-pill">{loanStatusLabels[loan.status]}</span>
-        </div>
-        <div className="home-snapshot-grid">
-          <SnapField label="Loan Number"    value={loan.loanNumber} />
-          <SnapField label="Product"        value={loan.loanProgram} />
-          <SnapField label="Purpose"        value={loanData?.purpose ? (PURPOSE_LABELS[loanData.purpose] ?? loanData.purpose) : null} />
-          <SnapField label="Loan Amount"    value={fmt.format(loan.loanAmount)} />
-          <SnapField label="Property State" value={loan.propertyState} />
-          <SnapField label="Occupancy"      value={loanData?.occupancy_type ?? null} />
-          <SnapField label="Channel"        value={loan.channel} />
-          <SnapField label="Submitted"      value={loan.submittedAt ?? null} />
-          <SnapField label="Last Updated"   value={loan.updatedAt} />
-          <SnapField label="File Owner"     value={loan.owner} />
-          {propAddress && <SnapField label="Subject Property" value={propAddress} wide />}
-        </div>
-      </div>
-
-      {/* Section 2 — Key Risk Metrics */}
-      {fin && (
-        <div className="home-section">
-          <h3 className="home-section-title">Key Risk Metrics</h3>
-          <div className="home-kpi-row">
-            <div className="home-kpi-group">
-              <p className="home-kpi-group-label">Property</p>
-              <div className="home-kpi-grid">
-                <KpiCard label="Appraised Value" value={fin.appraised_value != null ? fmt.format(fin.appraised_value) : "—"} />
-                <KpiCard label="Purchase Price"  value={fin.purchase_price  != null ? fmt.format(fin.purchase_price)  : "—"} />
-                <KpiCard label="LTV"  value={fmtPct(fin.ltv)}  flag={kpiFlag("ltv",  fin.ltv)} />
-                <KpiCard label="CLTV" value={fmtPct(fin.cltv)} flag={kpiFlag("ltv",  fin.cltv)} />
-              </div>
-            </div>
-            <div className="home-kpi-group">
-              <p className="home-kpi-group-label">Credit / Risk</p>
-              <div className="home-kpi-grid">
-                <KpiCard label="FICO Score"    value={fin.fico_score    != null ? String(fin.fico_score)      : "—"} flag={kpiFlag("fico", fin.fico_score)} />
-                <KpiCard label="DTI"           value={fmtPct(fin.debt_to_income)}                                    flag={kpiFlag("dti",  fin.debt_to_income)} />
-                <KpiCard label="DSCR"          value={fin.dscr          != null ? fin.dscr.toFixed(2)         : "—"} flag={kpiFlag("dscr", fin.dscr)} />
-                <KpiCard label="Cash Reserves" value={fin.cash_reserves != null ? fmt.format(fin.cash_reserves) : "—"} />
-              </div>
-            </div>
-            <div className="home-kpi-group">
-              <p className="home-kpi-group-label">Income</p>
-              <div className="home-kpi-grid">
-                <KpiCard label="Monthly Income" value={monthlyIncome != null ? fmt.format(monthlyIncome) : "—"} />
-                <KpiCard label="Annual Income"  value={annualIncome  != null ? fmt.format(annualIncome)  : "—"} />
-                <KpiCard label="Monthly Rent"   value={fin.monthly_rent != null ? fmt.format(fin.monthly_rent) : "—"} />
-              </div>
-            </div>
+      <div className="home-command-grid">
+        <section className="home-panel home-panel--tall">
+          <PanelHeader title="Borrower & Property" actionLabel="Open URLA" onAction={() => goTo("borrower-urla")} />
+          <div className="home-block">
+            <h4>Borrowers</h4>
+            <FieldRow label="Primary" value={borrowerName(primary)} />
+            <FieldRow label="Co-borrower" value={borrowerName(coBorrower)} />
+            <FieldRow label="Email" value={primary?.email ?? "-"} />
+            <FieldRow label="Phone" value={primary?.phone ?? "-"} />
+            <FieldRow label="FICO" value={financials?.fico_score != null ? String(financials.fico_score) : "-"} tone={riskTone("fico", financials?.fico_score)} />
+            <FieldRow label="Monthly income" value={fmtMoney(primary?.income_amount ?? financials?.monthly_income)} />
+            <FieldRow label="Income type" value={primary?.income_type ? (INCOME_LABELS[primary.income_type] ?? primary.income_type) : "-"} />
+            <FieldRow label="Employer" value={primary?.employer_name ?? "-"} />
           </div>
-        </div>
-      )}
-
-      {/* Section 3 — Internal Team */}
-      <div className="home-section">
-        <div className="home-section-header">
-          <h3 className="home-section-title">Internal Team</h3>
-          <button type="button" className="home-section-link" onClick={() => goTo("parties")}>View all parties →</button>
-        </div>
-        <div className="home-team-grid">
-          {MOCK_TEAM.map((p) => (
-            <div key={p.role} className="home-party-card">
-              <div className="home-party-avatar">{p.initials}</div>
-              <div className="home-party-info">
-                <span className="home-party-name">{p.name}</span>
-                <span className="home-party-role">{p.role}</span>
-                <a href={`mailto:${p.email}`} className="home-party-contact">{p.email}</a>
-                <span className="home-party-contact">{p.ext}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Section 4 — Outstanding Work */}
-      <div className="home-section">
-        <h3 className="home-section-title">Outstanding Work</h3>
-        <div className="home-work-grid">
-          <WorkItem label="Open Conditions"      count={loan.conditionsOpen}     onClick={() => goTo("conditions")}   color={loan.conditionsOpen > 0 ? "warn" : "ok"} />
-          <WorkItem label="Submitted Conditions" count={loan.conditionsSubmitted} onClick={() => goTo("conditions")}   color="neutral" />
-          <WorkItem label="Open Exceptions"      count={0}                        onClick={() => goTo("underwriting")} color="ok" />
-          <WorkItem label="Pending Documents"    count={0}                        onClick={() => goTo("documents")}    color="ok" />
-          <WorkItem label="Open Tasks"           count={loan.actionsNeeded}       onClick={() => goTo("processing")}   color={loan.actionsNeeded > 0 ? "warn" : "ok"} />
-          <WorkItem label="Suspended Items"      count={0}                        onClick={() => goTo("underwriting")} color="ok" />
-        </div>
-      </div>
-
-      {/* Section 5 — Borrower Summary */}
-      {borrowers.length > 0 && (
-        <div className="home-section">
-          <div className="home-section-header">
-            <h3 className="home-section-title">Borrower Summary</h3>
-            <button type="button" className="home-section-link" onClick={() => goTo("borrower-urla")}>View full URLA →</button>
+          <div className="home-block">
+            <h4>Subject Property</h4>
+            <FieldRow label="Address" value={propertyAddress} />
+            <FieldRow label="Occupancy" value={property?.occupancy ?? loanData?.occupancy_type ?? "-"} />
+            <FieldRow label="Type" value={property?.property_type ?? "-"} />
+            <FieldRow label="Units" value="-" />
+            <FieldRow label="Appraised value" value={fmtMoney(financials?.appraised_value)} />
+            <FieldRow label="Purchase price" value={fmtMoney(financials?.purchase_price)} />
           </div>
-          <div className="home-borrower-grid">
-            {primary    && <BorrowerCard borrower={primary}    label="Primary Borrower" />}
-            {coBorrower && <BorrowerCard borrower={coBorrower} label="Co-Borrower" />}
+        </section>
+
+        <section className="home-panel home-panel--tall">
+          <PanelHeader title="Loan Summary" actionLabel="Processing" onAction={() => goTo("processing")} />
+          <div className="home-block">
+            <FieldRow label="Loan amount" value={fmtMoney(financials?.loan_amount ?? loan.loanAmount)} />
+            <FieldRow label="Product" value={product} />
+            <FieldRow label="Purpose" value={purpose} />
+            <FieldRow label="Impounds" value="Not entered" />
+            <FieldRow label="Prepay penalty" value="Not entered" />
+            <FieldRow label="Cash to close" value={fmtMoney(financials?.down_payment)} />
+            <FieldRow label="Reserves" value={fmtMoney(financials?.cash_reserves)} />
+            <FieldRow label="Lock expiration" value={fmtDate(terms?.lock_expiration_date)} />
+            <FieldRow label="Current milestone" value={loanStatusLabels[loan.status]} />
           </div>
-        </div>
-      )}
 
-      {/* Section 6 — Activity Feed */}
-      <div className="home-section">
-        <h3 className="home-section-title">Recent Activity</h3>
-        <div className="home-feed">
-          {feed.map((item, i) => (
-            <div key={i} className="home-feed-item">
-              <span className="home-feed-icon">{item.icon}</span>
-              <div className="home-feed-body">
-                <span className="home-feed-text">{item.text}</span>
-                <span className="home-feed-time">{timeAgo(item.time)}</span>
-              </div>
-            </div>
-          ))}
-        </div>
+          <div className="home-workflow-list">
+            <h4>Workflow Summary</h4>
+            {workflow.map((item) => (
+              <button
+                key={item.label}
+                type="button"
+                className={`home-workflow-card home-workflow-card--${item.tone}`}
+                onClick={() => goTo(item.section)}
+              >
+                <span>
+                  <strong>{item.label}</strong>
+                  <small>{item.status}</small>
+                </span>
+                <b>{item.count}</b>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section className="home-panel home-panel--tall">
+          <PanelHeader title="Internal Team" actionLabel="Parties" onAction={() => goTo("parties")} />
+          <div className="home-team-list">
+            {MOCK_TEAM.map((member) => (
+              <article key={member.role} className="home-contact-card">
+                <div>
+                  <strong>{member.name}</strong>
+                  <span>{member.role}</span>
+                  {member.email ? <a href={`mailto:${member.email}`}>{member.email}</a> : <small>Assignment needed</small>}
+                </div>
+                <em>{member.status}</em>
+              </article>
+            ))}
+          </div>
+
+          <div className="home-activity">
+            <h4>Recent Activity</h4>
+            {activity.map((item, index) => (
+              <article key={`${item.label}-${index}`} className="home-activity-item">
+                <span className="home-activity-dot" aria-hidden />
+                <div>
+                  <strong>{item.label}</strong>
+                  <small>{item.detail}</small>
+                </div>
+                <time>{timeAgo(item.time)}</time>
+              </article>
+            ))}
+          </div>
+        </section>
       </div>
-
     </div>
   );
 }
 
-function SnapField({ label, value, wide }: { label: string; value: string | null | undefined; wide?: boolean }) {
-  return (
-    <div className={`home-field${wide ? " home-field--wide" : ""}`}>
-      <span className="home-field-label">{label}</span>
-      <span className="home-field-value">{value ?? "—"}</span>
-    </div>
-  );
-}
-
-function KpiCard({ label, value, flag = "" }: { label: string; value: string; flag?: "warn" | "danger" | "" }) {
-  return (
-    <div className={`home-kpi-card${flag ? ` home-kpi-card--${flag}` : ""}`}>
-      <span className="home-kpi-label">{label}</span>
-      <span className="home-kpi-value">{value}</span>
-    </div>
-  );
-}
-
-function WorkItem({ label, count, onClick, color }: {
-  label: string; count: number; onClick: () => void; color: "warn" | "ok" | "neutral";
+function HeroMetric({
+  label,
+  value,
+  tone = "",
+  pill = false,
+}: {
+  label: string;
+  value: string;
+  tone?: "" | "warn" | "danger";
+  pill?: boolean;
 }) {
   return (
-    <button type="button" className={`home-work-item home-work-item--${color}`} onClick={onClick}>
-      <span className="home-work-label">{label}</span>
-      <span className="home-work-count">{count}</span>
-    </button>
+    <div className={`home-hero-metric${tone ? ` home-hero-metric--${tone}` : ""}`}>
+      <span>{label}</span>
+      <strong className={pill ? "home-hero-pill" : ""}>{value}</strong>
+    </div>
   );
 }
 
-function BorrowerCard({ borrower, label }: { borrower: BorrowerOut; label: string }) {
-  const fullName = [borrower.first_name, borrower.last_name].filter(Boolean).join(" ") || "—";
+function PanelHeader({
+  title,
+  actionLabel,
+  onAction,
+}: {
+  title: string;
+  actionLabel: string;
+  onAction: () => void;
+}) {
   return (
-    <div className="home-borrower-card">
-      <div className="home-borrower-header">
-        <span className="home-borrower-badge">{label}</span>
-        <span className="home-borrower-name">{fullName}</span>
-      </div>
-      <div className="home-borrower-fields">
-        <SnapField label="Email"         value={borrower.email} />
-        <SnapField label="Phone"         value={borrower.phone} />
-        <SnapField label="Employer"      value={borrower.employer_name} />
-        <SnapField label="Income Type"   value={borrower.income_type ? (INCOME_LABELS[borrower.income_type] ?? borrower.income_type) : null} />
-        <SnapField label="Monthly Income" value={borrower.income_amount != null ? fmt.format(Number(borrower.income_amount)) : null} />
-      </div>
+    <div className="home-panel-header">
+      <h3>{title}</h3>
+      <button type="button" onClick={onAction}>
+        {actionLabel}
+      </button>
+    </div>
+  );
+}
+
+function FieldRow({
+  label,
+  value,
+  tone = "",
+}: {
+  label: string;
+  value: string;
+  tone?: "" | "warn" | "danger";
+}) {
+  return (
+    <div className={`home-field-row${tone ? ` home-field-row--${tone}` : ""}`}>
+      <span>{label}</span>
+      <strong>{value}</strong>
     </div>
   );
 }

@@ -1,0 +1,559 @@
+<?xml version='1.0' encoding='utf-8'?>
+<MESSAGE xmlns="http://www.mismo.org/residential/2009/schemas" xmlns:DU="http://www.datamodelextension.org/Schema/DU" xmlns:ULAD="http://www.datamodelextension.org/Schema/ULAD" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mismo.org/residential/2009/schemas DU_Wrapper_3.4.0_B324.xsd" MISMOReferenceModelIdentifier="3.4.032420160128">
+  <ABOUT_VERSIONS>
+    <ABOUT_VERSION SequenceNumber="1">
+      <AboutVersionIdentifier>DU Spec 1.8.3</AboutVersionIdentifier>
+      <CreatedDatetime>2026-03-07T13:05:00-05:00</CreatedDatetime>
+    </ABOUT_VERSION>
+  </ABOUT_VERSIONS>
+  <DEAL_SETS>
+    <DEAL_SET>
+      <DEALS>
+        <DEAL SequenceNumber="1">
+          <ASSETS>
+            <ASSET SequenceNumber="1" xlink:label="ASSET_1">
+              <ASSET_DETAIL>
+                <AssetType>RealEstateOwned</AssetType>
+              </ASSET_DETAIL>
+              <OWNED_PROPERTY>
+                <OWNED_PROPERTY_DETAIL>
+                  <OwnedPropertyDispositionStatusType>Retain</OwnedPropertyDispositionStatusType>
+                  <OwnedPropertyLienUPBAmount>314279.00</OwnedPropertyLienUPBAmount>
+                  <OwnedPropertyMaintenanceExpenseAmount>122.00</OwnedPropertyMaintenanceExpenseAmount>
+                  <OwnedPropertyRentalIncomeGrossAmount>0.00</OwnedPropertyRentalIncomeGrossAmount>
+                  <OwnedPropertyRentalIncomeNetAmount>0.00</OwnedPropertyRentalIncomeNetAmount>
+                  <OwnedPropertySubjectIndicator>false</OwnedPropertySubjectIndicator>
+                </OWNED_PROPERTY_DETAIL>
+                <PROPERTY>
+                  <ADDRESS>
+                    <AddressLineText>9036 Foge Breeze Blvd</AddressLineText>
+                    <CityName>Wesley Chapel</CityName>
+                    <CountryCode>US</CountryCode>
+                    <PostalCode>33545</PostalCode>
+                    <StateCode>FL</StateCode>
+                  </ADDRESS>
+                  <PROPERTY_DETAIL>
+                    <PropertyCurrentUsageType>PrimaryResidence</PropertyCurrentUsageType>
+                    <PropertyUsageType>PrimaryResidence</PropertyUsageType>
+                  </PROPERTY_DETAIL>
+                </PROPERTY>
+              </OWNED_PROPERTY>
+            </ASSET>
+            <ASSET SequenceNumber="2" xlink:label="ASSET_2">
+              <ASSET_DETAIL>
+                <AssetType>RealEstateOwned</AssetType>
+              </ASSET_DETAIL>
+              <OWNED_PROPERTY>
+                <OWNED_PROPERTY_DETAIL>
+                  <OwnedPropertyDispositionStatusType>Retain</OwnedPropertyDispositionStatusType>
+                  <OwnedPropertyMaintenanceExpenseAmount>656.61</OwnedPropertyMaintenanceExpenseAmount>
+                  <OwnedPropertyRentalIncomeNetAmount>-656.61</OwnedPropertyRentalIncomeNetAmount>
+                  <OwnedPropertySubjectIndicator>false</OwnedPropertySubjectIndicator>
+                </OWNED_PROPERTY_DETAIL>
+                <PROPERTY>
+                  <ADDRESS>
+                    <AddressLineText>36110 Jenny Lynne Circle</AddressLineText>
+                    <CityName>Zephyrills</CityName>
+                    <CountryCode>US</CountryCode>
+                    <PostalCode>33541</PostalCode>
+                    <StateCode>FL</StateCode>
+                  </ADDRESS>
+                  <PROPERTY_DETAIL>
+                    <PropertyCurrentUsageType>PrimaryResidence</PropertyCurrentUsageType>
+                    <PropertyUsageType>PrimaryResidence</PropertyUsageType>
+                  </PROPERTY_DETAIL>
+                </PROPERTY>
+              </OWNED_PROPERTY>
+            </ASSET>
+          </ASSETS>
+          <COLLATERALS>
+            <COLLATERAL SequenceNumber="1">
+              <SUBJECT_PROPERTY>
+                <ADDRESS>
+                  <AddressLineText>7200 Wisconsin Avenue</AddressLineText>
+                  <CityName>Bethesda</CityName>
+                  <CountyName>Montgomery</CountyName>
+                  <PostalCode>20814</PostalCode>
+                  <StateCode>MD</StateCode>
+                </ADDRESS>
+                <LOCATION_IDENTIFIER>
+                  <CENSUS_INFORMATION />
+                  <FIPS_INFORMATION>
+                    <FIPSCountyCode>039</FIPSCountyCode>
+                    <FIPSStateNumericCode>34</FIPSStateNumericCode>
+                  </FIPS_INFORMATION>
+                </LOCATION_IDENTIFIER>
+                <PROJECT>
+                  <PROJECT_DETAIL />
+                </PROJECT>
+                <PROPERTY_DETAIL>
+                  <AttachmentType>Detached</AttachmentType>
+                  <ConstructionMethodType>SiteBuilt</ConstructionMethodType>
+                  <FinancedUnitCount>1</FinancedUnitCount>
+                  <PropertyEstateType>FeeSimple</PropertyEstateType>
+                  <PropertyExistingCleanEnergyLienIndicator>false</PropertyExistingCleanEnergyLienIndicator>
+                  <PropertyInProjectIndicator>false</PropertyInProjectIndicator>
+                  <PropertyMixedUsageIndicator>false</PropertyMixedUsageIndicator>
+                  <PropertyStructureBuiltYear>2022</PropertyStructureBuiltYear>
+                  <PropertyUsageType>PrimaryResidence</PropertyUsageType>
+                  <PUDIndicator>false</PUDIndicator>
+                </PROPERTY_DETAIL>
+                <PROPERTY_VALUATIONS>
+                  <PROPERTY_VALUATION SequenceNumber="1">
+                    <PROPERTY_VALUATION_DETAIL>
+                      <PropertyValuationAmount>930000.00</PropertyValuationAmount>
+                    </PROPERTY_VALUATION_DETAIL>
+                  </PROPERTY_VALUATION>
+                </PROPERTY_VALUATIONS>
+                <SALES_CONTRACTS>
+                  <SALES_CONTRACT SequenceNumber="1">
+                    <SALES_CONTRACT_DETAIL>
+                      <SalesContractAmount>0.00</SalesContractAmount>
+                    </SALES_CONTRACT_DETAIL>
+                  </SALES_CONTRACT>
+                </SALES_CONTRACTS>
+              </SUBJECT_PROPERTY>
+            </COLLATERAL>
+          </COLLATERALS>
+          <LIABILITIES>
+            <LIABILITY SequenceNumber="1" xlink:label="LIABILITY_1">
+              <LIABILITY_DETAIL>
+                <LiabilityAccountIdentifier>677078438</LiabilityAccountIdentifier>
+                <LiabilityExclusionIndicator>false</LiabilityExclusionIndicator>
+                <LiabilityMonthlyPaymentAmount>2685.00</LiabilityMonthlyPaymentAmount>
+                <LiabilityPaymentIncludesTaxesInsuranceIndicator>false</LiabilityPaymentIncludesTaxesInsuranceIndicator>
+                <LiabilityPayoffStatusIndicator>false</LiabilityPayoffStatusIndicator>
+                <LiabilityType>MortgageLoan</LiabilityType>
+                <LiabilityUnpaidBalanceAmount>314279.00</LiabilityUnpaidBalanceAmount>
+              </LIABILITY_DETAIL>
+              <LIABILITY_HOLDER>
+                <NAME>
+                  <FullName>Claire Donovan</FullName>
+                </NAME>
+              </LIABILITY_HOLDER>
+            </LIABILITY>
+            <LIABILITY_SUMMARY>
+              <TotalNonSubjectPropertyDebtsToBePaidOffAmount>0.00</TotalNonSubjectPropertyDebtsToBePaidOffAmount>
+              <TotalSubjectPropertyPayoffsAndPaymentsAmount>0.00</TotalSubjectPropertyPayoffsAndPaymentsAmount>
+            </LIABILITY_SUMMARY>
+          </LIABILITIES>
+          <LOANS>
+            <LOAN SequenceNumber="1" LoanRoleType="SubjectLoan" xlink:label="SUBJECT_LOAN_1">
+              <AMORTIZATION>
+                <AMORTIZATION_RULE>
+                  <AmortizationType>Fixed</AmortizationType>
+                  <LoanAmortizationPeriodCount>360</LoanAmortizationPeriodCount>
+                  <LoanAmortizationPeriodType>Month</LoanAmortizationPeriodType>
+                </AMORTIZATION_RULE>
+              </AMORTIZATION>
+              <CLOSING_INFORMATION />
+              <DOCUMENT_SPECIFIC_DATA_SETS>
+                <DOCUMENT_SPECIFIC_DATA_SET SequenceNumber="1">
+                  <URLA>
+                    <URLA_DETAIL>
+                      <EstimatedClosingCostsAmount>48277.92</EstimatedClosingCostsAmount>
+                      <MIAndFundingFeeFinancedAmount>0.00</MIAndFundingFeeFinancedAmount>
+                      <MIAndFundingFeeTotalAmount>0.00</MIAndFundingFeeTotalAmount>
+                      <PrepaidItemsEstimatedAmount>0.00</PrepaidItemsEstimatedAmount>
+                    </URLA_DETAIL>
+                    <URLA_TOTAL>
+                      <EXTENSION>
+                        <OTHER>
+                          <ULAD:URLA_TOTAL_EXTENSION>
+                            <ULAD:URLATotalSellerCreditsAmount>37135.00</ULAD:URLATotalSellerCreditsAmount>
+                          </ULAD:URLA_TOTAL_EXTENSION>
+                        </OTHER>
+                      </EXTENSION>
+                    </URLA_TOTAL>
+                  </URLA>
+                </DOCUMENT_SPECIFIC_DATA_SET>
+              </DOCUMENT_SPECIFIC_DATA_SETS>
+              <HMDA_LOAN>
+                <HMDA_LOAN_DETAIL>
+                  <HMDA_HOEPALoanStatusIndicator>false</HMDA_HOEPALoanStatusIndicator>
+                </HMDA_LOAN_DETAIL>
+              </HMDA_LOAN>
+              <HOUSING_EXPENSES>
+                <HOUSING_EXPENSE SequenceNumber="1">
+                  <HousingExpensePaymentAmount>5311.95</HousingExpensePaymentAmount>
+                  <HousingExpenseTimingType>Proposed</HousingExpenseTimingType>
+                  <HousingExpenseType>FirstMortgagePrincipalAndInterest</HousingExpenseType>
+                </HOUSING_EXPENSE>
+                <HOUSING_EXPENSE SequenceNumber="2">
+                  <HousingExpensePaymentAmount>119.42</HousingExpensePaymentAmount>
+                  <HousingExpenseTimingType>Proposed</HousingExpenseTimingType>
+                  <HousingExpenseType>HomeownersInsurance</HousingExpenseType>
+                </HOUSING_EXPENSE>
+                <HOUSING_EXPENSE SequenceNumber="3">
+                  <HousingExpensePaymentAmount>1250.00</HousingExpensePaymentAmount>
+                  <HousingExpenseTimingType>Proposed</HousingExpenseTimingType>
+                  <HousingExpenseType>RealEstateTax</HousingExpenseType>
+                </HOUSING_EXPENSE>
+              </HOUSING_EXPENSES>
+              <LOAN_DETAIL>
+                <BalloonIndicator>false</BalloonIndicator>
+                <BelowMarketSubordinateFinancingIndicator>false</BelowMarketSubordinateFinancingIndicator>
+                <BuydownTemporarySubsidyFundingIndicator>false</BuydownTemporarySubsidyFundingIndicator>
+                <ConstructionLoanIndicator>false</ConstructionLoanIndicator>
+                <ConversionOfContractForDeedIndicator>false</ConversionOfContractForDeedIndicator>
+                <EnergyRelatedImprovementsIndicator>false</EnergyRelatedImprovementsIndicator>
+                <InterestOnlyIndicator>false</InterestOnlyIndicator>
+                <NegativeAmortizationIndicator>false</NegativeAmortizationIndicator>
+                <PrepaymentPenaltyIndicator>false</PrepaymentPenaltyIndicator>
+                <RenovationLoanIndicator>false</RenovationLoanIndicator>
+              </LOAN_DETAIL>
+              <LOAN_IDENTIFIERS>
+                <LOAN_IDENTIFIER SequenceNumber="1">
+                  <LoanIdentifier>OriginaHighBalanceVariant005-01</LoanIdentifier>
+                  <LoanIdentifierType>UniversalLoan</LoanIdentifierType>
+                </LOAN_IDENTIFIER>
+                <LOAN_IDENTIFIER SequenceNumber="2">
+                  <LoanIdentifier>OriginaHighBalanceVariant005-02</LoanIdentifier>
+                  <LoanIdentifierType>LenderLoan</LoanIdentifierType>
+                </LOAN_IDENTIFIER>
+              </LOAN_IDENTIFIERS>
+              <LOAN_PRODUCT>
+                <LOAN_PRODUCT_DETAIL>
+                  <DiscountPointsTotalAmount>0.00</DiscountPointsTotalAmount>
+                </LOAN_PRODUCT_DETAIL>
+              </LOAN_PRODUCT>
+              <ORIGINATION_SYSTEMS>
+                <ORIGINATION_SYSTEM>
+                  <LoanOriginationSystemName>BytePro</LoanOriginationSystemName>
+                  <LoanOriginationSystemVendorIdentifier>VB030201X</LoanOriginationSystemVendorIdentifier>
+                  <LoanOriginationSystemVersionIdentifier>Enterprise 23.1</LoanOriginationSystemVersionIdentifier>
+                </ORIGINATION_SYSTEM>
+              </ORIGINATION_SYSTEMS>
+              <PURCHASE_CREDITS>
+                <PURCHASE_CREDIT>
+                  <PurchaseCreditAmount>90000.00</PurchaseCreditAmount>
+                  <PurchaseCreditSourceType>BorrowerPaidOutsideClosing</PurchaseCreditSourceType>
+                  <PurchaseCreditType>EarnestMoney</PurchaseCreditType>
+                </PURCHASE_CREDIT>
+              </PURCHASE_CREDITS>
+              <QUALIFICATION />
+              <TERMS_OF_LOAN>
+                <BaseLoanAmount>675000.00</BaseLoanAmount>
+                <LienPriorityType>FirstLien</LienPriorityType>
+                <LoanPurposeType>CashOutRefinance</LoanPurposeType>
+                <MortgageType>Conventional</MortgageType>
+                <NoteRatePercent>7.9990</NoteRatePercent>
+              </TERMS_OF_LOAN>
+            </LOAN>
+          </LOANS>
+          <PARTIES>
+            <PARTY SequenceNumber="1">
+              <INDIVIDUAL>
+                <CONTACT_POINTS>
+                  <CONTACT_POINT>
+                    <CONTACT_POINT_EMAIL>
+                      <ContactPointEmailValue>cassie.cooney@acralending.com</ContactPointEmailValue>
+                    </CONTACT_POINT_EMAIL>
+                  </CONTACT_POINT>
+                  <CONTACT_POINT>
+                    <CONTACT_POINT_TELEPHONE>
+                      <ContactPointTelephoneValue>5458523566</ContactPointTelephoneValue>
+                    </CONTACT_POINT_TELEPHONE>
+                    <CONTACT_POINT_DETAIL>
+                      <ContactPointRoleType>Home</ContactPointRoleType>
+                    </CONTACT_POINT_DETAIL>
+                  </CONTACT_POINT>
+                </CONTACT_POINTS>
+                <NAME>
+                  <FirstName>Claire</FirstName>
+                  <LastName>Donovan</LastName>
+                </NAME>
+              </INDIVIDUAL>
+              <ADDRESSES>
+                <ADDRESS SequenceNumber="1">
+                  <AddressLineText>10655 Birch Street</AddressLineText>
+                  <AddressType>Mailing</AddressType>
+                  <CityName>Burbank</CityName>
+                  <CountryCode>US</CountryCode>
+                  <PostalCode>91502</PostalCode>
+                  <StateCode>CA</StateCode>
+                </ADDRESS>
+              </ADDRESSES>
+              <ROLES>
+                <ROLE SequenceNumber="1" xlink:label="BORROWER_1">
+                  <BORROWER>
+                    <BORROWER_DETAIL>
+                      <BorrowerBirthDate>1982-08-04</BorrowerBirthDate>
+                      <CommunityPropertyStateResidentIndicator>true</CommunityPropertyStateResidentIndicator>
+                      <DependentCount>1</DependentCount>
+                      <MaritalStatusType>Unmarried</MaritalStatusType>
+                      <SelfDeclaredMilitaryServiceIndicator>false</SelfDeclaredMilitaryServiceIndicator>
+                    </BORROWER_DETAIL>
+                    <COUNSELING>
+                      <COUNSELING_EVENTS>
+                        <COUNSELING_EVENT SequenceNumber="1" xlink:label="COUNSELING_EVENT_COUNSELING_1">
+                          <COUNSELING_EVENT_DETAIL>
+                            <CounselingConfirmationIndicator>false</CounselingConfirmationIndicator>
+                            <CounselingType>Counseling</CounselingType>
+                          </COUNSELING_EVENT_DETAIL>
+                        </COUNSELING_EVENT>
+                        <COUNSELING_EVENT SequenceNumber="2" xlink:label="COUNSELING_EVENT_EDUCATION_1">
+                          <COUNSELING_EVENT_DETAIL>
+                            <CounselingConfirmationIndicator>false</CounselingConfirmationIndicator>
+                            <CounselingType>Education</CounselingType>
+                          </COUNSELING_EVENT_DETAIL>
+                        </COUNSELING_EVENT>
+                      </COUNSELING_EVENTS>
+                    </COUNSELING>
+                    <CURRENT_INCOME />
+                    <DECLARATION>
+                      <DECLARATION_DETAIL>
+                        <BankruptcyIndicator>false</BankruptcyIndicator>
+                        <CitizenshipResidencyType>USCitizen</CitizenshipResidencyType>
+                        <HomeownerPastThreeYearsType>No</HomeownerPastThreeYearsType>
+                        <IntentToOccupyType>Yes</IntentToOccupyType>
+                        <OutstandingJudgmentsIndicator>false</OutstandingJudgmentsIndicator>
+                        <PartyToLawsuitIndicator>false</PartyToLawsuitIndicator>
+                        <PresentlyDelinquentIndicator>false</PresentlyDelinquentIndicator>
+                        <PriorPropertyDeedInLieuConveyedIndicator>false</PriorPropertyDeedInLieuConveyedIndicator>
+                        <PriorPropertyForeclosureCompletedIndicator>false</PriorPropertyForeclosureCompletedIndicator>
+                        <PriorPropertyShortSaleCompletedIndicator>false</PriorPropertyShortSaleCompletedIndicator>
+                        <PropertyProposedCleanEnergyLienIndicator>false</PropertyProposedCleanEnergyLienIndicator>
+                        <UndisclosedBorrowedFundsIndicator>false</UndisclosedBorrowedFundsIndicator>
+                        <UndisclosedComakerOfNoteIndicator>false</UndisclosedComakerOfNoteIndicator>
+                        <UndisclosedCreditApplicationIndicator>false</UndisclosedCreditApplicationIndicator>
+                        <UndisclosedMortgageApplicationIndicator>false</UndisclosedMortgageApplicationIndicator>
+                        <EXTENSION>
+                          <OTHER>
+                            <ULAD:DECLARATION_DETAIL_EXTENSION>
+                              <ULAD:SpecialBorrowerSellerRelationshipIndicator>false</ULAD:SpecialBorrowerSellerRelationshipIndicator>
+                            </ULAD:DECLARATION_DETAIL_EXTENSION>
+                          </OTHER>
+                        </EXTENSION>
+                      </DECLARATION_DETAIL>
+                    </DECLARATION>
+                    <DEPENDENTS>
+                      <DEPENDENT SequenceNumber="1">
+                        <DependentAgeYearsCount>0</DependentAgeYearsCount>
+                      </DEPENDENT>
+                    </DEPENDENTS>
+                    <EMPLOYERS>
+                      <EMPLOYER SequenceNumber="1" xlink:label="EMPLOYER_1">
+                        <LEGAL_ENTITY>
+                          <CONTACTS>
+                            <CONTACT>
+                              <CONTACT_POINTS>
+                                <CONTACT_POINT>
+                                  <CONTACT_POINT_TELEPHONE>
+                                    <ContactPointTelephoneValue>2016996377</ContactPointTelephoneValue>
+                                  </CONTACT_POINT_TELEPHONE>
+                                  <CONTACT_POINT_DETAIL />
+                                </CONTACT_POINT>
+                              </CONTACT_POINTS>
+                            </CONTACT>
+                          </CONTACTS>
+                          <LEGAL_ENTITY_DETAIL>
+                            <FullName>Miles Donovan</FullName>
+                          </LEGAL_ENTITY_DETAIL>
+                        </LEGAL_ENTITY>
+                        <ADDRESS>
+                          <AddressLineText>426 Jackson Ave</AddressLineText>
+                          <AddressUnitIdentifier>B</AddressUnitIdentifier>
+                          <CityName>Elizabeth</CityName>
+                          <CountryCode>US</CountryCode>
+                          <PostalCode>07201</PostalCode>
+                          <StateCode>NJ</StateCode>
+                        </ADDRESS>
+                        <EMPLOYMENT>
+                          <EmploymentBorrowerSelfEmployedIndicator>true</EmploymentBorrowerSelfEmployedIndicator>
+                          <EmploymentClassificationType>Primary</EmploymentClassificationType>
+                          <EmploymentMonthlyIncomeAmount>43651.16</EmploymentMonthlyIncomeAmount>
+                          <EmploymentPositionDescription>Owner</EmploymentPositionDescription>
+                          <EmploymentStartDate>2017-08-24</EmploymentStartDate>
+                          <EmploymentStatusType>Current</EmploymentStatusType>
+                          <EmploymentTimeInLineOfWorkMonthsCount>67</EmploymentTimeInLineOfWorkMonthsCount>
+                          <OwnershipInterestType>GreaterThanOrEqualTo25Percent</OwnershipInterestType>
+                          <SpecialBorrowerEmployerRelationshipIndicator>false</SpecialBorrowerEmployerRelationshipIndicator>
+                          <EXTENSION>
+                            <OTHER>
+                              <DU:EMPLOYMENT_EXTENSION>
+                                <DU:ForeignIncomeIndicator>false</DU:ForeignIncomeIndicator>
+                                <DU:SeasonalIncomeIndicator>false</DU:SeasonalIncomeIndicator>
+                              </DU:EMPLOYMENT_EXTENSION>
+                            </OTHER>
+                          </EXTENSION>
+                        </EMPLOYMENT>
+                      </EMPLOYER>
+                    </EMPLOYERS>
+                    <GOVERNMENT_MONITORING>
+                      <GOVERNMENT_MONITORING_DETAIL>
+                        <HMDAEthnicityCollectedBasedOnVisualObservationOrSurnameIndicator>false</HMDAEthnicityCollectedBasedOnVisualObservationOrSurnameIndicator>
+                        <HMDAEthnicityRefusalIndicator>false</HMDAEthnicityRefusalIndicator>
+                        <HMDAGenderCollectedBasedOnVisualObservationOrNameIndicator>false</HMDAGenderCollectedBasedOnVisualObservationOrNameIndicator>
+                        <HMDAGenderRefusalIndicator>false</HMDAGenderRefusalIndicator>
+                        <HMDARaceCollectedBasedOnVisualObservationOrSurnameIndicator>false</HMDARaceCollectedBasedOnVisualObservationOrSurnameIndicator>
+                        <HMDARaceRefusalIndicator>false</HMDARaceRefusalIndicator>
+                        <EXTENSION>
+                          <OTHER>
+                            <ULAD:GOVERNMENT_MONITORING_DETAIL_EXTENSION>
+                              <ULAD:ApplicationTakenMethodType>Internet</ULAD:ApplicationTakenMethodType>
+                              <ULAD:HMDAGenderType>Male</ULAD:HMDAGenderType>
+                            </ULAD:GOVERNMENT_MONITORING_DETAIL_EXTENSION>
+                          </OTHER>
+                        </EXTENSION>
+                      </GOVERNMENT_MONITORING_DETAIL>
+                      <HMDA_RACES>
+                        <HMDA_RACE SequenceNumber="1">
+                          <HMDA_RACE_DETAIL>
+                            <HMDARaceType>White</HMDARaceType>
+                          </HMDA_RACE_DETAIL>
+                        </HMDA_RACE>
+                      </HMDA_RACES>
+                      <EXTENSION>
+                        <OTHER>
+                          <ULAD:GOVERNMENT_MONITORING_EXTENSION>
+                            <ULAD:HMDA_ETHNICITIES>
+                              <ULAD:HMDA_ETHNICITY>
+                                <ULAD:HMDAEthnicityType>HispanicOrLatino</ULAD:HMDAEthnicityType>
+                              </ULAD:HMDA_ETHNICITY>
+                            </ULAD:HMDA_ETHNICITIES>
+                          </ULAD:GOVERNMENT_MONITORING_EXTENSION>
+                        </OTHER>
+                      </EXTENSION>
+                    </GOVERNMENT_MONITORING>
+                    <RESIDENCES>
+                      <RESIDENCE>
+                        <ADDRESS>
+                          <AddressLineText>10655 Birch Street</AddressLineText>
+                          <CityName>Burbank</CityName>
+                          <CountryCode>US</CountryCode>
+                          <PostalCode>91502</PostalCode>
+                          <StateCode>CA</StateCode>
+                        </ADDRESS>
+                        <LANDLORD>
+                          <LANDLORD_DETAIL>
+                            <MonthlyRentAmount>2195.00</MonthlyRentAmount>
+                          </LANDLORD_DETAIL>
+                        </LANDLORD>
+                        <RESIDENCE_DETAIL>
+                          <BorrowerResidencyBasisType>Rent</BorrowerResidencyBasisType>
+                          <BorrowerResidencyDurationMonthsCount>72</BorrowerResidencyDurationMonthsCount>
+                          <BorrowerResidencyType>Current</BorrowerResidencyType>
+                        </RESIDENCE_DETAIL>
+                      </RESIDENCE>
+                    </RESIDENCES>
+                  </BORROWER>
+                  <ROLE_DETAIL>
+                    <PartyRoleType>Borrower</PartyRoleType>
+                  </ROLE_DETAIL>
+                </ROLE>
+              </ROLES>
+              <TAXPAYER_IDENTIFIERS>
+                <TAXPAYER_IDENTIFIER SequenceNumber="1">
+                  <TaxpayerIdentifierType>SocialSecurityNumber</TaxpayerIdentifierType>
+                  <TaxpayerIdentifierValue>900030009</TaxpayerIdentifierValue>
+                </TAXPAYER_IDENTIFIER>
+              </TAXPAYER_IDENTIFIERS>
+            </PARTY>
+            <PARTY SequenceNumber="2">
+              <INDIVIDUAL>
+                <NAME>
+                  <FullName>Miles Donovan</FullName>
+                </NAME>
+              </INDIVIDUAL>
+              <ROLES>
+                <ROLE SequenceNumber="1" xlink:label="PROPERTY_OWNER_1">
+                  <PROPERTY_OWNER>
+                    <PropertyOwnerStatusType>Proposed</PropertyOwnerStatusType>
+                  </PROPERTY_OWNER>
+                  <ROLE_DETAIL>
+                    <PartyRoleType>PropertyOwner</PartyRoleType>
+                  </ROLE_DETAIL>
+                </ROLE>
+              </ROLES>
+            </PARTY>
+            <PARTY SequenceNumber="3">
+              <LEGAL_ENTITY>
+                <LEGAL_ENTITY_DETAIL>
+                  <FullName>Miles Donovan</FullName>
+                </LEGAL_ENTITY_DETAIL>
+              </LEGAL_ENTITY>
+              <ADDRESSES>
+                <ADDRESS SequenceNumber="1">
+                  <AddressLineText>330 Passaic Avenue Suite 204</AddressLineText>
+                  <CityName>Fairfield</CityName>
+                  <PostalCode>07004</PostalCode>
+                  <StateCode>NJ</StateCode>
+                </ADDRESS>
+              </ADDRESSES>
+              <ROLES>
+                <ROLE SequenceNumber="1" xlink:label="LOAN_ORIGINATION_COMPANY_1">
+                  <LICENSES>
+                    <LICENSE SequenceNumber="1">
+                      <LICENSE_DETAIL>
+                        <LicenseAuthorityLevelType>Private</LicenseAuthorityLevelType>
+                        <LicenseIdentifier>176743</LicenseIdentifier>
+                      </LICENSE_DETAIL>
+                    </LICENSE>
+                    <LICENSE SequenceNumber="2">
+                      <LICENSE_DETAIL>
+                        <LicenseAuthorityLevelType>PublicState</LicenseAuthorityLevelType>
+                        <LicenseIdentifier>9826392</LicenseIdentifier>
+                      </LICENSE_DETAIL>
+                    </LICENSE>
+                  </LICENSES>
+                  <ROLE_DETAIL>
+                    <PartyRoleType>LoanOriginationCompany</PartyRoleType>
+                  </ROLE_DETAIL>
+                </ROLE>
+              </ROLES>
+            </PARTY>
+            <PARTY SequenceNumber="4">
+              <INDIVIDUAL>
+                <CONTACT_POINTS>
+                  <CONTACT_POINT>
+                    <CONTACT_POINT_EMAIL>
+                      <ContactPointEmailValue>kmalcolm@ahmcloans.com; eacevedo@ahmcloans.com; hasams@ahmcloans.com</ContactPointEmailValue>
+                    </CONTACT_POINT_EMAIL>
+                  </CONTACT_POINT>
+                  <CONTACT_POINT>
+                    <CONTACT_POINT_TELEPHONE>
+                      <ContactPointTelephoneValue>8484685712</ContactPointTelephoneValue>
+                    </CONTACT_POINT_TELEPHONE>
+                    <CONTACT_POINT_DETAIL />
+                  </CONTACT_POINT>
+                </CONTACT_POINTS>
+                <NAME>
+                  <FirstName>Miles</FirstName>
+                  <LastName>Donovan</LastName>
+                </NAME>
+              </INDIVIDUAL>
+              <ROLES>
+                <ROLE SequenceNumber="1" xlink:label="LOAN_ORIGINATOR_1">
+                  <LICENSES>
+                    <LICENSE SequenceNumber="1">
+                      <LICENSE_DETAIL>
+                        <LicenseAuthorityLevelType>Private</LicenseAuthorityLevelType>
+                        <LicenseIdentifier>1904512</LicenseIdentifier>
+                      </LICENSE_DETAIL>
+                    </LICENSE>
+                    <LICENSE SequenceNumber="2">
+                      <LICENSE_DETAIL>
+                        <LicenseAuthorityLevelType>PublicState</LicenseAuthorityLevelType>
+                        <LicenseIdentifier>N/A</LicenseIdentifier>
+                      </LICENSE_DETAIL>
+                    </LICENSE>
+                  </LICENSES>
+                  <ROLE_DETAIL>
+                    <PartyRoleType>LoanOriginator</PartyRoleType>
+                  </ROLE_DETAIL>
+                </ROLE>
+              </ROLES>
+            </PARTY>
+          </PARTIES>
+          <RELATIONSHIPS>
+            <RELATIONSHIP SequenceNumber="1" xlink:from="ASSET_1" xlink:to="BORROWER_1" xlink:arcrole="urn:fdc:mismo.org:2009:residential/ASSET_IsAssociatedWith_ROLE" />
+            <RELATIONSHIP SequenceNumber="2" xlink:from="ASSET_1" xlink:to="LIABILITY_1" xlink:arcrole="urn:fdc:mismo.org:2009:residential/ASSET_IsAssociatedWith_LIABILITY" />
+            <RELATIONSHIP SequenceNumber="3" xlink:from="ASSET_2" xlink:to="BORROWER_1" xlink:arcrole="urn:fdc:mismo.org:2009:residential/ASSET_IsAssociatedWith_ROLE" />
+            <RELATIONSHIP SequenceNumber="4" xlink:from="LIABILITY_1" xlink:to="BORROWER_1" xlink:arcrole="urn:fdc:mismo.org:2009:residential/LIABILITY_IsAssociatedWith_ROLE" />
+          </RELATIONSHIPS>
+        </DEAL>
+      </DEALS>
+    </DEAL_SET>
+  </DEAL_SETS>
+</MESSAGE>

@@ -56,7 +56,7 @@ class BorrowerBase(BaseModel):
 
 
 class BorrowerCreate(BorrowerBase):
-    tenant_id: UUID
+    tenant_id: Optional[UUID] = None  # ignored; always derived from JWT
     loan_id: UUID
     # ssn_encrypted is intentionally excluded from the API surface.
     # Encryption must happen at the service layer before DB write.

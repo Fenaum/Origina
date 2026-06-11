@@ -1,6 +1,9 @@
+from datetime import datetime
+from typing import Any, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
@@ -56,3 +59,69 @@ def get_snapshot(
     if not snap or snap.tenant_id != current_user.tenant_id:
         raise HTTPException(status_code=404, detail="Snapshot not found")
     return snap
+
+
+# ── Field-level history ────────────────────────────────────────────────────────
+
+class FieldHistoryEntry(BaseModel):
+    model_config = ConfigDict(from_attributes=False)
+
+    audit_log_id: UUID
+    entity_type: str
+    entity_id: UUID
+    action: str
+    field_key: str
+    old_value: Optional[Any]
+    new_value: Optional[Any]
+    changed_by: Optional[UUID]
+    changed_at: datetime
+
+
+@router.get("/loans/{loan_id}/fields/{field_key}/history", response_model=list[FieldHistoryEntry])
+def get_field_history(
+    loan_id: UUID,
+    field_key: str,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Returns the audit history for a specific field on any entity associated with a loan.
+    Searches audit_log entries where entity_id == loan_id OR related entity_id,
+    filtered to entries where diff contains field_key.
+
+    TODO: Extend to search borrower, financials, and terms entity IDs for deeper history.
+    Currently only queries audit entries with entity_id == loan_id.
+    """
+    logs = (
+        db.query(AuditLog)
+        .filter(
+            AuditLog.tenant_id == current_user.tenant_id,
+            AuditLog.entity_id == loan_id,
+        )
+        .order_by(AuditLog.occurred_at.desc())
+        .limit(200)
+        .all()
+    )
+
+    results: list[FieldHistoryEntry] = []
+    for log in logs:
+        diff = log.diff or {}
+        if field_key in diff:
+            change = diff[field_key]
+            results.append(
+                FieldHistoryEntry(
+                    audit_log_id=log.id,
+                    entity_type=log.entity_type,
+                    entity_id=log.entity_id,
+                    action=log.action,
+                    field_key=field_key,
+                    old_value=change.get("old") if isinstance(change, dict) else None,
+                    new_value=change.get("new") if isinstance(change, dict) else change,
+                    changed_by=log.actor_user_id,
+                    changed_at=log.occurred_at,
+                )
+            )
+        if len(results) >= limit:
+            break
+    return results

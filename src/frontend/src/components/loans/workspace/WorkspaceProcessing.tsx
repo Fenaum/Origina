@@ -1,8 +1,6 @@
-// Processing workspace module.
-// Tracks processor-owned milestones, target close date, document review state,
-// and working notes until these fields are backed by the workflow API.
 import { useState } from "react";
 import { WorkspaceSaveBar } from "@/components/loans/workspace/WorkspaceSaveBar";
+import { WorkspaceFieldContextMenu } from "@/components/loans/workspace/WorkspaceFieldContextMenu";
 import type { LoanSummary } from "@/types/loan";
 
 type Props = { loan: LoanSummary };
@@ -60,7 +58,6 @@ export function WorkspaceProcessing({ loan }: Props) {
   const progress = Math.round((completedCount / MILESTONES.length) * 100);
 
   function setField(patch: Partial<ProcessingForm>) {
-    // Patch-based updates keep each field handler small and explicit.
     setForm((f) => ({ ...f, ...patch }));
   }
 
@@ -72,7 +69,6 @@ export function WorkspaceProcessing({ loan }: Props) {
   }
 
   async function handleSave() {
-    // Mock save mirrors the eventual async API contract and drives the save bar.
     setIsSaving(true);
     setSaveError(null);
     try {
@@ -129,40 +125,57 @@ export function WorkspaceProcessing({ loan }: Props) {
         <section className="proc-section">
           <h3 className="proc-section-title">Status &amp; Dates</h3>
           <div className="proc-field-grid">
-            <div className="proc-field">
-              <label className="proc-label">Target Close Date</label>
-              <input
-                type="date"
-                className="proc-input"
-                value={form.targetCloseDate}
-                onChange={(e) => setField({ targetCloseDate: e.target.value })}
-              />
-            </div>
-            <div className="proc-field">
-              <label className="proc-label">Document Review</label>
-              <select
-                className="proc-select"
-                value={form.docReviewStatus}
-                onChange={(e) => setField({ docReviewStatus: e.target.value as ProcessingForm["docReviewStatus"] })}
-              >
-                <option value="not_started">Not Started</option>
-                <option value="in_progress">In Progress</option>
-                <option value="complete">Complete</option>
-              </select>
-            </div>
+            <WorkspaceFieldContextMenu
+              loanId={loan.id}
+              meta={{ label: "Target Close Date", apiKey: "target_close_date", dbColumn: "target_close_date", table: "loans", fieldType: "date", required: false, description: "Processor-set target funding date." }}
+            >
+              <div className="proc-field">
+                <label className="proc-label">Target Close Date</label>
+                <input
+                  type="date"
+                  className="proc-input"
+                  value={form.targetCloseDate}
+                  onChange={(e) => setField({ targetCloseDate: e.target.value })}
+                />
+              </div>
+            </WorkspaceFieldContextMenu>
+            <WorkspaceFieldContextMenu
+              loanId={loan.id}
+              meta={{ label: "Document Review", apiKey: "doc_review_status", dbColumn: "doc_review_status", table: "loans", fieldType: "enum", required: false }}
+            >
+              <div className="proc-field">
+                <label className="proc-label">Document Review</label>
+                <select
+                  className="proc-select"
+                  value={form.docReviewStatus}
+                  onChange={(e) => setField({ docReviewStatus: e.target.value as ProcessingForm["docReviewStatus"] })}
+                >
+                  <option value="not_started">Not Started</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="complete">Complete</option>
+                </select>
+              </div>
+            </WorkspaceFieldContextMenu>
           </div>
         </section>
 
         {/* Processor notes */}
         <section className="proc-section">
           <h3 className="proc-section-title">Processor Notes</h3>
-          <textarea
-            className="proc-textarea"
-            rows={5}
-            placeholder="Processing notes, follow-up items, outstanding tasks…"
-            value={form.processorNotes}
-            onChange={(e) => setField({ processorNotes: e.target.value })}
-          />
+          <WorkspaceFieldContextMenu
+            loanId={loan.id}
+            meta={{ label: "Processor Notes", apiKey: "processor_notes", dbColumn: "processor_notes", table: "loans", fieldType: "text", required: false }}
+          >
+            <div className="proc-field proc-field--full">
+              <textarea
+                className="proc-textarea"
+                rows={5}
+                placeholder="Processing notes, follow-up items, outstanding tasks…"
+                value={form.processorNotes}
+                onChange={(e) => setField({ processorNotes: e.target.value })}
+              />
+            </div>
+          </WorkspaceFieldContextMenu>
         </section>
       </div>
     </div>

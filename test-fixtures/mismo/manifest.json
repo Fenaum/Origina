@@ -1,0 +1,341 @@
+{
+  "generated_by": "test-fixtures/mismo/generate_mismo_variants.py",
+  "note": "Synthetic MISMO fixtures for parser and workflow testing. Fake borrower and tax ID data only.",
+  "sources": [
+    "CommercialTest5.xml",
+    "ConsumerTest3.xml",
+    "ConsumerTest7.xml"
+  ],
+  "variants": [
+    {
+      "fixture_id": "OriginaCommercialVariant001",
+      "source": "CommercialTest5.xml",
+      "description": "DSCR-style investment refinance in Texas",
+      "created_at": "2026-01-12T09:15:00-06:00",
+      "borrowers": [
+        "Jordan Rivers",
+        "Maya Rivers"
+      ],
+      "address": "4401 Travis Street",
+      "city": "Dallas",
+      "county": "Dallas",
+      "state": "TX",
+      "postal_code": "75205",
+      "loan_amount": 525000.0,
+      "property_value": 720000.0,
+      "purchase_price": 0.0,
+      "purpose": "Refinance",
+      "occupancy": "Investment",
+      "mortgage_type": "Conventional",
+      "file": "generated/OriginaCommercialVariant001.xml"
+    },
+    {
+      "fixture_id": "OriginaCommercialVariant002",
+      "source": "CommercialTest5.xml",
+      "description": "Investment refinance in Florida with larger balance",
+      "created_at": "2026-01-18T11:40:00-05:00",
+      "borrowers": [
+        "Luis Herrera",
+        "Camila Herrera"
+      ],
+      "address": "811 Brickell Avenue",
+      "city": "Miami",
+      "county": "Miami-Dade",
+      "state": "FL",
+      "postal_code": "33131",
+      "loan_amount": 780000.0,
+      "property_value": 1040000.0,
+      "purchase_price": 0.0,
+      "purpose": "Refinance",
+      "occupancy": "Investment",
+      "mortgage_type": "Conventional",
+      "file": "generated/OriginaCommercialVariant002.xml"
+    },
+    {
+      "fixture_id": "OriginaCommercialVariant003",
+      "source": "CommercialTest5.xml",
+      "description": "Cash-out investment refinance in Georgia",
+      "created_at": "2026-02-02T14:05:00-05:00",
+      "borrowers": [
+        "Priya Shah",
+        "Nikhil Shah"
+      ],
+      "address": "1280 Peachtree Street NE",
+      "city": "Atlanta",
+      "county": "Fulton",
+      "state": "GA",
+      "postal_code": "30309",
+      "loan_amount": 650000.0,
+      "property_value": 915000.0,
+      "purchase_price": 0.0,
+      "purpose": "CashOutRefinance",
+      "occupancy": "Investment",
+      "mortgage_type": "Conventional",
+      "file": "generated/OriginaCommercialVariant003.xml"
+    },
+    {
+      "fixture_id": "OriginaCommercialVariant004",
+      "source": "CommercialTest5.xml",
+      "description": "Investment purchase in North Carolina",
+      "created_at": "2026-02-20T10:25:00-05:00",
+      "borrowers": [
+        "Elena Morgan",
+        "Victor Morgan"
+      ],
+      "address": "201 South College Street",
+      "city": "Charlotte",
+      "county": "Mecklenburg",
+      "state": "NC",
+      "postal_code": "28202",
+      "loan_amount": 455000.0,
+      "property_value": 675000.0,
+      "purchase_price": 675000.0,
+      "purpose": "Purchase",
+      "occupancy": "Investment",
+      "mortgage_type": "Conventional",
+      "file": "generated/OriginaCommercialVariant004.xml"
+    },
+    {
+      "fixture_id": "OriginaCommercialVariant005",
+      "source": "CommercialTest5.xml",
+      "description": "High-balance investment refinance in Arizona",
+      "created_at": "2026-03-04T08:55:00-07:00",
+      "borrowers": [
+        "Noah Bennett",
+        "Avery Bennett"
+      ],
+      "address": "7120 East Camelback Road",
+      "city": "Scottsdale",
+      "county": "Maricopa",
+      "state": "AZ",
+      "postal_code": "85251",
+      "loan_amount": 935000.0,
+      "property_value": 1240000.0,
+      "purchase_price": 0.0,
+      "purpose": "Refinance",
+      "occupancy": "Investment",
+      "mortgage_type": "Conventional",
+      "file": "generated/OriginaCommercialVariant005.xml"
+    },
+    {
+      "fixture_id": "OriginaConsumerVariant001",
+      "source": "ConsumerTest3.xml",
+      "description": "Primary residence purchase in Colorado",
+      "created_at": "2026-01-09T13:35:00-07:00",
+      "borrowers": [
+        "Sofia Alvarez",
+        "Mateo Alvarez"
+      ],
+      "address": "1725 Blake Street",
+      "city": "Denver",
+      "county": "Denver",
+      "state": "CO",
+      "postal_code": "80202",
+      "loan_amount": 365000.0,
+      "property_value": 500000.0,
+      "purchase_price": 500000.0,
+      "purpose": "Purchase",
+      "occupancy": "PrimaryResidence",
+      "mortgage_type": "Conventional",
+      "file": "generated/OriginaConsumerVariant001.xml"
+    },
+    {
+      "fixture_id": "OriginaConsumerVariant002",
+      "source": "ConsumerTest3.xml",
+      "description": "Primary residence purchase in Texas",
+      "created_at": "2026-01-26T15:20:00-06:00",
+      "borrowers": [
+        "Marcus Lee",
+        "Naomi Lee"
+      ],
+      "address": "98 San Jacinto Boulevard",
+      "city": "Austin",
+      "county": "Travis",
+      "state": "TX",
+      "postal_code": "78701",
+      "loan_amount": 420000.0,
+      "property_value": 560000.0,
+      "purchase_price": 560000.0,
+      "purpose": "Purchase",
+      "occupancy": "PrimaryResidence",
+      "mortgage_type": "Conventional",
+      "file": "generated/OriginaConsumerVariant002.xml"
+    },
+    {
+      "fixture_id": "OriginaConsumerVariant003",
+      "source": "ConsumerTest3.xml",
+      "description": "Primary residence purchase in Washington",
+      "created_at": "2026-02-08T09:45:00-08:00",
+      "borrowers": [
+        "Grace Kim",
+        "Daniel Kim"
+      ],
+      "address": "1201 3rd Avenue",
+      "city": "Seattle",
+      "county": "King",
+      "state": "WA",
+      "postal_code": "98101",
+      "loan_amount": 640000.0,
+      "property_value": 820000.0,
+      "purchase_price": 820000.0,
+      "purpose": "Purchase",
+      "occupancy": "PrimaryResidence",
+      "mortgage_type": "Conventional",
+      "file": "generated/OriginaConsumerVariant003.xml"
+    },
+    {
+      "fixture_id": "OriginaConsumerVariant004",
+      "source": "ConsumerTest3.xml",
+      "description": "Primary residence refinance in Oregon",
+      "created_at": "2026-02-14T12:10:00-08:00",
+      "borrowers": [
+        "Ethan Brooks",
+        "Harper Brooks"
+      ],
+      "address": "900 SW 5th Avenue",
+      "city": "Portland",
+      "county": "Multnomah",
+      "state": "OR",
+      "postal_code": "97204",
+      "loan_amount": 310000.0,
+      "property_value": 470000.0,
+      "purchase_price": 0.0,
+      "purpose": "Refinance",
+      "occupancy": "PrimaryResidence",
+      "mortgage_type": "Conventional",
+      "file": "generated/OriginaConsumerVariant004.xml"
+    },
+    {
+      "fixture_id": "OriginaConsumerVariant005",
+      "source": "ConsumerTest3.xml",
+      "description": "Primary residence purchase in Illinois",
+      "created_at": "2026-03-01T16:30:00-06:00",
+      "borrowers": [
+        "Amara Johnson",
+        "Caleb Johnson"
+      ],
+      "address": "233 South Wacker Drive",
+      "city": "Chicago",
+      "county": "Cook",
+      "state": "IL",
+      "postal_code": "60606",
+      "loan_amount": 510000.0,
+      "property_value": 690000.0,
+      "purchase_price": 690000.0,
+      "purpose": "Purchase",
+      "occupancy": "PrimaryResidence",
+      "mortgage_type": "Conventional",
+      "file": "generated/OriginaConsumerVariant005.xml"
+    },
+    {
+      "fixture_id": "OriginaHighBalanceVariant001",
+      "source": "ConsumerTest7.xml",
+      "description": "Second home purchase in New Jersey",
+      "created_at": "2026-01-15T10:05:00-05:00",
+      "borrowers": [
+        "Owen Carter",
+        "Lena Carter"
+      ],
+      "address": "180 River Road",
+      "city": "Summit",
+      "county": "Union",
+      "state": "NJ",
+      "postal_code": "07901",
+      "loan_amount": 725000.0,
+      "property_value": 945000.0,
+      "purchase_price": 945000.0,
+      "purpose": "Purchase",
+      "occupancy": "SecondHome",
+      "mortgage_type": "Conventional",
+      "file": "generated/OriginaHighBalanceVariant001.xml"
+    },
+    {
+      "fixture_id": "OriginaHighBalanceVariant002",
+      "source": "ConsumerTest7.xml",
+      "description": "Primary residence purchase in California",
+      "created_at": "2026-01-29T09:25:00-08:00",
+      "borrowers": [
+        "Mila Patel",
+        "Arjun Patel"
+      ],
+      "address": "525 Market Street",
+      "city": "San Francisco",
+      "county": "San Francisco",
+      "state": "CA",
+      "postal_code": "94105",
+      "loan_amount": 975000.0,
+      "property_value": 1225000.0,
+      "purchase_price": 1225000.0,
+      "purpose": "Purchase",
+      "occupancy": "PrimaryResidence",
+      "mortgage_type": "Conventional",
+      "file": "generated/OriginaHighBalanceVariant002.xml"
+    },
+    {
+      "fixture_id": "OriginaHighBalanceVariant003",
+      "source": "ConsumerTest7.xml",
+      "description": "Investment purchase in Florida",
+      "created_at": "2026-02-11T14:15:00-05:00",
+      "borrowers": [
+        "Jasper Cole",
+        "Iris Cole"
+      ],
+      "address": "777 South Flagler Drive",
+      "city": "West Palm Beach",
+      "county": "Palm Beach",
+      "state": "FL",
+      "postal_code": "33401",
+      "loan_amount": 840000.0,
+      "property_value": 1080000.0,
+      "purchase_price": 1080000.0,
+      "purpose": "Purchase",
+      "occupancy": "Investment",
+      "mortgage_type": "Conventional",
+      "file": "generated/OriginaHighBalanceVariant003.xml"
+    },
+    {
+      "fixture_id": "OriginaHighBalanceVariant004",
+      "source": "ConsumerTest7.xml",
+      "description": "Second home refinance in Virginia",
+      "created_at": "2026-02-24T11:50:00-05:00",
+      "borrowers": [
+        "Nora Mitchell",
+        "Eli Mitchell"
+      ],
+      "address": "1199 North Fairfax Street",
+      "city": "Alexandria",
+      "county": "Alexandria",
+      "state": "VA",
+      "postal_code": "22314",
+      "loan_amount": 590000.0,
+      "property_value": 790000.0,
+      "purchase_price": 0.0,
+      "purpose": "Refinance",
+      "occupancy": "SecondHome",
+      "mortgage_type": "Conventional",
+      "file": "generated/OriginaHighBalanceVariant004.xml"
+    },
+    {
+      "fixture_id": "OriginaHighBalanceVariant005",
+      "source": "ConsumerTest7.xml",
+      "description": "Primary residence cash-out refinance in Maryland",
+      "created_at": "2026-03-07T13:05:00-05:00",
+      "borrowers": [
+        "Claire Donovan",
+        "Miles Donovan"
+      ],
+      "address": "7200 Wisconsin Avenue",
+      "city": "Bethesda",
+      "county": "Montgomery",
+      "state": "MD",
+      "postal_code": "20814",
+      "loan_amount": 675000.0,
+      "property_value": 930000.0,
+      "purchase_price": 0.0,
+      "purpose": "CashOutRefinance",
+      "occupancy": "PrimaryResidence",
+      "mortgage_type": "Conventional",
+      "file": "generated/OriginaHighBalanceVariant005.xml"
+    }
+  ]
+}

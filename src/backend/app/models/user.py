@@ -32,7 +32,11 @@ class User(BaseModel):
     roles: Mapped[list["UserRole"]] = relationship("UserRole", back_populates="user")
     party_links: Mapped[list["UserParty"]] = relationship("UserParty", back_populates="user")
     assigned_loans: Mapped[list["Loan"]] = relationship("Loan", back_populates="assignee")
-    uploaded_documents: Mapped[list["Document"]] = relationship("Document", back_populates="uploader")
+    uploaded_documents: Mapped[list["Document"]] = relationship(
+        "Document",
+        foreign_keys="Document.uploaded_by",
+        back_populates="uploader",
+    )
     requested_exceptions: Mapped[list["LoanException"]] = relationship(
         "LoanException",
         foreign_keys="LoanException.requested_by",

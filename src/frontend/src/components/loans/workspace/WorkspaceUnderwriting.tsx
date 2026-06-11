@@ -1,8 +1,6 @@
-// Underwriting workspace module.
-// Captures underwriter decision data, risk overrides, and narrative notes while
-// the backend decisioning/conditions workflow is still being expanded.
 import { useState } from "react";
 import { WorkspaceSaveBar } from "@/components/loans/workspace/WorkspaceSaveBar";
+import { WorkspaceFieldContextMenu } from "@/components/loans/workspace/WorkspaceFieldContextMenu";
 import type { LoanSummary } from "@/types/loan";
 
 type Props = { loan: LoanSummary };
@@ -47,12 +45,10 @@ export function WorkspaceUnderwriting({ loan }: Props) {
   const isDirty = JSON.stringify(form) !== JSON.stringify(saved);
 
   function set(patch: Partial<UwForm>) {
-    // Partial updates keep individual input handlers from duplicating form state.
     setForm((f) => ({ ...f, ...patch }));
   }
 
   async function handleSave() {
-    // Mock save preserves the UX contract for dirty-state and save feedback.
     setIsSaving(true);
     setSaveError(null);
     try {
@@ -66,10 +62,6 @@ export function WorkspaceUnderwriting({ loan }: Props) {
     }
   }
 
-  function handleCancel() {
-    setForm(saved);
-  }
-
   return (
     <div className="uw-wrapper">
       <WorkspaceSaveBar
@@ -80,7 +72,7 @@ export function WorkspaceUnderwriting({ loan }: Props) {
         saveError={saveError}
         saveCount={saveCount}
         onSave={handleSave}
-        onCancel={handleCancel}
+        onCancel={() => setForm(saved)}
       />
 
       <div className="uw-content">
@@ -88,37 +80,52 @@ export function WorkspaceUnderwriting({ loan }: Props) {
         <section className="uw-section">
           <h3 className="uw-section-title">Credit Decision</h3>
           <div className="uw-field-grid">
-            <div className="uw-field">
-              <label className="uw-label">Decision</label>
-              <select
-                className="uw-select"
-                value={form.decision}
-                onChange={(e) => set({ decision: e.target.value as UwDecision })}
-              >
-                {(Object.keys(DECISION_LABELS) as UwDecision[]).map((k) => (
-                  <option key={k} value={k}>{DECISION_LABELS[k]}</option>
-                ))}
-              </select>
-            </div>
-            <div className="uw-field">
-              <label className="uw-label">Decision Date</label>
-              <input
-                type="date"
-                className="uw-input"
-                value={form.decisionDate}
-                onChange={(e) => set({ decisionDate: e.target.value })}
-              />
-            </div>
-            <div className="uw-field">
-              <label className="uw-label">Credit Score</label>
-              <input
-                type="number"
-                className="uw-input"
-                placeholder="e.g. 720"
-                value={form.creditScore}
-                onChange={(e) => set({ creditScore: e.target.value })}
-              />
-            </div>
+            <WorkspaceFieldContextMenu
+              loanId={loan.id}
+              meta={{ label: "Decision", apiKey: "uw_decision", dbColumn: "uw_decision", table: "loans", fieldType: "enum", required: false }}
+            >
+              <div className="uw-field">
+                <label className="uw-label">Decision</label>
+                <select
+                  className="uw-select"
+                  value={form.decision}
+                  onChange={(e) => set({ decision: e.target.value as UwDecision })}
+                >
+                  {(Object.keys(DECISION_LABELS) as UwDecision[]).map((k) => (
+                    <option key={k} value={k}>{DECISION_LABELS[k]}</option>
+                  ))}
+                </select>
+              </div>
+            </WorkspaceFieldContextMenu>
+            <WorkspaceFieldContextMenu
+              loanId={loan.id}
+              meta={{ label: "Decision Date", apiKey: "uw_decision_date", dbColumn: "uw_decision_date", table: "loans", fieldType: "date", required: false }}
+            >
+              <div className="uw-field">
+                <label className="uw-label">Decision Date</label>
+                <input
+                  type="date"
+                  className="uw-input"
+                  value={form.decisionDate}
+                  onChange={(e) => set({ decisionDate: e.target.value })}
+                />
+              </div>
+            </WorkspaceFieldContextMenu>
+            <WorkspaceFieldContextMenu
+              loanId={loan.id}
+              meta={{ label: "Credit Score", apiKey: "fico_score", dbColumn: "fico_score", table: "loan_financials", fieldType: "integer", required: false, description: "Representative FICO score used for underwriting." }}
+            >
+              <div className="uw-field">
+                <label className="uw-label">Credit Score</label>
+                <input
+                  type="number"
+                  className="uw-input"
+                  placeholder="e.g. 720"
+                  value={form.creditScore}
+                  onChange={(e) => set({ creditScore: e.target.value })}
+                />
+              </div>
+            </WorkspaceFieldContextMenu>
           </div>
         </section>
 
@@ -126,54 +133,74 @@ export function WorkspaceUnderwriting({ loan }: Props) {
         <section className="uw-section">
           <h3 className="uw-section-title">Risk Analysis</h3>
           <div className="uw-field-grid">
-            <div className="uw-field">
-              <label className="uw-label">LTV Override (%)</label>
-              <input
-                type="number"
-                className="uw-input"
-                placeholder="e.g. 80.00"
-                value={form.ltv_override}
-                onChange={(e) => set({ ltv_override: e.target.value })}
-              />
-              <span className="uw-hint">Leave blank to use calculated LTV</span>
-            </div>
-            <div className="uw-field">
-              <label className="uw-label">DTI Override (%)</label>
-              <input
-                type="number"
-                className="uw-input"
-                placeholder="e.g. 43.00"
-                value={form.dti_override}
-                onChange={(e) => set({ dti_override: e.target.value })}
-              />
-              <span className="uw-hint">Leave blank to use calculated DTI</span>
-            </div>
+            <WorkspaceFieldContextMenu
+              loanId={loan.id}
+              meta={{ label: "LTV Override", apiKey: "ltv", dbColumn: "ltv", table: "loan_financials", fieldType: "numeric(5,4)", required: false, description: "Loan-to-value ratio. Stored as decimal (e.g. 0.80 = 80%)." }}
+            >
+              <div className="uw-field">
+                <label className="uw-label">LTV Override (%)</label>
+                <input
+                  type="number"
+                  className="uw-input"
+                  placeholder="e.g. 80.00"
+                  value={form.ltv_override}
+                  onChange={(e) => set({ ltv_override: e.target.value })}
+                />
+                <span className="uw-hint">Leave blank to use calculated LTV</span>
+              </div>
+            </WorkspaceFieldContextMenu>
+            <WorkspaceFieldContextMenu
+              loanId={loan.id}
+              meta={{ label: "DTI Override", apiKey: "debt_to_income", dbColumn: "debt_to_income", table: "loan_financials", fieldType: "numeric(5,4)", required: false, description: "Debt-to-income ratio. Stored as decimal (e.g. 0.43 = 43%)." }}
+            >
+              <div className="uw-field">
+                <label className="uw-label">DTI Override (%)</label>
+                <input
+                  type="number"
+                  className="uw-input"
+                  placeholder="e.g. 43.00"
+                  value={form.dti_override}
+                  onChange={(e) => set({ dti_override: e.target.value })}
+                />
+                <span className="uw-hint">Leave blank to use calculated DTI</span>
+              </div>
+            </WorkspaceFieldContextMenu>
           </div>
-          <div className="uw-field uw-field--full">
-            <label className="uw-label">Risk Notes</label>
-            <textarea
-              className="uw-textarea"
-              rows={3}
-              placeholder="Notable risk factors, mitigants, or guideline deviations…"
-              value={form.riskNotes}
-              onChange={(e) => set({ riskNotes: e.target.value })}
-            />
-          </div>
+          <WorkspaceFieldContextMenu
+            loanId={loan.id}
+            meta={{ label: "Risk Notes", apiKey: "risk_notes", dbColumn: "risk_notes", table: "loans", fieldType: "text", required: false, description: "Notable risk factors, mitigants, or guideline deviations." }}
+          >
+            <div className="uw-field uw-field--full">
+              <label className="uw-label">Risk Notes</label>
+              <textarea
+                className="uw-textarea"
+                rows={3}
+                placeholder="Notable risk factors, mitigants, or guideline deviations…"
+                value={form.riskNotes}
+                onChange={(e) => set({ riskNotes: e.target.value })}
+              />
+            </div>
+          </WorkspaceFieldContextMenu>
         </section>
 
         {/* UW Notes */}
         <section className="uw-section">
           <h3 className="uw-section-title">Underwriter Notes</h3>
-          <div className="uw-field uw-field--full">
-            <label className="uw-label">Internal Notes</label>
-            <textarea
-              className="uw-textarea"
-              rows={5}
-              placeholder="Full underwriting narrative, income analysis, asset review…"
-              value={form.uwNotes}
-              onChange={(e) => set({ uwNotes: e.target.value })}
-            />
-          </div>
+          <WorkspaceFieldContextMenu
+            loanId={loan.id}
+            meta={{ label: "UW Notes", apiKey: "uw_notes", dbColumn: "uw_notes", table: "loans", fieldType: "text", required: false, description: "Full underwriting narrative, income analysis, asset review." }}
+          >
+            <div className="uw-field uw-field--full">
+              <label className="uw-label">Internal Notes</label>
+              <textarea
+                className="uw-textarea"
+                rows={5}
+                placeholder="Full underwriting narrative, income analysis, asset review…"
+                value={form.uwNotes}
+                onChange={(e) => set({ uwNotes: e.target.value })}
+              />
+            </div>
+          </WorkspaceFieldContextMenu>
         </section>
 
         {/* Exceptions placeholder */}
