@@ -2,6 +2,11 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { LoadingSpinner } from "@/components/feedback/LoadingSpinner";
 import { parseMismoFile } from "@/services/mismoService";
+import {
+  createBorrowerForLoan,
+  patchLoanHeader,
+  upsertLoanFinancials,
+} from "@/services/submissionService";
 import { useLoanSubmissionStore } from "@/state/submissionStore";
 import type { MismoParsed } from "@/types/submission";
 
@@ -49,6 +54,36 @@ export function MismoUpload() {
         : useLoanSubmissionStore.getState().draft.borrowers,
       income: parsed.income as never,
     });
+
+    // Persist parsed data to the backend so the pipeline shows real values.
+    await Promise.all([
+      // Loan header: program and purpose
+      patchLoanHeader(loanId, {
+        loan_program: parsed.loan.product ?? null,
+        purpose: parsed.loan.purpose ?? null,
+      }),
+      // Financials: loan amount and estimated property value
+      ...(parsed.loan.loanAmount != null || parsed.property.estimatedValue != null
+        ? [
+            upsertLoanFinancials(loanId, {
+              loan_amount: parsed.loan.loanAmount ?? null,
+              appraised_value: parsed.property.estimatedValue ?? null,
+            }),
+          ]
+        : []),
+      // Borrowers: create a DB row for each parsed borrower (SSN never sent)
+      ...parsed.borrowers.map((b, i) =>
+        createBorrowerForLoan(loanId, {
+          type: i === 0 ? "primary_borrower" : "co_borrower",
+          first_name: b.firstName ?? null,
+          last_name: b.lastName ?? null,
+          email: b.email ?? null,
+          phone: b.phone ?? null,
+          dob: b.dob ?? null,
+        }),
+      ),
+    ]);
+
     await saveDraft();
     void router.push(`/loans/${loanId}/edit/setup`);
   }

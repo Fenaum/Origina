@@ -248,7 +248,11 @@ export interface SubmissionDraft {
 
 export interface SubmitResult {
   loanId: string;
-  loanNumber: string;
+  loanNumber: string | null;
+  borrowerName: string | null;
+  loanAmount: number | null;
+  productType: LoanProgram | string | null;
+  submittedAt: string | null;
   assignedAeName: string;
 }
 

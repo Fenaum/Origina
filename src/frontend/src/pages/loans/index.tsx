@@ -13,7 +13,7 @@ import { useAuth } from "@/state/auth";
 import type { LoanSummary } from "@/types/loan";
 
 export default function LoanPipelinePage() {
-  const { token } = useAuth();
+  const { token, isLoading: authLoading } = useAuth();
   const store = usePipelineStore();
   const [loans, setLoans] = useState<LoanSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -24,10 +24,20 @@ export default function LoanPipelinePage() {
     async (isRetry = false) => {
       setError(null);
       setRetrying(isRetry);
+
+      if (authLoading) return;
+
+      if (!token) {
+        setLoans([]);
+        setLoading(false);
+        setRetrying(false);
+        return;
+      }
+
       if (!isRetry) setLoading(true);
 
       try {
-        const data = await listLoans(token ?? undefined);
+        const data = await listLoans(token, { limit: 1000 });
         setLoans(data);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Unable to load pipeline data.");
@@ -36,7 +46,7 @@ export default function LoanPipelinePage() {
         setRetrying(false);
       }
     },
-    [token],
+    [authLoading, token],
   );
 
   useEffect(() => {
@@ -47,6 +57,12 @@ export default function LoanPipelinePage() {
     () => applyPipelineFilters(loans, store.filters),
     [loans, store.filters],
   );
+
+  // Scroll to top of results whenever active filters change so search results
+  // are never off-screen above the user's current scroll position.
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [store.filters.search, store.filters.statuses, store.filters.programs, store.filters.actionNeeded, store.filters.conditionsOutstanding]);
 
   const sorted = useMemo(
     () => applyPipelineSort(filtered, store.sortField, store.sortDir),
@@ -76,7 +92,7 @@ export default function LoanPipelinePage() {
         ) : (
           <>
             <PipelineKpis loans={loans} />
-            <PipelineGrid loans={sorted} />
+            <PipelineGrid loans={sorted} onLoanMutated={() => void loadLoans(true)} />
           </>
         )}
 

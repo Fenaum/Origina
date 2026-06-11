@@ -1,6 +1,37 @@
 // Backend response shapes — mirrors src/backend/app/schemas/
 // Keep in sync with the FastAPI Pydantic schemas.
 
+// ── Documents ─────────────────────────────────────────────────────────────────
+export type DocumentOut = {
+  id: string;
+  tenant_id: string;
+  loan_id: string;
+  doc_type: string | null;
+  file_name: string;
+  mime_type: string | null;
+  file_size_bytes: number | null;
+  storage_key: string;
+  sha256: string | null;
+  uploaded_by: string | null;
+  uploaded_at: string;
+  tags: Record<string, unknown>;
+  condition_id: string | null;
+  archived_at: string | null;
+  archived_by: string | null;
+};
+
+// ── Loan submission ───────────────────────────────────────────────────────────
+export type LoanSubmitOut = {
+  id: string;
+  loan_number: string | null;
+  status: string;
+  submitted_at: string | null;
+  updated_at: string;
+  borrower_name: string | null;
+  loan_amount: number | null;
+  loan_program: string | null;
+};
+
 // ── Auth ─────────────────────────────────────────────────────────────────────
 export type TokenResponse = {
   access_token: string;
@@ -158,6 +189,44 @@ export type PaginatedList<T> = {
   total: number;
   page: number;
   size: number;
+};
+
+// ── Context menu / Quick Actions ─────────────────────────────────────────────
+export type LoanQuickInfoOut = {
+  id: string;
+  loan_number: string | null;
+  status: string;
+  loan_program: string | null;
+  purpose: string | null;
+  loan_amount: number | null;
+  borrower_name: string;
+  property_state: string | null;
+  submitted_at: string | null;
+  updated_at: string;
+  ltv: number | null;
+  cltv: number | null;
+  fico_score: number | null;
+  debt_to_income: number | null;
+  dscr: number | null;
+};
+
+export type SandboxOut = {
+  sandbox_id: string;
+  url: string;
+  message: string;
+};
+
+// ── Field History ─────────────────────────────────────────────────────────────
+export type FieldHistoryEntry = {
+  audit_log_id: string;
+  entity_type: string;
+  entity_id: string;
+  action: string;
+  field_key: string;
+  old_value: unknown;
+  new_value: unknown;
+  changed_by: string | null;
+  changed_at: string;
 };
 
 // ── API error ─────────────────────────────────────────────────────────────────

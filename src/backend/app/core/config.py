@@ -20,3 +20,25 @@ if not DATABASE_URL:
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "change-me-in-production")
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "480"))
+
+# ── Document / file storage ────────────────────────────────────────────────────
+# STORAGE_BACKEND: "local" for dev; "s3" when Phase 3 is implemented.
+STORAGE_BACKEND: str = os.getenv("STORAGE_BACKEND", "local")
+LOCAL_UPLOAD_DIR: str = os.getenv("LOCAL_UPLOAD_DIR", "/tmp/origina-uploads")
+MAX_UPLOAD_SIZE_MB: int = int(os.getenv("MAX_UPLOAD_SIZE_MB", "50"))
+
+# Allowed MIME types for uploaded documents.
+# Extend this list as new document types are required.
+ALLOWED_MIME_TYPES: frozenset = frozenset({
+    "application/pdf",
+    "image/jpeg",
+    "image/png",
+    "image/tiff",
+    "image/webp",
+    "application/xml",
+    "text/xml",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+})

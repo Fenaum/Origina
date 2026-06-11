@@ -6,10 +6,12 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
+from app.models.borrowers import Borrower
 from app.models.loan import Loan, LoanFinancials, LoanParty, LoanTerms
-from app.models.user import User
+from app.models.user import Tenant, User
 from app.models.workflow import LoanStatusEvent
 from app.schemas.loan_schema import (
+    ArchiveLoanRequest,
     LoanCreate,
     LoanFinancialsOut,
     LoanFinancialsUpdate,
@@ -17,11 +19,16 @@ from app.schemas.loan_schema import (
     LoanPartyCreate,
     LoanPartyOut,
     LoanPipelineSummaryOut,
+    LoanQuickInfoOut,
+    LoanSubmitOut,
     LoanTermsOut,
     LoanTermsUpdate,
     LoanUpdate,
+    MoveTenantRequest,
+    SandboxOut,
 )
 from app.schemas.workflow_schema import StatusEventCreate, StatusEventOut
+from app.security.roles import ACCOUNT_MANAGER, IT_ADMIN, require_roles
 from app.security.security import get_audited_db, get_current_user
 
 router = APIRouter(prefix="/loans", tags=["loans"])
@@ -45,6 +52,19 @@ def create_loan(
     data = payload.model_dump(exclude={"tenant_id"})
     loan = Loan(**data, tenant_id=current_user.tenant_id)
     db.add(loan)
+    db.flush()  # assigns loan.id before we reference it in the event row
+
+    # Record the initial status event so loan history starts at creation.
+    # from_status is NULL — there was no prior state.
+    event = LoanStatusEvent(
+        tenant_id=current_user.tenant_id,
+        loan_id=loan.id,
+        from_status=None,
+        to_status="new_draft",
+        reason="Loan draft created",
+        actor_user_id=current_user.id,
+    )
+    db.add(event)
     db.commit()
     db.refresh(loan)
     return loan
@@ -321,3 +341,171 @@ def remove_party(
         db.delete(link)
         db.commit()
     return None
+
+
+# ── Context Menu / Quick Actions ──────────────────────────────────────────────
+
+@router.get("/{loan_id}/quick-info", response_model=LoanQuickInfoOut)
+def get_loan_quick_info(
+    loan_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Compact loan + financials summary for the pipeline quick-info popover."""
+    loan = _get_or_404(loan_id, db, current_user.tenant_id)
+    fin = db.query(LoanFinancials).filter(LoanFinancials.loan_id == loan_id).first()
+    primary = (
+        db.query(Borrower)
+        .filter(
+            Borrower.loan_id == loan_id,
+            Borrower.tenant_id == current_user.tenant_id,
+            Borrower.type == "primary_borrower",
+        )
+        .first()
+    )
+    borrower_name = (
+        " ".join(p for p in [primary.first_name, primary.last_name] if p)
+        if primary
+        else "(Unknown)"
+    )
+    return LoanQuickInfoOut(
+        id=loan.id,
+        loan_number=loan.loan_number,
+        status=loan.status,
+        loan_program=loan.loan_program,
+        purpose=loan.purpose,
+        loan_amount=fin.loan_amount if fin else None,
+        borrower_name=borrower_name,
+        property_state=None,  # TODO: join with properties table
+        submitted_at=loan.submitted_at,
+        updated_at=loan.updated_at,
+        ltv=fin.ltv if fin else None,
+        cltv=fin.cltv if fin else None,
+        fico_score=fin.fico_score if fin else None,
+        debt_to_income=fin.debt_to_income if fin else None,
+        dscr=fin.dscr if fin else None,
+    )
+
+
+@router.post("/{loan_id}/submit", response_model=LoanSubmitOut)
+def submit_loan(
+    loan_id: UUID,
+    db: Session = Depends(get_audited_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Transition a loan draft from new_draft → submitted.
+
+    Phase 1 validation (intentionally minimal — full checklist validation is Phase 2):
+      - Loan must belong to the authenticated tenant.
+      - Loan must be in new_draft status (prevents double-submission).
+
+    Phase 2 TODO:
+      - Require loan_financials.loan_amount > 0.
+      - Validate required borrower fields (first_name, last_name, dob, ssn_last4).
+      - Validate required property fields (address, state, zip).
+      - Check document checklist: all required docs must be uploaded.
+    """
+    from datetime import date as _date
+
+    loan = _get_or_404(loan_id, db, current_user.tenant_id)
+
+    if loan.status != "new_draft":
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Loan cannot be submitted from status '{loan.status}'. "
+                   "Only new_draft loans can be submitted.",
+        )
+
+    # Assign a loan number if not already set (simple sequential format for Phase 1).
+    # Phase 2 TODO: use a DB sequence or tenant-scoped numbering scheme.
+    if not loan.loan_number:
+        from sqlalchemy import func as _func
+        count = db.query(_func.count(Loan.id)).filter(
+            Loan.tenant_id == current_user.tenant_id
+        ).scalar() or 0
+        loan.loan_number = f"OR-{1000 + count}"
+
+    loan.status = "submitted"
+    loan.submitted_at = _date.today()
+
+    event = LoanStatusEvent(
+        tenant_id=current_user.tenant_id,
+        loan_id=loan.id,
+        from_status="new_draft",
+        to_status="submitted",
+        reason="Loan submitted by originator",
+        actor_user_id=current_user.id,
+    )
+    db.add(event)
+    db.commit()
+    db.refresh(loan)
+    return loan
+
+
+@router.post("/{loan_id}/sandbox", response_model=SandboxOut)
+def open_in_sandbox(
+    loan_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    TODO: Implement real sandbox environment provisioning.
+    Currently returns a mock response. A real implementation would
+    clone the loan into an isolated sandbox tenant and return a URL.
+    """
+    _get_or_404(loan_id, db, current_user.tenant_id)
+    return SandboxOut(
+        sandbox_id=f"sbx_{loan_id}",
+        url=f"/sandbox/loans/{loan_id}",
+        message="Sandbox environment is not yet provisioned. Mock response only.",
+    )
+
+
+@router.patch("/{loan_id}/archive", response_model=LoanOut)
+def archive_loan(
+    loan_id: UUID,
+    payload: ArchiveLoanRequest,
+    db: Session = Depends(get_audited_db),
+    current_user: User = Depends(get_current_user),
+    _authorized: User = Depends(require_roles(IT_ADMIN, ACCOUNT_MANAGER)),
+):
+    """
+    Soft-deletes a loan by setting status = 'archived'.
+    Requires IT_ADMIN or ACCOUNT_MANAGER role.
+    The loan remains in the database for audit purposes.
+    """
+    loan = _get_or_404(loan_id, db, current_user.tenant_id)
+    if loan.status in ("funded", "closed", "post_closing"):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Cannot archive a loan with status '{loan.status}'.",
+        )
+    loan.status = "archived"
+    db.commit()
+    db.refresh(loan)
+    return loan
+
+
+@router.patch("/{loan_id}/tenant", response_model=LoanOut)
+def move_loan_tenant(
+    loan_id: UUID,
+    payload: MoveTenantRequest,
+    db: Session = Depends(get_audited_db),
+    current_user: User = Depends(get_current_user),
+    _authorized: User = Depends(require_roles(IT_ADMIN)),
+):
+    """
+    Moves a loan to a different tenant. IT_ADMIN only.
+    Use with extreme caution — this changes data visibility and ownership.
+    A reason is strongly recommended for the audit trail.
+    """
+    loan = _get_or_404(loan_id, db, current_user.tenant_id)
+    target = db.query(Tenant).filter(Tenant.id == payload.target_tenant_id).first()
+    if not target:
+        raise HTTPException(status_code=404, detail="Target tenant not found")
+    if target.id == loan.tenant_id:
+        raise HTTPException(status_code=400, detail="Loan is already in the specified tenant")
+    loan.tenant_id = payload.target_tenant_id
+    db.commit()
+    db.refresh(loan)
+    return loan

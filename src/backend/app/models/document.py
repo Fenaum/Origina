@@ -31,13 +31,10 @@ class Document(TenantMixin, UUIDMixin, Base):
     file_name: Mapped[str] = mapped_column(String, nullable=False)
     mime_type: Mapped[str | None] = mapped_column(String)
     file_size_bytes: Mapped[int | None] = mapped_column(BigInteger)
-    # storage_key is the S3 object key (or equivalent). The application uses
-    # this to retrieve the file — never store the full signed URL here because
-    # signed URLs expire.
+    # storage_key is the object key (S3 or local path relative to base dir).
+    # Never store the full signed URL here — signed URLs expire.
     storage_key: Mapped[str] = mapped_column(String, nullable=False)
-    # sha256 enables deduplication: before storing, hash the file and check
-    # if it already exists (idx_documents_sha index makes this fast).
-    # Also used for integrity verification after retrieval.
+    # sha256 enables deduplication and integrity verification after retrieval.
     sha256: Mapped[str | None] = mapped_column(String)
     uploaded_by: Mapped[UUID | None] = mapped_column(
         PG_UUID(as_uuid=True),
@@ -50,5 +47,28 @@ class Document(TenantMixin, UUIDMixin, Base):
     )
     tags: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, server_default="{}")
 
+    # ── Soft-delete (added in migration 112) ──────────────────────────────────
+    # archived_at IS NOT NULL means the document is logically deleted.
+    # Rows are never hard-deleted — they remain for audit purposes.
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    archived_by: Mapped[UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+
+    # ── Condition link (added in migration 112) ───────────────────────────────
+    # Optional FK to conditions. Used by the document checklist to associate
+    # an upload with an outstanding condition.
+    condition_id: Mapped[UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("conditions.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+
     loan: Mapped["Loan"] = relationship("Loan", back_populates="documents")
-    uploader: Mapped["User | None"] = relationship("User", back_populates="uploaded_documents")
+    uploader: Mapped["User | None"] = relationship(
+        "User",
+        foreign_keys=[uploaded_by],
+        back_populates="uploaded_documents",
+    )

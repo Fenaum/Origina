@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { PipelineLoanContextMenu } from "@/components/loans/pipeline/PipelineLoanContextMenu";
 import { loanProgramLabels, loanStatusLabels, type LoanSummary } from "@/types/loan";
 import {
   ALL_COLUMN_DEFS,
@@ -124,7 +125,7 @@ function RowMenu({
       <button
         role="menuitem"
         className="pipeline-row-menu-item"
-        onClick={() => go(`/loans/${loan.id}?section=notes`)}
+        onClick={() => go(`/loans/${loan.id}?section=conversation`)}
       >
         Add Note
       </button>
@@ -143,9 +144,12 @@ function RowMenu({
   );
 }
 
-export function PipelineGrid({ loans }: { loans: LoanSummary[] }) {
+type ContextState = { loan: LoanSummary; x: number; y: number } | null;
+
+export function PipelineGrid({ loans, onLoanMutated }: { loans: LoanSummary[]; onLoanMutated?: () => void }) {
   const { columns, sortField, sortDir, toggleSort } = usePipelineStore();
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [openMenuId, setOpenMenuId]     = useState<string | null>(null);
+  const [ctxState,   setCtxState]       = useState<ContextState>(null);
 
   const visibleDefs = ALL_COLUMN_DEFS.filter((d) => columns.includes(d.id)).sort(
     (a, b) => columns.indexOf(a.id) - columns.indexOf(b.id),
@@ -201,8 +205,11 @@ export function PipelineGrid({ loans }: { loans: LoanSummary[] }) {
               <tr
                 key={loan.id}
                 className={`pipeline-row${loan.actionsNeeded > 0 ? " pipeline-row--action" : ""}`}
-                onClick={() => {
-                  if (openMenuId === loan.id) setOpenMenuId(null);
+                onClick={() => { if (openMenuId === loan.id) setOpenMenuId(null); }}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  setOpenMenuId(null);
+                  setCtxState({ loan, x: e.clientX, y: e.clientY });
                 }}
               >
                 {visibleDefs.map((def) => (
@@ -238,6 +245,16 @@ export function PipelineGrid({ loans }: { loans: LoanSummary[] }) {
       <div className="pipeline-grid-footer">
         {loans.length} loan{loans.length !== 1 ? "s" : ""}
       </div>
+
+      {ctxState && (
+        <PipelineLoanContextMenu
+          loan={ctxState.loan}
+          x={ctxState.x}
+          y={ctxState.y}
+          onClose={() => setCtxState(null)}
+          onLoanMutated={onLoanMutated}
+        />
+      )}
     </div>
   );
 }

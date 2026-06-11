@@ -22,16 +22,27 @@ function toSummary(row: LoanPipelineSummaryOut): LoanSummary {
   };
 }
 
-export async function listLoans(token?: string): Promise<LoanSummary[]> {
+export async function listLoans(
+  token?: string,
+  options: { skip?: number; limit?: number } = {},
+): Promise<LoanSummary[]> {
   if (process.env.NEXT_PUBLIC_MOCK_LOAN_API_ERROR === "true") {
     throw new Error("Mock loan API error");
   }
 
   if (!token) return mockLoans;
 
-  const rows = await apiRequest<LoanPipelineSummaryOut[]>("/loans/pipeline", {
-    token,
-  });
+  const params = new URLSearchParams();
+  if (options.skip != null) params.set("skip", String(options.skip));
+  if (options.limit != null) params.set("limit", String(options.limit));
+  const query = params.toString();
+
+  const rows = await apiRequest<LoanPipelineSummaryOut[]>(
+    `/loans/pipeline${query ? `?${query}` : ""}`,
+    {
+      token,
+    },
+  );
   return rows.map(toSummary);
 }
 
@@ -43,9 +54,12 @@ export async function getLoanById(
     return mockLoans.find((loan) => loan.id === loanId) ?? null;
   }
 
-  const rows = await apiRequest<LoanPipelineSummaryOut[]>("/loans/pipeline", {
-    token,
-  });
+  const rows = await apiRequest<LoanPipelineSummaryOut[]>(
+    "/loans/pipeline?limit=1000",
+    {
+      token,
+    },
+  );
   const row = rows.find((r) => r.id === loanId);
   return row ? toSummary(row) : null;
 }

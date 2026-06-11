@@ -116,7 +116,9 @@ class LoanBase(BaseModel):
 
 
 class LoanCreate(LoanBase):
-    tenant_id: UUID
+    # tenant_id is intentionally absent — the endpoint injects it from the
+    # authenticated user's JWT. Clients must not send it.
+    pass
 
 
 class LoanUpdate(LoanBase):
@@ -174,3 +176,57 @@ class LoanPipelineSummaryOut(BaseModel):
     conditions_open: int
     conditions_submitted: int
     actions_needed: int
+
+
+# ── Context Menu / Quick Actions ───────────────────────────────────────────────
+
+class LoanQuickInfoOut(BaseModel):
+    """Compact loan summary for the pipeline quick-info popover."""
+
+    id: UUID
+    loan_number: Optional[str]
+    status: str
+    loan_program: Optional[str]
+    purpose: Optional[str]
+    loan_amount: Optional[Decimal]
+    borrower_name: str
+    property_state: Optional[str]
+    submitted_at: Optional[datetime]
+    updated_at: datetime
+    # From loan_financials
+    ltv: Optional[Decimal]
+    cltv: Optional[Decimal]
+    fico_score: Optional[int]
+    debt_to_income: Optional[Decimal]
+    dscr: Optional[Decimal]
+
+
+class SandboxOut(BaseModel):
+    """Placeholder response for the Open in Sandbox action. Not yet provisioned."""
+
+    sandbox_id: str
+    url: str
+    message: str
+
+
+class MoveTenantRequest(BaseModel):
+    target_tenant_id: UUID
+    reason: Optional[str] = None
+
+
+class ArchiveLoanRequest(BaseModel):
+    reason: Optional[str] = None
+
+
+class LoanSubmitOut(BaseModel):
+    """Response from POST /loans/{id}/submit."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    loan_number: Optional[str]
+    status: str
+    submitted_at: Optional[date]
+    updated_at: datetime
+    borrower_name: Optional[str] = None
+    loan_amount: Optional[Decimal] = None
+    loan_program: Optional[str] = None

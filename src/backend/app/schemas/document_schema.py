@@ -6,6 +6,9 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class DocumentCreate(BaseModel):
+    """Internal schema for metadata-only document creation (used by legacy POST /).
+    Prefer the /upload multipart endpoint for new code.
+    """
     loan_id: UUID
     doc_type: Optional[str] = None
     file_name: str
@@ -14,6 +17,7 @@ class DocumentCreate(BaseModel):
     storage_key: str
     sha256: Optional[str] = None
     tags: Dict[str, Any] = Field(default_factory=dict)
+    condition_id: Optional[UUID] = None
     # tenant_id and uploaded_by are injected from auth — never from the client
 
 
@@ -32,3 +36,6 @@ class DocumentOut(BaseModel):
     uploaded_by: Optional[UUID] = None
     uploaded_at: datetime
     tags: Dict[str, Any]
+    condition_id: Optional[UUID] = None
+    archived_at: Optional[datetime] = None
+    archived_by: Optional[UUID] = None
