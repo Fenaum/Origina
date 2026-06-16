@@ -4,19 +4,25 @@ from fastapi.responses import JSONResponse
 
 import app.models  # noqa: F401 — registers all SQLAlchemy models so relationships resolve
 from app.api.v1 import (
+    appraisal,
     audit,
     auth,
     borrowers,
     conditions,
+    credit,
     decisioning,
     documents,
+    escrow,
+    exceptions,
     health,
     intake,
     loans,
     parties,
     properties,
     roles,
+    status,
     tenants,
+    title,
     users,
     workflow,
 )
@@ -64,15 +70,21 @@ app.include_router(auth.router,         prefix=_V1)
 app.include_router(tenants.router,      prefix=_V1)
 app.include_router(users.router,        prefix=_V1)
 app.include_router(roles.router,        prefix=_V1)
+app.include_router(status.router,       prefix=_V1)
 app.include_router(loans.router,        prefix=_V1)
 app.include_router(borrowers.router,    prefix=_V1)
 app.include_router(properties.router,   prefix=_V1)
 app.include_router(documents.router,    prefix=_V1)
 app.include_router(conditions.router,   prefix=_V1)
+app.include_router(exceptions.router,   prefix=_V1)
 app.include_router(workflow.router,     prefix=_V1)
 app.include_router(parties.router,      prefix=_V1)
 app.include_router(decisioning.router,  prefix=_V1)
 app.include_router(audit.router,        prefix=_V1)
+app.include_router(appraisal.router,    prefix=_V1)
+app.include_router(credit.router,       prefix=_V1)
+app.include_router(escrow.router,       prefix=_V1)
+app.include_router(title.router,        prefix=_V1)
 
 
 # ── Root ───────────────────────────────────────────────────────────────────────

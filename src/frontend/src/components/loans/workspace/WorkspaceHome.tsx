@@ -41,16 +41,22 @@ const MOCK_TEAM = [
   { role: "Funder", name: "Simone Liu", email: "s.liu@origina.dev", status: "Standby" },
 ];
 
-function fmtMoney(value: number | null | undefined): string {
-  return value != null ? money.format(value) : "-";
+function fmtMoney(value: number | string | null | undefined): string {
+  if (value == null) return "-";
+  const n = Number(value);
+  return isNaN(n) ? "-" : money.format(n);
 }
 
-function fmtPct(value: number | null | undefined): string {
-  return value != null ? `${(value * 100).toFixed(1)}%` : "-";
+function fmtPct(value: number | string | null | undefined): string {
+  if (value == null) return "-";
+  const n = Number(value);
+  return isNaN(n) ? "-" : `${(n * 100).toFixed(1)}%`;
 }
 
-function fmtRatio(value: number | null | undefined): string {
-  return value != null ? value.toFixed(2) : "-";
+function fmtRatio(value: number | string | null | undefined): string {
+  if (value == null) return "-";
+  const n = Number(value);
+  return isNaN(n) ? "-" : n.toFixed(2);
 }
 
 function fmtDate(value: string | null | undefined): string {

@@ -112,7 +112,7 @@ export type BorrowerOut = {
   phone: string | null;
   ssn_last4: string | null;
   dob: string | null;
-  relationship: string | null;
+  borrower_relationship: string | null;
   income_type: string | null;
   income_amount: number | null;
   employment_status: string | null;
@@ -216,6 +216,199 @@ export type SandboxOut = {
   message: string;
 };
 
+// ── Property (extended) ───────────────────────────────────────────────────────
+export type PropertyDetailOut = PropertyOut & {
+  county: string | null;
+  census_tract: string | null;
+  msa: string | null;
+  apn: string | null;
+  year_built: number | null;
+  square_footage: number | null;
+  lot_size_sqft: number | null;
+  units: number | null;
+  is_mixed_use: boolean | null;
+  is_rural: boolean | null;
+  is_condo_pud: boolean | null;
+  flood_zone: string | null;
+  flood_insurance_required: boolean | null;
+  annual_taxes: number | null;
+  hazard_insurance: number | null;
+  hoa_dues: number | null;
+  value_source: string | null;
+  estimated_value: number | null;
+};
+
+// ── Loan Status ───────────────────────────────────────────────────────────────
+export type StatusTransitionOption = { status: string; label: string };
+export type LoanStatusOut = {
+  loan_id: string;
+  current_status: string;
+  current_status_label: string;
+  is_terminal: boolean;
+  available_transitions: StatusTransitionOption[];
+};
+
+export type StatusEventOut = {
+  id: string;
+  loan_id: string;
+  from_status: string | null;
+  to_status: string;
+  reason: string | null;
+  actor_user_id: string | null;
+  occurred_at: string;
+};
+
+// ── Appraisal ─────────────────────────────────────────────────────────────────
+export type AppraisalOrderOut = {
+  id: string;
+  loan_id: string;
+  tenant_id: string;
+  ordered_date: string | null;
+  ordered_by: string | null;
+  vendor_name: string | null;
+  appraiser_name: string | null;
+  external_ref: string | null;
+  due_date: string | null;
+  inspection_date: string | null;
+  received_date: string | null;
+  appraised_value: number | null;
+  purchase_price: number | null;
+  appraisal_type: string | null;
+  property_condition: string | null;
+  review_status: string | null;
+  reviewed_by: string | null;
+  review_date: string | null;
+  has_rov: boolean | null;
+  second_appraisal: boolean | null;
+  review_notes: string | null;
+  is_primary: boolean;
+  archived_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+// ── Credit ────────────────────────────────────────────────────────────────────
+export type CreditReportOut = {
+  id: string;
+  loan_id: string;
+  tenant_id: string;
+  report_date: string | null;
+  vendor: string | null;
+  reference_number: string | null;
+  equifax_score: number | null;
+  experian_score: number | null;
+  transunion_score: number | null;
+  middle_score: number | null;
+  rep_score: number | null;
+  is_active: boolean;
+  archived_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CreditLiabilityOut = {
+  id: string;
+  loan_id: string;
+  credit_report_id: string | null;
+  tradeline_type: string | null;
+  creditor_name: string | null;
+  account_number_last4: string | null;
+  balance: number | null;
+  monthly_payment: number | null;
+  credit_limit: number | null;
+  is_excluded: boolean;
+  paid_at_closing: boolean;
+  omit_reason: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CreditEventOut = {
+  id: string;
+  loan_id: string;
+  event_type: string;
+  event_date: string | null;
+  discharged_date: string | null;
+  months_since: number | null;
+  explanation: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+// ── Escrow ────────────────────────────────────────────────────────────────────
+export type EscrowDetailOut = {
+  id: string;
+  loan_id: string;
+  company_name: string | null;
+  officer_name: string | null;
+  officer_email: string | null;
+  officer_phone: string | null;
+  company_address: string | null;
+  escrow_number: string | null;
+  contract_date: string | null;
+  closing_date: string | null;
+  settlement_agent: string | null;
+  earnest_money_deposit: number | null;
+  wire_instructions_status: string | null;
+  estimated_cash_to_close: number | null;
+  verified_cash_to_close: number | null;
+  seller_credits: number | null;
+  lender_credits: number | null;
+  third_party_fees: number | null;
+  escrow_balance: number | null;
+  closing_protection_letter: boolean;
+  settlement_stmt_reviewed: boolean;
+  wire_verified: boolean;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+// ── Title ─────────────────────────────────────────────────────────────────────
+export type TitleExceptionOut = {
+  id: string;
+  loan_id: string;
+  title_order_id: string | null;
+  exception_type: string;
+  description: string | null;
+  holder_name: string | null;
+  amount: number | null;
+  exception_status: string;
+  resolution: string | null;
+  cleared_date: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type TitleOrderOut = {
+  id: string;
+  loan_id: string;
+  company_name: string | null;
+  officer_name: string | null;
+  officer_email: string | null;
+  officer_phone: string | null;
+  ordered_date: string | null;
+  commitment_received_date: string | null;
+  title_status: string;
+  external_ref: string | null;
+  borrower_vesting: string | null;
+  ownership_type: string | null;
+  entity_vesting: string | null;
+  vesting_notes: string | null;
+  cleared_date: string | null;
+  cleared_by: string | null;
+  funding_blocked: boolean;
+  funding_block_reason: string | null;
+  legal_review_required: boolean;
+  legal_reviewer: string | null;
+  legal_review_status: string | null;
+  legal_review_notes: string | null;
+  notes: string | null;
+  exceptions: TitleExceptionOut[];
+  created_at: string;
+  updated_at: string;
+};
+
 // ── Field History ─────────────────────────────────────────────────────────────
 export type FieldHistoryEntry = {
   audit_log_id: string;
@@ -227,6 +420,97 @@ export type FieldHistoryEntry = {
   new_value: unknown;
   changed_by: string | null;
   changed_at: string;
+};
+
+// ── Tasks ─────────────────────────────────────────────────────────────────────
+export type TaskStatus = "todo" | "in_progress" | "blocked" | "done" | "cancelled";
+export type TaskPriority = "low" | "normal" | "high" | "urgent";
+
+export type TaskOut = {
+  id: string;
+  tenant_id: string;
+  loan_id: string;
+  title: string;
+  description: string | null;
+  status: TaskStatus;
+  priority: TaskPriority;
+  assigned_to: string | null;
+  due_at: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+// ── Exceptions ────────────────────────────────────────────────────────────────
+// Legacy values (open, closed) preserved for existing data.
+// New workflow states added in migration 119_exceptions_stabilize.sql.
+export type ExceptionStatus =
+  | "open"                        // legacy
+  | "draft"
+  | "submitted"
+  | "assigned"
+  | "under_review"
+  | "additional_info_requested"
+  | "approved"
+  | "approved_with_conditions"
+  | "denied"
+  | "withdrawn"
+  | "closed";                     // legacy terminal
+
+export type ExceptionSeverity = "low" | "medium" | "high" | "critical";
+export type ExceptionSource = "pre_file" | "loan_file";
+
+export type ExceptionOut = {
+  id: string;
+  tenant_id: string;
+  loan_id: string | null;
+  exception_type: string;
+  exception_source: ExceptionSource;
+  title: string;
+  description: string | null;
+  status: ExceptionStatus;
+  severity: ExceptionSeverity;
+  guideline_value: string | null;
+  actual_value: string | null;
+  variance: string | null;
+  justification: string | null;
+  compensating_factors: string | null;
+  risk_factors: string | null;
+  loan_snapshot: Record<string, unknown>;
+  requested_by: string | null;
+  decided_by: string | null;
+  decided_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ExceptionEventOut = {
+  id: string;
+  tenant_id: string;
+  exception_id: string;
+  event_type: string;
+  actor_user_id: string | null;
+  event_data: Record<string, unknown>;
+  occurred_at: string;
+};
+
+export type ExceptionCommentOut = {
+  id: string;
+  tenant_id: string;
+  exception_id: string;
+  body: string;
+  created_by: string | null;
+  is_internal: boolean;
+  created_at: string;
+};
+
+export type ExceptionDocumentOut = {
+  id: string;
+  tenant_id: string;
+  exception_id: string;
+  document_id: string;
+  attached_by: string | null;
+  attached_at: string;
 };
 
 // ── API error ─────────────────────────────────────────────────────────────────

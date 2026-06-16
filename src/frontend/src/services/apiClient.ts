@@ -31,7 +31,18 @@ export async function apiRequest<T>(
   if (!response.ok) {
     const detail = await response
       .json()
-      .then((body: { detail?: string }) => body.detail)
+      .then((body: { detail?: unknown }) => {
+        const d = body.detail;
+        if (!d) return null;
+        if (typeof d === "string") return d;
+        // FastAPI validation errors: array of {loc, msg, type}
+        if (Array.isArray(d)) {
+          return (d as { loc?: string[]; msg?: string }[])
+            .map((e) => [e.loc?.slice(-1)[0], e.msg].filter(Boolean).join(": "))
+            .join("; ") || JSON.stringify(d);
+        }
+        return JSON.stringify(d);
+      })
       .catch(() => null);
     throw new Error(detail ?? `API ${response.status}`);
   }

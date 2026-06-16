@@ -38,7 +38,7 @@ class BorrowerBase(BaseModel):
     email: Optional[str] = None
     current_address_id: Optional[UUID] = None
     mailing_address_id: Optional[UUID] = None
-    relationship: Optional[str] = None
+    borrower_relationship: Optional[str] = None
     income_type: Optional[str] = None
     income_amount: Optional[Decimal] = None
     ethnicity: Optional[str] = None
@@ -72,7 +72,7 @@ class BorrowerUpdate(BaseModel):
     email: Optional[str] = None
     current_address_id: Optional[UUID] = None
     mailing_address_id: Optional[UUID] = None
-    relationship: Optional[str] = None
+    borrower_relationship: Optional[str] = None
     income_type: Optional[str] = None
     income_amount: Optional[Decimal] = None
     ethnicity: Optional[str] = None

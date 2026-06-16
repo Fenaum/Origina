@@ -34,7 +34,7 @@ const URLA_SECTIONS: { id: URLASectionId; number: string; label: string }[] = [
 
 type BorrowerEdit = Partial<Pick<BorrowerOut,
   | "first_name" | "last_name" | "email" | "phone" | "dob"
-  | "marital_status" | "dependents" | "relationship"
+  | "marital_status" | "dependents" | "borrower_relationship"
   | "employment_status" | "employer_name" | "job_title"
   | "years_on_job" | "years_in_profession" | "work_phone"
   | "income_type" | "income_amount"
@@ -259,8 +259,8 @@ function SectionPersonal({ borrower, edit, patch, loanId }: {
             <input type="tel" className="urla-field-input" {...f("phone")} />
           </InputField>
         </WorkspaceFieldContextMenu>
-        <InputField label="Relationship to Borrower" id={`${borrower.id}-relationship`}>
-          <input className="urla-field-input" {...f("relationship")} />
+        <InputField label="Relationship to Borrower" id={`${borrower.id}-borrower_relationship`}>
+          <input className="urla-field-input" {...f("borrower_relationship")} />
         </InputField>
       </div>
     </div>
@@ -495,7 +495,7 @@ function SectionAssets({ data, onChange }: {
         <button type="button" className="urla-add-btn" onClick={addAsset}>+ Add Account</button>
       </div>
       {data.assets.length === 0 && (
-        <p className="urla-empty-list">No asset accounts recorded. Click "+ Add Account" to begin.</p>
+        <p className="urla-empty-list">No asset accounts recorded. Click &quot;+ Add Account&quot; to begin.</p>
       )}
       {data.assets.map((a) => (
         <div key={a.id} className="urla-list-item">
@@ -769,6 +769,9 @@ export function WorkspaceBorrowerURLA({ loan }: Props) {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveCount, setSaveCount] = useState(0);
   const [isAddingBorrower, setIsAddingBorrower] = useState(false);
+  const [showAddPicker, setShowAddPicker] = useState(false);
+  const [newBorrowerType, setNewBorrowerType] = useState<BorrowerOut["type"]>("co_borrower");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!detail?.borrowers) return;
@@ -820,14 +823,14 @@ export function WorkspaceBorrowerURLA({ loan }: Props) {
     setLocalData((prev) => ({ ...prev, [borrowerId]: { ...prev[borrowerId], ...patch } }));
   }
 
-  async function handleAddBorrower() {
+  async function handleAddBorrower(type: BorrowerOut["type"] = newBorrowerType) {
     if (!token) return;
     setIsAddingBorrower(true);
     try {
       const created = await apiRequest<BorrowerOut>("/borrowers/", {
         method: "POST",
         token,
-        body: JSON.stringify({ loan_id: loan.id, type: "primary_borrower" }),
+        body: JSON.stringify({ loan_id: loan.id, type }),
       });
       setExtraBorrowers((prev) => [...prev, created]);
       setActiveBorrowerId(created.id);
@@ -835,10 +838,34 @@ export function WorkspaceBorrowerURLA({ loan }: Props) {
       setLocalData((prev) => ({ ...prev, [created.id]: defaultLocalData() }));
       setSaved((prev) => ({ ...prev, [created.id]: {} }));
       setSavedLocal((prev) => ({ ...prev, [created.id]: defaultLocalData() }));
+      setShowAddPicker(false);
     } catch (e) {
       setSaveError((e as Error).message);
     } finally {
       setIsAddingBorrower(false);
+    }
+  }
+
+  async function handleRemoveBorrower(id: string) {
+    if (!token) return;
+    if (!confirm("Remove this borrower from the loan? This cannot be undone.")) return;
+    setDeletingId(id);
+    try {
+      await apiRequest(`/borrowers/${id}`, { method: "DELETE", token });
+      setExtraBorrowers((prev) => prev.filter((b) => b.id !== id));
+      // If the active borrower was removed, switch to the first remaining one
+      if (activeBorrowerId === id) {
+        const remaining = [...(detail?.borrowers ?? []), ...extraBorrowers].filter((b) => b.id !== id);
+        setActiveBorrowerId(remaining[0]?.id ?? null);
+      }
+      setEdits((prev) => { const n = { ...prev }; delete n[id]; return n; });
+      setLocalData((prev) => { const n = { ...prev }; delete n[id]; return n; });
+      setSaved((prev) => { const n = { ...prev }; delete n[id]; return n; });
+      setSavedLocal((prev) => { const n = { ...prev }; delete n[id]; return n; });
+    } catch (e) {
+      setSaveError((e as Error).message);
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -913,19 +940,75 @@ export function WorkspaceBorrowerURLA({ loan }: Props) {
         {borrowers.map((b) => {
           const name = [b.first_name, b.last_name].filter(Boolean).join(" ") || (BORROWER_TYPE_LABELS[b.type] ?? "Borrower");
           const isActive = b.id === activeBorrower.id;
+          const isDeleting = deletingId === b.id;
           return (
-            <button
-              key={b.id}
-              type="button"
-              className={`urla-borrower-tab ${isActive ? "urla-borrower-tab--active" : ""}`}
-              onClick={() => setActiveBorrowerId(b.id)}
-            >
-              <span className="urla-tab-type">{BORROWER_TYPE_LABELS[b.type] ?? "Borrower"}</span>
-              <span className="urla-tab-name">{name}</span>
-            </button>
+            <div key={b.id} className="urla-tab-actions">
+              <button
+                type="button"
+                className={`urla-borrower-tab ${isActive ? "urla-borrower-tab--active" : ""}`}
+                onClick={() => setActiveBorrowerId(b.id)}
+                disabled={isDeleting}
+              >
+                <span className="urla-tab-type">{BORROWER_TYPE_LABELS[b.type] ?? "Borrower"}</span>
+                <span className="urla-tab-name">{isDeleting ? "Removing…" : name}</span>
+              </button>
+              {borrowers.length > 1 && (
+                <button
+                  type="button"
+                  className="urla-tab-remove"
+                  title="Remove borrower"
+                  disabled={isDeleting}
+                  onClick={() => void handleRemoveBorrower(b.id)}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           );
         })}
+
+        {/* Add Borrower button */}
+        <button
+          type="button"
+          className="urla-add-tab-btn"
+          disabled={isAddingBorrower}
+          onClick={() => setShowAddPicker((v) => !v)}
+        >
+          {isAddingBorrower ? "Adding…" : "+ Add Borrower"}
+        </button>
       </div>
+
+      {/* Borrower type picker */}
+      {showAddPicker && (
+        <div className="urla-add-borrower-row">
+          <span className="urla-add-borrower-label">Borrower Type:</span>
+          <select
+            className="urla-add-borrower-select"
+            value={newBorrowerType}
+            onChange={(e) => setNewBorrowerType(e.target.value as BorrowerOut["type"])}
+          >
+            <option value="co_borrower">Co-Borrower</option>
+            <option value="guarantor">Guarantor</option>
+            <option value="primary_borrower">Primary Borrower</option>
+            <option value="other">Other</option>
+          </select>
+          <button
+            type="button"
+            className="task-btn task-btn--primary"
+            disabled={isAddingBorrower}
+            onClick={() => void handleAddBorrower(newBorrowerType)}
+          >
+            {isAddingBorrower ? "Creating…" : "Create"}
+          </button>
+          <button
+            type="button"
+            className="task-btn task-btn--ghost"
+            onClick={() => setShowAddPicker(false)}
+          >
+            Cancel
+          </button>
+        </div>
+      )}
 
       {/* Two-column body: section nav + content */}
       <div className="urla-body">

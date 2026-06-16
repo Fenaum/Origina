@@ -17,8 +17,9 @@ import { SubmissionLayout } from "@/components/submission/SubmissionLayout";
 import { SubmissionProcessingOverlay } from "@/components/submission/SubmissionProcessingOverlay";
 import { SubmissionSuccessModal } from "@/components/submission/SubmissionSuccessModal";
 import { LoanSetupStep } from "@/components/submission/steps/LoanSetupStep";
+import { useDocumentStore } from "@/state/documentStore";
 import { useLoanSubmissionStore } from "@/state/submissionStore";
-import type { SubmissionStep, SubmitResult } from "@/types/submission";
+import type { DocumentChecklistItem, SubmissionDraft, SubmissionStep, SubmitResult, ValidationError } from "@/types/submission";
 
 const stepIds = submissionSteps.map((step) => step.id);
 
@@ -39,6 +40,7 @@ export function SubmissionWizard({
     submitLoan,
     hydrateFromApi,
   } = useLoanSubmissionStore();
+  const checklist = useDocumentStore((s) => s.checklist);
   const didHydrate = useRef(false);
   const didAutoSaveOnce = useRef(false);
   const currentIndex = stepIds.indexOf(step);
@@ -46,6 +48,7 @@ export function SubmissionWizard({
   const [processingStep, setProcessingStep] = useState(0);
   const [successResult, setSuccessResult] = useState<SubmitResult | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [stepValidationErrors, setStepValidationErrors] = useState<ValidationError[]>([]);
 
   useEffect(() => {
     if (!didHydrate.current) {
@@ -56,6 +59,7 @@ export function SubmissionWizard({
 
   useEffect(() => {
     setStep(step);
+    setStepValidationErrors([]);
   }, [setStep, step]);
 
   const serializedDraft = useMemo(() => JSON.stringify(draft), [draft]);
@@ -75,6 +79,13 @@ export function SubmissionWizard({
   }
 
   async function continueStep() {
+    const blockingErrors = collectBlockingErrors(step, draft, checklist);
+    if (blockingErrors.length > 0) {
+      setStepValidationErrors(blockingErrors);
+      return;
+    }
+    setStepValidationErrors([]);
+
     if (step === "review") {
       if (isSubmitting) return;
       await runSubmit();
@@ -135,6 +146,7 @@ export function SubmissionWizard({
           isSaving={saveStatus === "saving"}
           isSubmitting={isSubmitting}
           isDisabled={isSubmitting}
+          errors={stepValidationErrors}
           onBack={() => goToStep(stepIds[Math.max(currentIndex - 1, 0)])}
           onContinue={() => void continueStep()}
           onSave={() => void saveDraft()}
@@ -160,6 +172,51 @@ export function SubmissionWizard({
       )}
     </>
   );
+}
+
+function collectBlockingErrors(
+  step: SubmissionStep,
+  draft: SubmissionDraft,
+  checklist: DocumentChecklistItem[],
+): ValidationError[] {
+  const missingRequiredDocs = (): ValidationError[] =>
+    checklist
+      .filter(
+        (item) =>
+          item.requirement === "required" &&
+          item.uploadStatus !== "uploaded" &&
+          item.uploadStatus !== "verified",
+      )
+      .map((item) => ({
+        field: `documents.${item.docType}`,
+        step: "documents" as SubmissionStep,
+        severity: "blocking" as const,
+        code: "REQUIRED_DOCUMENT",
+        message: `${item.label} must be uploaded.`,
+        remedy: "Upload this document before continuing.",
+      }));
+
+  if (step === "review") {
+    const allErrors: ValidationError[] = [];
+    for (const s of stepIds) {
+      const sErrors = (draft.stepErrors[s as SubmissionStep] ?? []).filter(
+        (e) => e.severity === "blocking",
+      );
+      allErrors.push(...sErrors);
+    }
+    allErrors.push(...missingRequiredDocs());
+    return allErrors;
+  }
+
+  const errors = (draft.stepErrors[step] ?? []).filter(
+    (e) => e.severity === "blocking",
+  );
+
+  if (step === "documents") {
+    errors.push(...missingRequiredDocs());
+  }
+
+  return errors;
 }
 
 function StepContent({ step }: { step: SubmissionStep }) {

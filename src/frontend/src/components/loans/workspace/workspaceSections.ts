@@ -3,34 +3,36 @@
 // share one source of truth as the workspace grows past horizontal-tab scale.
 export const WORKSPACE_NAV_GROUPS = [
   {
-    id: "overview",
-    label: "Overview",
-    sections: [
-      { id: "home", label: "Home", shortLabel: "H" },
-    ],
-  },
-  {
     id: "workflow",
     label: "Workflow",
     sections: [
-      { id: "processing", label: "Processing", shortLabel: "Pr" },
+      { id: "status",       label: "Status",       shortLabel: "St" },
+      { id: "tasks",        label: "Tasks",        shortLabel: "Tk" },
+      { id: "processing",   label: "Processing",   shortLabel: "Pr" },
       { id: "underwriting", label: "Underwriting", shortLabel: "UW" },
-      { id: "conditions", label: "Conditions", shortLabel: "Co" },
-      { id: "disclosures", label: "Disclosures", shortLabel: "Di" },
+      { id: "conditions",   label: "Conditions",   shortLabel: "Co" },
+      { id: "exceptions",   label: "Exceptions",   shortLabel: "Ex" },
+      { id: "disclosures",  label: "Disclosures",  shortLabel: "Di" },
     ],
   },
   {
     id: "loan-file",
     label: "Loan File",
     sections: [
-      { id: "borrower-urla", label: "Borrower URLA", shortLabel: "BU" },
-      { id: "income", label: "Financial Analysis", shortLabel: "FA" },
-      { id: "hmda", label: "HMDA", shortLabel: "HM" },
-      { id: "documents", label: "Documents", shortLabel: "Do" },
-      { id: "parties", label: "Parties", shortLabel: "Pa" },
-      { id: "funding", label: "Funding", shortLabel: "Fu" },
-      { id: "closing", label: "Closing", shortLabel: "Cl" },
-      { id: "loan-estimate", label: "Loan Estimate", shortLabel: "LE" },
+      { id: "home",             label: "Home",             shortLabel: "Ho" },
+      { id: "borrower-urla",    label: "Borrower URLA",    shortLabel: "BU" },
+      { id: "income",           label: "Financial Analysis", shortLabel: "FA" },
+      { id: "subject-property", label: "Subject Property", shortLabel: "SP" },
+      { id: "appraisal",        label: "Appraisal",        shortLabel: "Ap" },
+      { id: "credit",           label: "Credit",           shortLabel: "Cr" },
+      { id: "hmda",             label: "HMDA",             shortLabel: "HM" },
+      { id: "documents",        label: "Documents",        shortLabel: "Do" },
+      { id: "parties",          label: "Parties",          shortLabel: "Pa" },
+      { id: "escrow",           label: "Escrow",           shortLabel: "Es" },
+      { id: "title-legal",      label: "Title & Legal",    shortLabel: "TL" },
+      { id: "loan-estimate",    label: "Loan Estimate",    shortLabel: "LE" },
+      { id: "funding",          label: "Funding",          shortLabel: "Fu" },
+      { id: "closing",          label: "Closing",          shortLabel: "Cl" },
     ],
   },
   {
@@ -62,9 +64,11 @@ export const ALL_SECTION_IDS = new Set<string>(ALL_SECTIONS.map((s) => s.id));
 
 const SECTION_ALIASES: Record<string, WorkspaceSection> = {
   notes: "conversation",
+  overview: "home",
+  property: "subject-property",
+  title: "title-legal",
 };
 
-// Guards query-string values before they are used as typed workspace sections.
 export function isWorkspaceSection(value: string): value is WorkspaceSection {
   return ALL_SECTION_IDS.has(value);
 }

@@ -991,3 +991,1178 @@ With `loanNumber ASC` sort (the user's persisted sort), the alphabetically-last 
 - Page now handles all vertical scrolling; `thead { top: 52px }` is correctly relative to the viewport toolbar
 
 **Diagnosis method:** Created test loans (test1–test6) with sequential names to establish the pattern. Confirmed the pipeline API returned all loans. Used CSS trace to identify the overflow-y scroll container as the proximate cause.
+
+---
+
+## Session 17 — Loan Workspace Expansion: Command Center, Financial Analysis, and Remaining Tabs
+
+**Type:** Major frontend implementation / workspace expansion
+
+### Scope
+
+Continued the Origina loan workspace architecture implementation after the initial URLA and Parties buildout. The goal was to move the workspace away from placeholder tabs and toward a modern loan command center with real frontend-first modules for processors, underwriters, disclosure desk users, closers, funders, and operations users.
+
+### Navigation and Shell
+
+**`src/frontend/src/components/loans/LoanWorkspaceRail.tsx`**
+- Added the grouped vertical loan workspace rail that belongs inside the loan file, separate from the global app sidebar.
+- Supports grouped sections, active section state, count/status badges, and compact display behavior.
+- Uses the existing `?section=` URL-driven navigation model.
+
+**`src/frontend/src/components/loans/workspace/workspaceSections.ts`**
+- Reworked workspace navigation registry into grouped sections:
+  - Overview
+  - Workflow
+  - Loan File
+  - Team
+  - System
+- Renamed `Income` to `Financial Analysis` while preserving the underlying `income` route key.
+- Added/kept route aliases such as `notes -> conversation`.
+
+**`src/frontend/src/components/loans/LoanWorkspaceShell.tsx`**
+- Updated shell to use the grouped vertical rail.
+- Kept shallow routing so section changes do not remount the entire loan file page.
+- Updated the topbar with additional loan context placeholders:
+  - Purpose pending
+  - DTI/DSCR pending
+  - Owner
+  - Primary `Move File` action
+- Removed placeholder fallback for newly built sections and routed each tab to its real component.
+
+**UI fix**
+- Removed the visible mark/icon next to the regular workspace rail title.
+- Kept compact-mode rail behavior intact.
+
+### Home Command Center
+
+**`src/frontend/src/components/loans/workspace/WorkspaceHome.tsx`**
+- Rebuilt the Home screen as a loan command center.
+- Added hero metrics:
+  - Loan number
+  - Status
+  - Amount
+  - Product
+  - Purpose
+  - LTV / CLTV
+  - DTI
+  - DSCR
+  - Submitted date
+  - Lock status
+- Added three-column dashboard layout:
+  - Borrower & Property Summary
+  - Loan Summary + Workflow Summary
+  - Internal Team + Recent Activity
+- Workflow summary cards navigate directly to the relevant workspace section.
+- Uses real available loan detail data where exposed by backend, and clear pending/mock placeholders where backend fields do not exist yet.
+
+### Financial Analysis Workspace
+
+**`src/frontend/src/components/loans/workspace/WorkspaceIncome.tsx`**
+- Reframed the old Income tab as the Financial Analysis workspace.
+- Added subsection navigation:
+  - Overview
+  - Employment Income
+  - Self Employment
+  - Rental Income
+  - Asset & Reserve Analysis
+  - Other Income
+  - Income Calculation Summary
+  - Audit Trail
+- Preserved existing wage, self-employment, rental/DSCR worksheets and right-click field metadata behavior.
+- Added pending-state KPIs where backend fields do not exist yet instead of fabricating persisted values.
+
+**`src/frontend/src/components/loans/workspace/AssetReserveAnalysis.tsx`**
+- Added a full frontend-first Asset & Reserve Analysis module.
+- Asset accounts support:
+  - Institution
+  - Account holder
+  - Account type
+  - Borrower age
+  - Last four
+  - End balance
+  - Statement expiration
+  - Retirement flag
+- Each account can hold multiple allocations:
+  - Cash to close
+  - Asset depletion
+  - ATR in full
+  - Reserves
+- Added expandable account rows and allocation rows.
+- Added sticky live summary panel with:
+  - Total verified assets
+  - Total eligible assets
+  - Cash-to-close allocation
+  - Asset depletion allocation
+  - ATR allocation
+  - Available reserves
+  - Remaining unallocated eligible assets
+  - Monthly depletion income
+  - Funds required to close
+  - Additional amount needed
+- Added validation for:
+  - Allocations exceeding eligible balance
+  - Retirement account used for cash to close
+  - Missing required account fields
+  - Expired statements
+  - Cash-to-close shortfall
+
+**`src/frontend/src/types/financialAnalysis.ts`**
+- Added typed frontend model for:
+  - Financial analysis subsections
+  - Asset accounts
+  - Asset allocations
+  - Computed asset accounts
+  - Validation messages
+  - Worksheet summary
+  - Prepared income output records
+
+**`src/frontend/src/state/financialAnalysisStore.ts`**
+- Added Zustand store for asset worksheet state.
+- Added calculation helpers for:
+  - Eligible balance
+  - Allocation totals
+  - Remaining eligible balance
+  - Available reserves
+  - Monthly asset depletion income
+  - Additional needed to close
+  - Income output generation
+- Encapsulated the current underwriting math so components do not duplicate calculation rules.
+
+**`src/frontend/src/services/financialAnalysisService.ts`**
+- Added mock asset worksheet service.
+- Left TODO seam for future `GET /loans/{loanId}/financial-analysis/assets`.
+
+### HMDA Workspace
+
+**`src/frontend/src/components/loans/workspace/WorkspaceHMDA.tsx`**
+- Built a dedicated HMDA compliance workspace.
+- Added two-column layout:
+  - Left: HMDA data entry
+  - Right: sticky validation panel
+- Added form sections:
+  - Borrower Information
+  - Property Information
+  - Loan Information
+- Added live completion percentage.
+- Added missing required field list.
+- Added warning list for incomplete reportability context.
+- Uses mock/local state until backend HMDA tables and validation endpoints exist.
+
+### Documents Workspace
+
+**`src/frontend/src/components/loans/workspace/WorkspaceDocuments.tsx`**
+- Built a three-panel document management workspace:
+  - Left: category navigation
+  - Center: document grid/table
+  - Right: preview and metadata panel
+- Added document categories:
+  - Income
+  - Assets
+  - Credit
+  - Property
+  - Disclosures
+  - Conditions
+  - Closing
+  - Miscellaneous
+- Added mock document records with:
+  - File name
+  - Category
+  - Version
+  - Status
+  - Uploaded by
+  - Uploaded date
+  - Linked condition
+  - Document type
+  - Metadata
+- Added empty states for categories with no documents.
+
+### Disclosures Workspace
+
+**`src/frontend/src/components/loans/workspace/WorkspaceDisclosures.tsx`**
+- Built a disclosures workspace for disclosure desk users.
+- Added:
+  - Disclosure lifecycle timeline
+  - Disclosure package list
+  - Prepare / Review / Send subtabs
+  - Sticky compliance panel
+- Added compliance indicators:
+  - TRID clock
+  - Earliest closing date
+  - Waiting period status
+  - Missing signatures
+  - Outstanding redisclosures
+- Uses mock package/event data until disclosure tables and APIs exist.
+
+### Funding Workspace
+
+**`src/frontend/src/components/loans/workspace/WorkspaceFunding.tsx`**
+- Built a funding readiness screen.
+- Added checklist for:
+  - Clear to fund approval
+  - Wire instructions
+  - Warehouse line
+  - Final conditions
+  - Funding authorization
+- Added Wire & Warehouse summary panel.
+- Added sticky status panel and funding review action.
+
+### Closing Workspace
+
+**`src/frontend/src/components/loans/workspace/WorkspaceClosing.tsx`**
+- Built a closing coordination screen.
+- Added closing timeline:
+  - Closing package requested
+  - Title final review
+  - CD waiting period
+  - Docs out
+  - Signed package returned
+- Added sticky closing control panel:
+  - Earliest close
+  - Docs out
+  - Signing appointment
+  - Package returned
+- Added `Prepare Closing Package` placeholder action.
+
+### Conversation Workspace
+
+**`src/frontend/src/components/loans/workspace/WorkspaceConversation.tsx`**
+- Replaced the old Notes placeholder with a Conversation workspace.
+- Added internal chat-style thread:
+  - Author
+  - Role
+  - Timestamp
+  - Message body
+- Added composer placeholder for future mentions and attachments.
+- Added linked activity panel.
+
+### Audit Log Workspace
+
+**`src/frontend/src/components/loans/workspace/WorkspaceAuditLog.tsx`**
+- Built an audit log workspace.
+- Added audit summary strip:
+  - Event count
+  - Material changes
+  - Sources
+  - Export status
+- Added event history table with:
+  - Event
+  - Actor
+  - Source
+  - Field
+  - Before
+  - After
+  - Timestamp
+- Uses mock audit entries until backend audit endpoints are wired to the workspace.
+
+### Styling
+
+**`src/frontend/src/styles/globals.css`**
+- Added/expanded styles for:
+  - Vertical loan workspace rail
+  - Fixed loan topbar enhancements
+  - Home command center hero bar and panels
+  - Financial Analysis subsection shell
+  - Asset account grid, allocation rows, validation states, and sticky summary panel
+  - HMDA validation panel
+  - Document three-panel layout
+  - Disclosure timeline and workspace subtabs
+  - Funding and closing control panels
+  - Conversation thread and composer
+  - Audit table
+  - Responsive mobile stacking
+- Kept Origina green/black/white theme.
+- Used orange/red only for functional warning/blocking states.
+
+### Backend Gaps Identified
+
+The workspace is now frontend-complete enough to demonstrate the command center, but these backend pieces are still needed:
+
+- `asset_accounts`
+- `asset_allocations`
+- immutable financial calculation run snapshots
+- HMDA data and validation result persistence
+- disclosure packages and append-only disclosure events
+- document versioning/category/status APIs
+- conversation/message persistence
+- funding and closing milestone persistence
+- workspace audit endpoint that aggregates audit log, disclosure events, document events, condition changes, and financial calculation changes
+- richer loan summary/detail API fields for:
+  - Purpose
+  - LTV / CLTV
+  - DTI / DSCR
+  - verified assets
+  - cash to close
+  - lock status
+  - internal team assignments
+
+### Validation performed
+
+- `npm run lint` passed.
+- `npm run build` passed.
+- Build still shows existing non-blocking warnings:
+  - stale `baseline-browser-mapping`
+  - missing native Next SWC package, WASM fallback used
+  - experimental CommonJS/ESM warning from Redux Toolkit bundle during static generation
+
+---
+
+## Session 18 — Workspace Expansion: Status, Property, Appraisal, Credit, Escrow, Title & Legal
+
+**Type:** Major feature implementation — 5 new DB tables, 5 new API route modules, 6 new workspace components
+
+### Scope
+
+Full end-to-end build of six new loan workspace modules following the Origina Workspace Expansion spec. Each module required database migrations, SQLAlchemy models, Pydantic schemas, FastAPI route modules, frontend type definitions, and React workspace components.
+
+### Database Migrations
+
+| Migration | File | Content |
+|---|---|---|
+| 113 | `113_property_details.sql` | `ALTER TABLE properties ADD COLUMN` — 19 new columns: county, census_tract, msa, apn, year_built, square_footage, lot_size_sqft, units, is_mixed_use, is_rural, is_condo_pud, flood_zone, flood_insurance_required, annual_taxes, hazard_insurance, hoa_dues, value_source, estimated_value |
+| 114 | `114_appraisal.sql` | New `appraisal_orders` table — order tracking, valuation, and full review/clearance fields |
+| 115 | `115_credit.sql` | New `credit_reports`, `credit_liabilities`, `credit_events` tables |
+| 116 | `116_escrow.sql` | New `escrow_details` table (unique per active loan via partial index) |
+| 117 | `117_title.sql` | New `title_orders`, `title_exceptions` tables |
+
+**Bug found during migration:** Migration trigger function was named `set_updated_at()` but the actual DB function installed by earlier migrations is `update_updated_at_column()`. Fixed in migrations 114–117 before applying.
+
+### Backend — Models
+
+| File | Content |
+|---|---|
+| `models/appraisal.py` (NEW) | `AppraisalOrder` — TenantMixin, Base, all order/review fields |
+| `models/credit.py` (NEW) | `CreditReport`, `CreditLiability`, `CreditEvent` |
+| `models/escrow.py` (NEW) | `EscrowDetail` |
+| `models/title.py` (NEW) | `TitleOrder`, `TitleException` |
+| `models/properties.py` (UPDATED) | Added all 19 new columns from migration 113 |
+| `models/loan.py` (UPDATED) | Added 4 new `relationship()` entries: `appraisals`, `credit_reports`, `escrow` (uselist=False), `title_orders` — all with `cascade="all, delete-orphan"` |
+| `models/__init__.py` (UPDATED) | Added imports for all 7 new model classes |
+
+### Backend — Schemas
+
+| File | Content |
+|---|---|
+| `schemas/appraisal_schema.py` (NEW) | `AppraisalOrderBase/Create/Update/Out` |
+| `schemas/credit_schema.py` (NEW) | `CreditReportBase/Create/Update/Out`, `CreditLiabilityBase/Create/Update/Out`, `CreditEventBase/Create/Update/Out` |
+| `schemas/escrow_schema.py` (NEW) | `EscrowDetailBase/Create/Update/Out` |
+| `schemas/title_schema.py` (NEW) | `TitleOrderBase/Create/Update/Out`, `TitleExceptionBase/Create/Update/Out` |
+| `schemas/property_schema.py` (UPDATED) | Added all 19 new fields to `PropertyBase` |
+
+### Backend — API Routes
+
+| File | Prefix | Endpoints |
+|---|---|---|
+| `api/v1/status.py` (NEW) | `/loans/{id}/status` | `GET` current status + available transitions; `GET` history; `POST` transition. Server-authoritative `ALLOWED_TRANSITIONS` dict enforces legal moves. Every transition writes to `loan_status_events`. |
+| `api/v1/appraisal.py` (NEW) | `/appraisals` | `GET ?loan_id=`, `POST`, `GET /{id}`, `PATCH /{id}`, `DELETE /{id}` |
+| `api/v1/credit.py` (NEW) | `/credit` | Reports: `GET ?loan_id=`, `POST`, `PATCH /{id}`. Liabilities: same. Events: same. |
+| `api/v1/escrow.py` (NEW) | `/escrow` | `GET /{loan_id}`, `PUT /{loan_id}` (upsert pattern — creates if absent, updates if present) |
+| `api/v1/title.py` (NEW) | `/title` | Orders: `GET ?loan_id=`, `POST`, `GET /{id}`, `PATCH /{id}`. Exceptions: `GET ?loan_id=`, `POST`, `PATCH /{id}`. |
+| `core/main.py` (UPDATED) | — | Registered 5 new routers. Total routes: **123** (verified). |
+
+**Status transition rules (`ALLOWED_TRANSITIONS`):**
+
+```
+new_draft         → submitted, withdrawn, cancelled
+submitted         → conditions_review, denied, withdrawn, cancelled
+conditions_review → approved_pending, approved, denied, withdrawn, cancelled
+approved_pending  → approved, denied, withdrawn, cancelled
+approved          → funded, denied, withdrawn, cancelled
+funded            → closed, post_closing
+closed            → post_closing, archived
+post_closing      → archived
+denied/withdrawn/cancelled/archived → [] (terminal)
+```
+
+### Frontend — Types
+
+**`src/frontend/src/types/api.ts` (UPDATED)**
+- Added: `PropertyDetailOut` (extends `PropertyOut` with 19 new fields), `StatusTransitionOption`, `LoanStatusOut`, `StatusEventOut`, `AppraisalOrderOut`, `CreditReportOut`, `CreditLiabilityOut`, `CreditEventOut`, `EscrowDetailOut`, `TitleExceptionOut`, `TitleOrderOut`
+
+### Frontend — Navigation
+
+**`src/frontend/src/components/loans/workspace/workspaceSections.ts` (UPDATED)**
+- Restructured into 4 groups: Workflow (5 sections), Loan File (14 sections), Team (1 section), System (1 section)
+- Added new sections: `status`, `subject-property`, `appraisal`, `credit`, `escrow`, `title-legal`
+- Added aliases: `overview→home`, `property→subject-property`, `title→title-legal`
+
+**`src/frontend/src/components/loans/LoanWorkspaceShell.tsx` (UPDATED)**
+- Added imports and routing for all 6 new workspace components
+
+### Frontend — Workspace Components (all NEW)
+
+**`WorkspaceStatus.tsx`**
+- Current status badge with tone-coded colors (green/amber/red/blue)
+- Available transitions panel — buttons filtered to legal next states
+- Confirmation modal with optional reason field
+- Status history timeline rendering `loan_status_events` rows
+- Calls real API: `GET /loans/{id}/status`, `POST /loans/{id}/status/transition`, `GET /loans/{id}/status/history`
+
+**`WorkspaceSubjectProperty.tsx`**
+- Address form (street, city, state, ZIP, county, APN, census tract, MSA)
+- Property characteristics (type, occupancy, year built, sq ft, lot size, units)
+- Boolean flags (mixed-use, rural, condo/PUD)
+- Flood zone and flood insurance required
+- Valuation & taxes (value source, estimated value, annual taxes, hazard insurance, HOA)
+- Saves via `PATCH /properties/{id}` with WorkspaceSaveBar
+
+**`WorkspaceAppraisal.tsx`**
+- 4-step progress stepper (Ordered → Inspection → Received → Reviewed), driven by date fields
+- Order details: vendor/AMC, appraiser, dates, appraisal type
+- Valuation: appraised value, purchase price, property condition C1–C6 picker
+- Review/clearance: review status, reviewed by, ROV flag, second appraisal flag, review notes
+- Create-new-order flow when no order exists on file
+- Calls `GET/POST/PATCH /appraisals/`
+
+**`WorkspaceCredit.tsx`**
+- Credit score cards: Equifax, Experian, TransUnion, Middle Score, Rep Score with risk color coding (≥740 green, ≥680 blue, ≥620 amber, <620 red)
+- Report metadata: date, vendor, reference number
+- Liabilities grid: total balance/payments summary + per-tradeline table with excluded/paid-at-closing tags
+- Derogatory events list: bankruptcy, foreclosure, short sale, charge-off, etc.
+- Read-only (credit data is vendor-imported, not manually entered)
+- Calls `GET /credit/reports`, `/credit/liabilities`, `/credit/events`
+
+**`WorkspaceEscrow.tsx`**
+- Escrow contact card (company, officer, email, phone, address)
+- Key dates (contract, closing)
+- Settlement summary (EMD, estimated/verified cash-to-close, seller/lender credits, third-party fees, escrow balance, wire instructions status)
+- Clearance checklist: closing protection letter, settlement statement reviewed, wire verified
+- Create/open escrow flow when no record exists
+- Upserts via `PUT /escrow/{loan_id}` with WorkspaceSaveBar
+
+**`WorkspaceTitleLegal.tsx`**
+- Title company contact + ordered/commitment dates + title status picker
+- Vesting section (borrower vesting string, ownership type dropdown, entity name)
+- Inline exception management: add exception form, per-exception status, one-click "Mark Cleared" action
+- Open exception count badge in section header
+- Funding blocked and legal review required toggles with conditional field rendering
+- Exception cards with left-border color coding (red=open, amber=in-review, green=cleared)
+- Calls `GET/POST/PATCH /title/orders` and `GET/POST/PATCH /title/exceptions`
+
+### Frontend — CSS
+
+**`src/frontend/src/styles/globals.css` (UPDATED — ~420 lines appended)**
+- `ws-status-*` — status badge variants, transition buttons, confirm overlay/modal, timeline
+- `prop-*` — property form grid, checkboxes
+- `appr-*` — appraisal stepper (dot + connector), field grid, textarea
+- `credit-*` — score cards (featured variant), liability table, event cards
+- `escrow-*` — field grid, checklist
+- `title-*` — section header with badge, exception cards (tone variants), inline exception form, alert section variant
+
+### Seed Data
+
+**`scripts/seed_nonqm_loans.py` (REWRITTEN)**
+- Produces 200 realistic Non-QM loans with ~90% field coverage
+- Added: co-borrowers (40% of loans), notes (388 total), tasks (220 total), broker party assignments, full financial calculations (P&I, taxes, HOI, HOA, escrow, total payment)
+- Starts with `DELETE FROM loans WHERE tenant_id = :tid` (CASCADE removes all child rows) to allow clean reseeding
+- Results: 200 loans, 77 co-borrowers, 388 notes, 220 tasks, 200 broker assignments
+
+### Bug Fixes — Same Session
+
+**Pipeline table: last row always hidden (`globals.css`)**
+- Root cause: `.pipeline-table-wrap` had `overflow-y: clip` (from a prior attempted fix) — even with clip, `overflow-x: auto` alone makes the element a CSS scroll container per spec, and all sticky positioning inside it is relative to that container's top, not the viewport. The thead's `top: 52px` was permanently mispositioned.
+- Fix: Removed `position: sticky; top: 52px; z-index: 5` from `.pipeline-table thead th` entirely. Thead is no longer sticky. Page scrolling handles vertical scrolling. Horizontal overflow is preserved.
+
+**`WorkspaceHome.tsx` — `.toFixed is not a function`**
+- Root cause: Postgres `numeric`/`decimal` columns (dscr, debt_to_income, ltv, etc.) serialize as strings in JSON. JavaScript's `value.toFixed()` does not exist on strings.
+- Fix: `fmtMoney`, `fmtPct`, `fmtRatio` all now pass through `Number(value)` before any arithmetic. `isNaN()` guard returns `"-"` for non-numeric strings.
+
+**`WorkspaceIncome.tsx` — `fin.dscr.toFixed is not a function`**
+- Same root cause as above — DSCR from `loan_financials` arrives as a string.
+- Fix: inline `Number(fin.dscr).toFixed(2)` and hardened `fmtPct` helper with same `Number()` coercion.
+
+### Lint Fixes
+
+After running `npm run lint`:
+
+| File | Issue | Fix |
+|---|---|---|
+| `WorkspaceBorrowerURLA.tsx:498` | `react/no-unescaped-entities` — raw `"` in JSX text | Replaced with `&quot;` |
+| `WorkspaceCredit.tsx:52` | `react-hooks/set-state-in-effect` — `setLoading(true)` synchronously in effect body | Removed synchronous call; initialized `loading` state as `!!token` so it starts `true` when authenticated |
+| `WorkspaceStatus.tsx:24` | `@typescript-eslint/no-unused-vars` — `TERMINAL` set was defined but never referenced | Removed `TERMINAL` |
+
+**Validation performed:**
+- `npm run lint` — 0 errors, 0 warnings ✓
+- `npm run build` — compiled successfully, 60 static pages generated ✓
+
+---
+
+## Session 19 — Tasks Workspace, Condition Templates, and Borrower Add/Remove
+
+**Type:** Feature — Tasks workspace, template system for tasks + conditions, full borrower CRUD in URLA
+
+---
+
+### What was built
+
+#### 1. `WorkspaceTasks.tsx` (new)
+
+Full task management workspace connected to the real `GET/POST/PATCH/DELETE /tasks/` API.
+
+**Features:**
+- `TaskForm` — inline form with title, description, priority select, status select, and due date
+- `TaskCard` — status cycle toggle (click to advance todo→in_progress→done), priority badge, status pill, due date with overdue highlight, edit inline, delete with confirm
+- Filter tabs: All / To Do / In Progress / Blocked / Done / Cancelled with per-tab counts
+- Stats row: To Do, In Progress, Blocked, Done counts as clickable tiles
+- "Apply Template" button opens `TemplatePickerModal` with `type="task"`
+- `handleApplyTemplate` creates all tasks via `Promise.all` preserving template order
+
+**API calls:**
+- `GET /tasks/?loan_id={id}` — load tasks on mount
+- `POST /tasks/` — create task (manual or from template)
+- `PATCH /tasks/{id}` — update task (status cycle or full edit)
+- `DELETE /tasks/{id}` — delete task
+
+#### 2. `TemplatePickerModal.tsx` (new)
+
+Shared modal component for both task and condition templates.
+
+**Features:**
+- Left panel: template cards with name, description, item count
+- Right panel: preview list with priority (tasks) or stage (conditions) badges
+- Controlled `applying` state with error display
+- Props: `type: "task" | "condition"`, `onApply(items)`, `onCancel`
+
+#### 3. `data/templates.ts` (new)
+
+Pure frontend data — no new DB tables. All templates are Non-QM-specific.
+
+**Task Templates (4):**
+- `dscr-purchase` — 10 tasks for DSCR investment purchase
+- `bank-stmt-refinance` — 9 tasks for bank statement self-employed refi
+- `asset-depletion` — 8 tasks for asset-depletion qualification
+- `full-processing` — 15 tasks for any Non-QM loan
+
+**Condition Templates (4):**
+- `dscr-full` — 10 conditions (PTA/PTD/PTF) for DSCR loans
+- `bank-stmt-full` — 10 conditions for bank statement borrowers
+- `standard-purchase` — 11 conditions for general Non-QM purchase
+- `refi-package` — 9 conditions for rate/term or cash-out refi
+
+#### 4. `WorkspaceConditions.tsx` (updated)
+
+Added "Apply Template" button next to "+ Add Condition" in the header. Opens `TemplatePickerModal` with `type="condition"`. Sequential `createCondition` calls assign incrementing condition numbers.
+
+#### 5. `WorkspaceBorrowerURLA.tsx` (updated)
+
+Three changes to support full borrower CRUD in the URLA module:
+
+**Add Borrower (with type picker):**
+- "+ Add Borrower" dashed button appended to borrower tab row
+- Clicking reveals inline `urla-add-borrower-row` picker: Type dropdown (Co-Borrower default, Primary, Guarantor, Other) + Create + Cancel
+- `handleAddBorrower(type)` now accepts the selected type instead of hardcoding `primary_borrower`
+
+**Remove Borrower:**
+- Each borrower tab gets an `×` remove button (hidden when only 1 borrower remains)
+- `handleRemoveBorrower(id)` calls `DELETE /borrowers/{id}`, cleans up all local state maps, and switches active borrower to the next available
+- Confirm dialog before deletion
+
+#### 6. `globals.css` (updated)
+
+Added CSS for all new classes:
+- `task-*` — wrapper, header, buttons, form, stats, filter tabs, task cards, status toggles, priority/status badges, due date
+- `tpl-*` — modal overlay, modal layout, left template list, right preview panel, footer buttons
+- `urla-add-borrower-row`, `urla-tab-actions`, `urla-tab-remove`, `urla-add-tab-btn` — borrower tab management
+
+#### 7. `api.ts` (updated)
+
+Added:
+```typescript
+export type TaskStatus = "todo" | "in_progress" | "blocked" | "done" | "cancelled";
+export type TaskPriority = "low" | "normal" | "high" | "urgent";
+export type TaskOut = { id, tenant_id, loan_id, title, description, status, priority, assigned_to, due_at, created_by, created_at, updated_at };
+```
+
+#### 8. `workspaceSections.ts` (updated)
+
+Added `{ id: "tasks", label: "Tasks", shortLabel: "Tk" }` to the Workflow group.
+
+#### 9. `LoanWorkspaceShell.tsx` (updated)
+
+Added `WorkspaceTasks` import and routing: `if (section === "tasks") return <WorkspaceTasks loan={loan} />;`
+
+---
+
+### Files changed
+
+| File | Type | Notes |
+|---|---|---|
+| `components/loans/workspace/WorkspaceTasks.tsx` | NEW | Full task workspace with real API |
+| `components/loans/workspace/TemplatePickerModal.tsx` | NEW | Shared template picker modal |
+| `data/templates.ts` | NEW | 4 task + 4 condition Non-QM templates |
+| `components/loans/workspace/WorkspaceConditions.tsx` | UPDATED | Added Apply Template button |
+| `components/loans/workspace/WorkspaceBorrowerURLA.tsx` | UPDATED | Add/remove borrower, type picker |
+| `styles/globals.css` | UPDATED | task-*, tpl-*, urla-tab-* CSS added |
+| `types/api.ts` | UPDATED | TaskStatus, TaskPriority, TaskOut |
+| `components/loans/workspace/workspaceSections.ts` | UPDATED | Tasks section added to Workflow group |
+| `components/loans/LoanWorkspaceShell.tsx` | UPDATED | WorkspaceTasks import + routing |
+
+---
+
+**Validation performed:**
+- `npm run lint` — 0 errors, 0 warnings ✓
+- `npm run build` — compiled successfully, all static pages generated ✓
+
+---
+
+## Session 20 — QA: Submission Data Loss — Borrower Name, Subject Property, and All Form Fields
+
+**Type:** Bug fix — Critical data mapping failures in the loan submission flow (manual + MISMO XML)
+
+---
+
+### QA Findings (4 critical bugs)
+
+#### Bug 1 — `saveLoanDraft` was localStorage-only (root cause)
+
+**File**: `services/submissionService.ts:108-113`
+
+`saveLoanDraft` called `saveLocally()` only. Every field the user typed (borrower name, property address, loan amount, program, purpose) was saved to localStorage and **never written to the database**. The auto-save running every 1.5 seconds silently wrote to nowhere. All form data was lost on submit.
+
+**Fix**: Updated `submissionStore.ts:saveDraft` to flush all form data to the backend after the local save — PATCH loan header, PUT financials, and sync borrowers/property (see below).
+
+---
+
+#### Bug 2 — Subject property never created in the DB
+
+**File**: `services/submissionService.ts` (missing function), `components/submission/mismo/MismoUpload.tsx:59-85`
+
+No `createPropertyForLoan` function existed. `PropertySection` updated Zustand store only. `MismoUpload.applyImport` created borrowers but skipped the property entirely. The `properties` table row was never inserted. The pipeline's lateral join for `property_state` (and `WorkspaceSubjectProperty`) always returned null/empty.
+
+**Fix**:
+- Added `createPropertyForLoan(loanId, property)` to `submissionService.ts`
+- Added `updatePropertyInDb(propertyDbId, property)` to `submissionService.ts`
+- `MismoUpload.applyImport` now calls `createPropertyForLoan` alongside borrower creation
+- `saveDraft` now creates or patches the subject property on every save
+
+---
+
+#### Bug 3 — Borrower name always null after submit; pipeline showed "Unnamed Borrower"
+
+Two-part bug:
+
+**Part A** — Manual wizard never created borrower records.
+`BorrowerSection` wrote to the Zustand store only. Only `MismoUpload.applyImport` ever called `POST /borrowers/`. Any loan created through the manual wizard had no borrower row in the DB.
+
+**Fix**: `saveDraft` now calls `createBorrowerForLoan` or `patchBorrowerInDb` on every save (guarded by `borrowerDbIds` tracking to prevent duplicate inserts).
+
+**Part B** — `submit_loan` endpoint returned wrong response shape.
+`loans.py:submit_loan` returned the raw `loan` ORM object as `LoanSubmitOut`, but `LoanSubmitOut.borrower_name` and `LoanSubmitOut.loan_amount` don't exist on the `Loan` model — they always serialized as `None` even when borrower and financials rows existed.
+
+**Fix**: `submit_loan` now JOINs `borrowers` and `loan_financials` after commit and returns a `LoanSubmitOut(...)` constructed explicitly with the joined values.
+
+---
+
+#### Bug 4 — Duplicate borrower rows on repeated saves
+
+Adding backend sync to `saveDraft` would have caused a new `POST /borrowers/` on every auto-save (every 1.5 seconds), creating hundreds of duplicate rows.
+
+**Fix**: Added `borrowerDbIds: Record<string, string>` and `propertyDbId: string | null` to the Zustand store. These map client-side UUIDs to server-assigned UUIDs. On each `saveDraft`:
+- If no DB ID → `POST` and store the returned ID
+- If DB ID exists → `PATCH` the existing row
+
+Both fields are included in `partialize` so they survive page reloads.
+
+---
+
+#### Bug 5 — FastAPI validation errors rendered as `[object Object]`
+
+**File**: `services/apiClient.ts`
+
+When the backend returned a 422 Pydantic validation error, `detail` is an `Array<{loc, msg, type}>` — not a string. `apiClient.ts` typed `body` as `{ detail?: string }` and passed the array directly to `new Error(array)`, which stringified to `[object Object]`. The runtime error was completely unreadable.
+
+**Fix**: Changed `detail` type to `unknown`. Added array branch: extracts the last `loc` segment and `msg` from each error object, joins with `"; "`. Simple string `detail` and unrecognised shapes fall through to `JSON.stringify`.
+
+```typescript
+const detail = await response.json().then((body: { detail?: unknown }) => {
+  const d = body.detail;
+  if (!d) return null;
+  if (typeof d === "string") return d;
+  if (Array.isArray(d)) {
+    return (d as { loc?: string[]; msg?: string }[])
+      .map((e) => [e.loc?.slice(-1)[0], e.msg].filter(Boolean).join(": "))
+      .join("; ") || JSON.stringify(d);
+  }
+  return JSON.stringify(d);
+}).catch(() => null);
+```
+
+---
+
+#### Bug 6 — `tenant_id: Field required` on subject property creation
+
+**File**: `src/backend/app/schemas/property_schema.py`
+
+`PropertyCreate` declared `tenant_id: UUID` as a required field. The frontend never sends `tenant_id` (it is always derived from the JWT on the backend). Every `POST /properties/` call returned 422 `tenant_id: Field required`. Subject property rows could never be created.
+
+**Fix**: Changed to `tenant_id: Optional[UUID] = None  # ignored; always derived from JWT`, matching the same pattern already used by `BorrowerCreate`.
+
+---
+
+#### Bug 7 — Purpose value mismatch between frontend enum and DB enum
+
+**File**: `services/submissionService.ts`
+
+Frontend `LoanPurpose` type uses `"rate_term_refi"` and `"cash_out_refi"`. The backend `loan_purpose` DB enum uses `"refinance"` and `"cash_out"`. Sending the frontend values directly would have caused a 422 or DB constraint violation on every refinance/cash-out submission.
+
+**Fix**: Added `PURPOSE_MAP` in `patchLoanHeader`:
+```typescript
+const PURPOSE_MAP: Record<string, string> = {
+  rate_term_refi: "refinance",
+  cash_out_refi: "cash_out",
+};
+```
+`purpose` is translated via `PURPOSE_MAP[purpose] ?? purpose` before being sent. Purchase loans pass through unchanged.
+
+---
+
+#### Bug 8 — Null sent to `loans.purpose NOT NULL` column
+
+**File**: `services/submissionService.ts`
+
+`patchLoanHeader` was sending all fields including `purpose: null` when the user hadn't selected a purpose yet. `loans.purpose` is `NOT NULL` (or has a check constraint). Sending `null` caused a 422/500 on every early auto-save before the user reached the purpose step.
+
+**Fix**: `patchLoanHeader` now builds the body dynamically — only includes a field if the value is non-null. If no non-null fields remain, the function returns early without making a network request.
+
+---
+
+### Files changed
+
+| File | Type | Change |
+|---|---|---|
+| `services/submissionService.ts` | UPDATED | Added `createPropertyForLoan`, `updatePropertyInDb`, `patchBorrowerInDb`; updated `patchLoanHeader` to skip null fields and map purpose values; updated `upsertLoanFinancials` to include `purchase_price` and `fico_score`; added `PURPOSE_MAP` |
+| `state/submissionStore.ts` | UPDATED | Added `borrowerDbIds` + `propertyDbId` state; rewrote `saveDraft` to flush header, financials, borrowers, and property to backend; reset tracking IDs in `startNewDraft` and `resetSubmission`; persisted new fields via `partialize` |
+| `components/submission/mismo/MismoUpload.tsx` | UPDATED | `applyImport` now calls `createPropertyForLoan`; persists returned DB IDs into store so next save PATCHes |
+| `src/backend/app/api/v1/loans.py` | UPDATED | `submit_loan` JOINs `Borrower` and `LoanFinancials` after commit; returns explicit `LoanSubmitOut(...)` with `borrower_name` and `loan_amount` populated |
+| `services/apiClient.ts` | UPDATED | Fixed `detail` type to `unknown`; added array-format handler for Pydantic validation errors |
+| `src/backend/app/schemas/property_schema.py` | UPDATED | `tenant_id: UUID` → `Optional[UUID] = None` — never required from client, always derived from JWT |
+
+---
+
+### Test results
+
+**Manual path (new loan wizard):**
+- Borrower first/last name → saved to `borrowers` table on first `saveDraft` ✓
+- Subject property address/city/state → saved to `properties` table on first `saveDraft` ✓
+- Loan program/purpose/occupancy → PATCHed to `loans` on every save ✓
+- Loan amount + estimated value → PUT to `loan_financials` on every save ✓
+- After submit: pipeline borrower_name column shows real name ✓
+- Repeated saves PATCH (not POST) existing rows — no duplicates ✓
+
+**MISMO import path:**
+- Borrower row created with first/last/email/phone on `applyImport` ✓
+- Subject property row created with address/city/state on `applyImport` ✓
+- `borrowerDbIds` / `propertyDbId` persisted — subsequent saves PATCH ✓
+- `LoanSubmitOut.borrower_name` now returns real name from DB JOIN ✓
+- `LoanSubmitOut.loan_amount` now returns real amount from DB JOIN ✓
+
+**Validation performed:**
+- `npm run lint` — 0 errors, 0 warnings ✓
+- `npm run build` — compiled successfully, all static pages generated ✓
+
+---
+
+## Session 21 — Bug Fix: MISMO Import `applyImport` Concurrent Promise.all and Broken External setState
+
+**Type:** Bug fix — runtime crash in MISMO XML import flow (`applyImport`)
+
+---
+
+### Bug: `Failed to fetch` + double-POST on MISMO import
+
+**File**: `components/submission/mismo/MismoUpload.tsx`
+
+After Session 20 added backend sync to `saveDraft`, `applyImport` had two compounding bugs:
+
+**Bug A — `useLoanSubmissionStore.setState(state => { state.x = y })` mutation is a no-op externally**
+
+External `setState` calls on a Zustand+Immer store are raw Zustand — Immer wrapping only applies inside the store's own `set()`. The mutation function produces `undefined` as its return value, so Zustand receives `undefined` and discards the update. Result: `borrowerDbIds` and `propertyDbId` were never persisted. On the subsequent `saveDraft` call, `get().borrowerDbIds` was still `{}`, causing `saveDraft` to POST new borrower rows again — duplicate inserts.
+
+**Bug B — Redundant concurrent `Promise.all` (now fully superseded by `saveDraft`)**
+
+`applyImport` ran `patchLoanHeader`, `upsertLoanFinancials`, `createBorrowerForLoan`, and `createPropertyForLoan` concurrently via `Promise.all`, then called `saveDraft()` which ran the same calls again. Any transient server error in the concurrent block caused `Failed to fetch` before `saveDraft` even ran.
+
+### Fix
+
+Removed all explicit API calls from `applyImport`. Since `saveDraft` now handles full backend sync (header, financials, borrowers, property) and correctly persists `borrowerDbIds`/`propertyDbId` via Immer's `set()`, `applyImport` only needs to:
+1. `startNewDraft("mismo")` — create the DB loan row
+2. `hydrateFromMismo(...)` — merge parsed XML fields into the Zustand draft
+3. `saveDraft()` — flush everything to the backend in one sequential pass
+
+Also removed the now-unused imports (`createBorrowerForLoan`, `createPropertyForLoan`, `patchLoanHeader`, `upsertLoanFinancials`) from `MismoUpload.tsx`.
+
+---
+
+### Files changed
+
+| File | Type | Change |
+|---|---|---|
+| `components/submission/mismo/MismoUpload.tsx` | UPDATED | Removed concurrent `Promise.all` + broken external `setState`; `applyImport` now calls `hydrateFromMismo` + `saveDraft` only |
+
+---
+
+### Test results
+
+**Validation performed:**
+- `npm run lint` — 0 errors, 0 warnings ✓
+
+---
+
+## Session 22 — Bug Fix: Borrower Name / Property Address Reversion + Document Upload Persistence
+
+**Type:** Critical bug fix — borrower name and subject property address silently cleared on every save cycle
+
+---
+
+### Root Cause: `state.draft = saved` in `saveDraft`
+
+**File**: `state/submissionStore.ts:161–237`
+
+`saveDraft` captured a T=0 snapshot of `draft` at the top of the function, then at the END of all async API calls set `state.draft = saved` (the T=0 snapshot). This created a data reversion loop:
+
+1. Auto-save fires. T=0: `firstName = ""`, `street1 = ""`
+2. `createBorrowerForLoan` is called with `first_name: null` — creates DB row with null name
+3. `borrowerDbIds` is updated: `{ clientId: serverBorrowerId }`
+4. `set((state) => { state.draft = saved })` runs — reverts `state.draft` to T=0 snapshot (empty strings), **wiping any text the user typed during the 500–2000ms API call window**
+5. The revert triggers `serializedDraft` to change → **new 1500ms auto-save timer fires**
+6. New save sees `firstName = ""` again → calls `patchBorrowerInDb` with `first_name: null` → **clears the name in the DB**
+7. Repeat forever
+
+The borrower IS created in the DB, but with null name — and every subsequent PATCH writes null back, so the name can never be set.
+
+The property is never created at all: `hasPropertyData` checks `prop.street1 || prop.city || prop.state || prop.postalCode`. The revert makes these always empty strings → `hasPropertyData = false` → `createPropertyForLoan` is never called.
+
+### Root Cause 2: `hydrateFromApi` overwrites latest state with stale snapshot
+
+**File**: `state/submissionStore.ts:265–271`
+
+`hydrateFromApi` was called every time `SubmissionWizard` mounted. It loaded from `"origina.draftAutosave.{loanId}"` (written by `saveLocally` — a snapshot from the BEGINNING of the last save cycle). If the Zustand persist already had the latest state, `hydrateFromApi` would clobber it with a stale copy.
+
+---
+
+### Fix 1 — Don't overwrite `state.draft` after async save
+
+Removed `state.draft = saved` from both branches of `saveDraft`. Replaced with `state.draft.isDraft = true` (the only meaningful field `saved` added). This preserves all user input that was entered during the async backend call window.
+
+Added a code comment explaining WHY the pattern was intentionally avoided, so it is not reintroduced.
+
+### Fix 2 — Skip `hydrateFromApi` when the loan is already loaded
+
+Added early return in `hydrateFromApi`: if `get().draft.loanId === loanId`, the Zustand persist already has the latest in-memory state. Skip the `fetchLoanDraft` call entirely to avoid overwriting live state with a stale autosave snapshot.
+
+If the loanId does NOT match (user navigated to a different loan), `hydrateFromApi` loads from localStorage as before.
+
+---
+
+---
+
+### Bug 2 — Document uploads reset on every navigation (checklist wiped)
+
+**Files**: `state/documentStore.ts`, `components/submission/DocumentChecklist.tsx`
+
+Two bugs combined:
+
+**Bug 2A — `generateChecklist` wiped all uploads on remount**
+
+`DocumentChecklist` called `generateChecklist(product, borrowers)` in a `useEffect` with `[product, borrowers]` as dependencies. `borrowers` changed on every keystroke (Immer creates a new reference on every `upsertBorrower`). On every remount of the documents step and on every borrower field edit, `generateChecklist` replaced the entire checklist with a fresh all-"not_started" array, clearing all uploaded file statuses.
+
+**Bug 2B — No persistence between page reloads**
+
+`documentStore` used plain `devtools` with no `persist` middleware. Upload status (`fileId`, `fileName`, `uploadStatus`) was in-memory only. Hard refresh or opening the wizard in a new tab showed "not_started" for every item regardless of what was uploaded.
+
+### Fix
+
+`documentStore.ts`:
+- Added `loanId: string | null` to state to track which loan the checklist belongs to
+- `generateChecklist(product, borrowers, loanId)` now merges instead of replacing: if `loanId` matches the stored `loanId`, items with `uploadStatus !== "not_started"` are preserved from the existing checklist
+- If `loanId` changes (new loan), checklist resets cleanly
+- Added `persist` middleware (key `"origina.documents"`) persisting `loanId`, `checklist`, and `uploadedDocs` — survives page reload
+- Added `loadDocumentsForLoan(loanId)` action: calls `GET /documents/?loan_id={loanId}`, maps results by `doc_type`, updates checklist items with real upload status/fileId/fileName from the DB
+
+`DocumentChecklist.tsx`:
+- Reads `loanId` from submission store
+- Passes `loanId` to `generateChecklist`
+- Second `useEffect`: calls `loadDocumentsForLoan(loanId)` on mount if `loanId` is a real UUID (not "draft-") — restores upload state from DB after page reload
+
+---
+
+### Files changed
+
+| File | Type | Change |
+|---|---|---|
+| `state/submissionStore.ts` | UPDATED | Removed `state.draft = saved` from both branches of `saveDraft`; added `state.draft.isDraft = true`; added guard in `hydrateFromApi` to skip if `draft.loanId === loanId` |
+| `state/documentStore.ts` | UPDATED | Added `loanId` tracking; `generateChecklist` now merges instead of replacing; added `persist` middleware; added `loadDocumentsForLoan` action to reload upload state from DB |
+| `components/submission/DocumentChecklist.tsx` | UPDATED | Passes `loanId` to `generateChecklist`; calls `loadDocumentsForLoan` on mount |
+
+---
+
+### Test results
+
+**Expected behavior after fix:**
+- User types first name "John" → auto-save fires → DB row created/patched with `first_name: "John"` → workspace shows "John" ✓
+- User types address "123 Main St, Los Angeles, CA" → auto-save fires → `hasPropertyData = true` → property row created → workspace shows address ✓
+- Page refresh → Zustand persist reloads latest state → `hydrateFromApi` no-ops → user sees their in-progress input ✓
+- User uploads bank statement on documents step → navigates to income step → returns to documents step → file still shows as uploaded ✓
+- Hard page reload on documents step → `loadDocumentsForLoan` fetches from `GET /documents/?loan_id=...` → uploaded files restored ✓
+
+**Important note**: existing "Unnamed Borrower" test loans were created with the old broken code (before Session 22 fix). Those loans already have null borrower names in the DB. To verify the fix, create a **new** submission and fill in borrower name and address — those fields will now persist correctly.
+
+**Validation performed:**
+- `npm run lint` — 0 errors, 0 warnings ✓
+
+---
+
+## Session 23 — Bug Fix: Backend Borrower `relationship` Keyword + Per-Step Validation Gate
+
+**Type:** Critical backend bug fix + submission UX feature
+
+---
+
+### Bug 1 — Backend `TypeError: 'relationship' is an invalid keyword argument for Borrower`
+
+**File**: `src/backend/app/schemas/borrower_schema.py`
+
+`BorrowerBase` had a field named `relationship: Optional[str] = None`. When `create_borrower` called `Borrower(**payload.model_dump(exclude={"tenant_id"}))`, the dict included `relationship: None`. SQLAlchemy rejected it with `TypeError: 'relationship' is an invalid keyword argument for Borrower` because `relationship` is the reserved SQLAlchemy ORM keyword — not a column name. The ORM column is `borrower_relationship`.
+
+This bug caused ALL `createBorrowerForLoan` calls to fail silently (caught by `saveDraft`'s outer `try/except` → `saveStatus: "error"`). Borrower names could never persist because the DB row was never created. This also triggered the "Save failed" indicator on every "Save & Continue" click.
+
+**Fix**: Renamed `relationship` to `borrower_relationship` in both `BorrowerBase` and `BorrowerUpdate`. The field now matches the SQLAlchemy column name (`borrower_relationship`). `BorrowerOut` inherits from `BorrowerBase` and uses `from_attributes=True`, so it now correctly reads `borrower.borrower_relationship` from the ORM. The `update_borrower` PATCH endpoint uses `setattr(borrower, k, v)` — after rename, `k` is `borrower_relationship` which maps to the correct column.
+
+---
+
+### Feature — Per-Step Validation Gate
+
+**Files**: `components/submission/SubmissionWizard.tsx`, `components/submission/StepFooter.tsx`, `styles/globals.css`
+
+The user reported "it says save field whenever i click save and continue button" and requested that users cannot advance until required fields are filled and required documents are uploaded.
+
+**Problem**: `continueStep()` called `saveDraft()` unconditionally. When the backend borrower creation failed (due to the `relationship` bug above), `saveStatus` was set to `"error"`, which displayed the "Save failed" banner via `SaveStatusIndicator`. Navigation still happened regardless. No validation prevented advancing through steps with empty required fields.
+
+**Implementation**:
+
+`SubmissionWizard.tsx`:
+- Added `const checklist = useDocumentStore((s) => s.checklist)` to read document upload state
+- Added `const [stepValidationErrors, setStepValidationErrors] = useState<ValidationError[]>([])`
+- In the `step` change `useEffect`, added `setStepValidationErrors([])` to clear errors when navigating between steps
+- Modified `continueStep()` to call `collectBlockingErrors(step, draft, checklist)` before proceeding. If any blocking errors exist, they are set in state and navigation is blocked. Only if zero blocking errors does the flow continue to `saveDraft()` and `goToStep()`
+- Added a standalone `collectBlockingErrors(step, draft, checklist)` helper at module level:
+  - For all steps: reads `draft.stepErrors[step]` (pre-computed by `refreshValidation` on every store update) and filters to `severity === "blocking"`
+  - For the `documents` step: additionally maps required docs that aren't `uploaded` or `verified` into `ValidationError` objects
+  - For the `review` step: aggregates blocking errors from ALL steps plus missing required docs — blocks "Submit Loan" if anything is incomplete
+
+`StepFooter.tsx`:
+- Added `errors?: ValidationError[]` prop
+- Wrapped existing button row in `<div className="step-footer-buttons">` to support the new column layout
+- Renders `<ul className="step-footer-errors">` with per-error `<li className="step-footer-error">` items above the buttons when `errors.length > 0`
+
+`styles/globals.css`:
+- Changed `.step-footer` from `display: flex; justify-content: space-between` to `display: flex; flex-direction: column; gap: 0.5rem` to accommodate the error list
+- Added `.step-footer-buttons { display: flex; justify-content: space-between; align-items: center }` to preserve the existing button row layout
+- Added `.step-footer-errors`, `.step-footer-error` using the existing `blocking` color palette (`#a33a2a` text, `rgba(163, 58, 42, 0.08)` background)
+
+---
+
+### Files changed
+
+| File | Type | Change |
+|---|---|---|
+| `src/backend/app/schemas/borrower_schema.py` | UPDATED | Renamed `relationship` → `borrower_relationship` in `BorrowerBase` and `BorrowerUpdate` |
+| `components/submission/SubmissionWizard.tsx` | UPDATED | Added validation gate in `continueStep()`; added `collectBlockingErrors` helper; reads document checklist from `useDocumentStore` |
+| `components/submission/StepFooter.tsx` | UPDATED | Added `errors?: ValidationError[]` prop; renders error list above buttons |
+| `styles/globals.css` | UPDATED | Refactored `.step-footer` to column layout; added `.step-footer-buttons`, `.step-footer-errors`, `.step-footer-error` |
+
+---
+
+### Test results
+
+**Expected behavior after fix:**
+- Setup step empty → click "Save & Continue" → errors list appears: "Product is required.", "Purpose is required.", "Loan Amount is required." → navigation blocked ✓
+- Fill all setup fields → click "Save & Continue" → no errors → save runs → next step ✓
+- Documents step with required doc not uploaded → click "Save & Continue" → "Bank Statement (24 months) must be uploaded." → blocked ✓
+- Upload required doc → click "Save & Continue" → passes ✓
+- Review step with incomplete steps → "Submit Loan" → shows all blocking errors aggregated across all steps ✓
+- Borrower creation now succeeds (relationship bug fixed) → no "Save failed" banner on click ✓
+- Navigate to next step → error list clears ✓
+
+**Validation performed:**
+- `npm run build` — compiled successfully, 0 TypeScript errors ✓
+
+---
+
+## Session 24 — Exception Module: Full Architecture & MVP Implementation
+
+**Type:** New feature — exception module (backend + frontend)
+
+---
+
+### Phase 0 Compatibility Review Findings
+
+| Question | Answer |
+|---|---|
+| Existing exceptions table | `070_exceptions.sql` created it with `loan_id NOT NULL` — blocks pre-file use case |
+| Existing ENUMs | `exception_status`, `exception_severity` in `030_types.sql` — sufficient for MVP |
+| Existing model | `LoanException` in `workflow.py`, basic CRUD stub in `workflow.py` router |
+| Loan-scoped routing | No nested routes — flat `GET /exceptions/?loan_id=...` pattern (same as conditions, tasks) |
+| Tenant isolation | `tenant_id NOT NULL` + `filter(tenant_id == current_user.tenant_id)` on every query |
+| RBAC | `require_roles()` factory; approve/deny restricted to underwriter/account_manager/it_admin |
+| Architecture option | **Option A** — unified `exceptions` table with `loan_id` made nullable |
+| Critical blocker | `loan_id NOT NULL` in live DB must be dropped before pre-file exceptions work |
+| `metadata` reserved | SQLAlchemy reserves the name `metadata` on all declarative models — renamed to `event_data` |
+
+---
+
+### Architecture Decision: Option A with nullable `loan_id`
+
+The existing `exceptions` table is extended rather than replaced. Making `loan_id` nullable (via `ALTER TABLE`) enables pre-file exceptions without schema duplication. All 4 supporting tables hang off `exceptions.id`.
+
+```
+exceptions                    ← core record (loan_id now nullable)
+  └─ exception_events         ← immutable event log (append-only)
+  └─ exception_comments       ← immutable comment thread (append-only)
+  └─ exception_documents      ← junction: exceptions ↔ documents
+exception_authority_rules     ← tenant-configurable approval matrix
+```
+
+---
+
+### Migration: `118_exceptions_v2.sql`
+
+1. `ALTER TABLE exceptions ALTER COLUMN loan_id DROP NOT NULL` — enables pre-file exceptions
+2. Added rich underwriting fields: `guideline_value`, `actual_value`, `variance`, `justification`, `compensating_factors`, `risk_factors`, `loan_snapshot` (JSONB), `exception_source` (`pre_file` | `loan_file`)
+3. Added `audit_exceptions` trigger (reuses existing `log_audit_event()` function)
+4. Created `exception_events` (append-only: `id`, `tenant_id`, `exception_id`, `event_type`, `actor_user_id`, `event_data` JSONB, `occurred_at`)
+5. Created `exception_comments` (append-only: `id`, `tenant_id`, `exception_id`, `body`, `created_by`, `is_internal`, `created_at`)
+6. Created `exception_documents` (junction: `exception_id`, `document_id`, `attached_by`, UNIQUE constraint)
+7. Created `exception_authority_rules` (`exception_type` nullable, `max_severity`, `allowed_roles` JSONB array, `requires_dual_approval`, `is_active`)
+8. Indexes: `idx_exception_events_exception`, `idx_exception_comments_exception`, `idx_exception_documents_exception`, `idx_exceptions_loan_status`, `idx_exceptions_tenant_status`
+
+---
+
+### Backend: `models/workflow.py`
+
+Updated `LoanException`:
+- `loan_id` → `nullable=True`
+- Added 8 new mapped columns (guideline_value through exception_source)
+- Added relationships: `events`, `comments`, `document_links` → new tables
+
+New models:
+- `ExceptionEvent(TenantMixin, UUIDMixin)` — append-only; `event_data` JSONB (renamed from `metadata` which is SQLAlchemy-reserved)
+- `ExceptionComment(TenantMixin, UUIDMixin)` — append-only
+- `ExceptionDocument(TenantMixin, UUIDMixin)` — junction table
+- `ExceptionAuthorityRule(TenantMixin, UUIDMixin)` — mutable approval matrix
+
+Updated `models/user.py`: Added `exception_events_authored` and `exception_comments_authored` backref relationships.
+
+---
+
+### Backend: `schemas/exception_schema.py` (new file)
+
+Full schema set:
+- `ExceptionBase/Create/Update/Out` — core exception
+- `DecisionRequest` — approve/deny/withdraw payload
+- `ExceptionEventOut` — event history
+- `ExceptionCommentCreate/Out` — comment thread
+- `ExceptionDocumentCreate/Out` — document attachments
+- `ExceptionAuthorityRuleCreate/Update/Out` — authority matrix CRUD
+
+---
+
+### Backend: `services/exception_repo.py` (new file)
+
+Service layer with authority checking:
+- `can_approve(exception, user, db)` — checks tenant authority rules first, falls back to default roles (`underwriter`, `account_manager`, `it_admin`)
+- `approve_exception / deny_exception / withdraw_exception` — validates status transition, checks authority, logs event, commits
+- `log_event(db, exception, event_type, actor, metadata)` — creates `ExceptionEvent` row
+- `add_comment(db, exception, body, is_internal, actor)` — creates `ExceptionComment` + logs event
+- `attach_document(db, exception, document_id, actor)` — creates `ExceptionDocument` junction + logs event, rejects duplicates
+
+---
+
+### Backend: `api/v1/exceptions.py` (new router, prefix `/exceptions`)
+
+19 endpoints:
+- `POST /exceptions/` — create (all authenticated users)
+- `GET /exceptions/` — list with filters: `loan_id`, `exception_source`, `status_filter`, `exception_type`, `severity`
+- `GET /exceptions/{id}` — get
+- `PATCH /exceptions/{id}` — update fields
+- `DELETE /exceptions/{id}` — delete (IT admin only)
+- `POST /exceptions/{id}/approve` — approve (authority check in service)
+- `POST /exceptions/{id}/deny` — deny (authority check in service)
+- `POST /exceptions/{id}/withdraw` — withdraw
+- `GET /exceptions/{id}/events` — event history
+- `POST /exceptions/{id}/comments` — add comment
+- `GET /exceptions/{id}/comments` — list comments
+- `POST /exceptions/{id}/documents` — attach document
+- `GET /exceptions/{id}/documents` — list attached docs
+- `GET /authority-rules/` — list rules (underwriter/account_manager/it_admin)
+- `POST /authority-rules/` — create rule (it_admin only)
+- `PATCH /authority-rules/{id}` — update rule (it_admin only)
+
+Registered in `core/main.py` at `prefix=/api/v1`.
+
+---
+
+### Frontend: Workspace "Exceptions" Section
+
+`workspaceSections.ts`: Added `{ id: "exceptions", label: "Exceptions", shortLabel: "Ex" }` to the Workflow nav group (after Conditions).
+
+`WorkspaceExceptions.tsx` (new component):
+- Loads exceptions for the loan via `GET /exceptions/?loan_id=...`
+- Filter tabs: All / Open / Approved / Denied / Withdrawn (with counts)
+- `ExceptionCard` — expandable card showing all fields, comparison row (guideline vs actual vs variance), justification, compensating factors, risk factors
+- Approve / Deny / Withdraw action buttons with reason textarea (opens inline confirm panel)
+- `ExceptionForm` — full create form with type, severity, guideline/actual/variance, justification, compensating factors, risk factors, description
+
+`LoanWorkspaceShell.tsx`: Added `WorkspaceExceptions` import and routing case for `section === "exceptions"`.
+
+`types/api.ts`: Added `ExceptionOut`, `ExceptionEventOut`, `ExceptionCommentOut`, `ExceptionDocumentOut`, `ExceptionStatus`, `ExceptionSeverity`, `ExceptionSource` types. Also fixed `BorrowerOut.relationship` → `BorrowerOut.borrower_relationship` (schema rename from Session 23).
+
+`WorkspaceBorrowerURLA.tsx`: Updated `BorrowerEdit` type and field binding from `relationship` → `borrower_relationship`.
+
+`globals.css`: Added full exception module CSS (`.exc-workspace`, `.exc-card`, `.exc-badge--*`, `.exc-sev--*`, `.exc-btn-approve/deny/withdraw`, `.exc-form-panel`, etc.)
+
+---
+
+### Files changed
+
+| File | Type | Change |
+|---|---|---|
+| `db/migrations/118_exceptions_v2.sql` | NEW | Full schema upgrade |
+| `src/backend/app/models/workflow.py` | UPDATED | Extended `LoanException`; new `ExceptionEvent`, `ExceptionComment`, `ExceptionDocument`, `ExceptionAuthorityRule` models |
+| `src/backend/app/models/user.py` | UPDATED | Added `exception_events_authored`, `exception_comments_authored` backrefs |
+| `src/backend/app/schemas/exception_schema.py` | NEW | Full Pydantic schema set |
+| `src/backend/app/services/exception_repo.py` | NEW | Service layer with authority checking and event logging |
+| `src/backend/app/api/v1/exceptions.py` | NEW | 19-endpoint router |
+| `src/backend/app/core/main.py` | UPDATED | Registered exceptions router |
+| `src/backend/app/models/__init__.py` | UPDATED | Added 4 new model exports |
+| `src/frontend/src/components/loans/workspace/workspaceSections.ts` | UPDATED | Added "exceptions" nav section |
+| `src/frontend/src/components/loans/workspace/WorkspaceExceptions.tsx` | NEW | Full exception panel component |
+| `src/frontend/src/components/loans/LoanWorkspaceShell.tsx` | UPDATED | Registered WorkspaceExceptions |
+| `src/frontend/src/types/api.ts` | UPDATED | Added exception types; fixed `borrower_relationship` rename |
+| `src/frontend/src/components/loans/workspace/WorkspaceBorrowerURLA.tsx` | UPDATED | Fixed field binding for `borrower_relationship` |
+| `src/frontend/src/styles/globals.css` | UPDATED | Added exception module CSS |
+
+---
+
+### What's deferred to v2
+
+- Escalation workflow (multi-level approval chains requiring multiple approvers)
+- Email/notification integration when exception is decided
+- Standalone pre-file exception submission page (`/loans/new/exception`)
+- Exception analytics dashboard (open count by type, avg decision time, approval rate)
+- Exception templates (pre-filled common request types)
+- Dual-approval enforcement (authority rule `requires_dual_approval = true`)
+
+---
+
+### To activate in production
+
+1. Run `scripts/db_migrate.sh` to apply `118_exceptions_v2.sql`
+2. Restart backend (`uvicorn app.core.main:app --reload`)
+3. Frontend: already built — the "Exceptions" tab appears in the Workflow group of every loan workspace
+
+---
+
+### Validation performed
+
+- Python imports: `python3 -c "from app.models.workflow import ..."` — 0 errors ✓
+- Frontend: `npm run build` — compiled successfully, 0 TypeScript errors ✓

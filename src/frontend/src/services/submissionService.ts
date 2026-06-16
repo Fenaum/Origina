@@ -21,8 +21,8 @@
 
 import { apiRequest } from "@/services/apiClient";
 import { createEmptySubmissionDraft } from "@/data/submissionConfig";
-import type { SubmissionDraft, SubmitResult } from "@/types/submission";
-import type { BorrowerOut, LoanOut, LoanSubmitOut } from "@/types/api";
+import type { SubmissionDraft, SubmitResult, BorrowerDraft, PropertyDraft } from "@/types/submission";
+import type { BorrowerOut, LoanOut, LoanSubmitOut, PropertyOut } from "@/types/api";
 
 const LS_AUTOSAVE_PREFIX = "origina.draftAutosave";
 const TOKEN_KEY = "origina.token";
@@ -183,36 +183,140 @@ export async function createBorrowerForLoan(
   });
 }
 
+// Frontend purpose values → backend loan_purpose enum
+const PURPOSE_MAP: Record<string, string> = {
+  rate_term_refi: "refinance",
+  cash_out_refi: "cash_out",
+};
+
 /**
- * PATCHes header fields on a loan (loan_program, purpose, etc.).
+ * PATCHes header fields on a loan (loan_program, purpose, occupancy_type, etc.).
+ *
+ * Only sends fields that are non-null to avoid overwriting NOT NULL columns.
+ * Maps frontend purpose values to the backend loan_purpose enum.
  */
 export async function patchLoanHeader(
   loanId: string,
-  patch: { loan_program?: string | null; purpose?: string | null },
+  patch: {
+    loan_program?: string | null;
+    purpose?: string | null;
+    occupancy_type?: string | null;
+  },
 ): Promise<void> {
   const token = getToken();
   if (!token || loanId.startsWith("draft-")) return;
 
+  const body: Record<string, string> = {};
+  if (patch.loan_program != null) body.loan_program = patch.loan_program;
+  if (patch.purpose != null) body.purpose = PURPOSE_MAP[patch.purpose] ?? patch.purpose;
+  if (patch.occupancy_type != null) body.occupancy_type = patch.occupancy_type;
+
+  if (Object.keys(body).length === 0) return;
+
   await apiRequest<LoanOut>(`/loans/${loanId}`, {
     method: "PATCH",
     token,
-    body: JSON.stringify(patch),
+    body: JSON.stringify(body),
   });
 }
 
 /**
  * UPSERTs the loan_financials row (creates or updates).
+ * Skips the call entirely when all values are null — no point creating an empty row.
  */
 export async function upsertLoanFinancials(
   loanId: string,
-  payload: { loan_amount?: number | null; appraised_value?: number | null },
+  payload: {
+    loan_amount?: number | null;
+    appraised_value?: number | null;
+    purchase_price?: number | null;
+    fico_score?: number | null;
+  },
 ): Promise<void> {
   const token = getToken();
   if (!token || loanId.startsWith("draft-")) return;
+
+  const hasValue = Object.values(payload).some((v) => v != null);
+  if (!hasValue) return;
 
   await apiRequest<unknown>(`/loans/${loanId}/financials`, {
     method: "PUT",
     token,
     body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * PATCHes an existing borrower in the DB with current draft values.
+ */
+export async function patchBorrowerInDb(
+  borrowerDbId: string,
+  borrower: BorrowerDraft,
+): Promise<void> {
+  const token = getToken();
+  if (!token) return;
+
+  await apiRequest<BorrowerOut>(`/borrowers/${borrowerDbId}`, {
+    method: "PATCH",
+    token,
+    body: JSON.stringify({
+      first_name: borrower.firstName || null,
+      last_name: borrower.lastName || null,
+      email: borrower.email || null,
+      phone: borrower.phone || null,
+      dob: borrower.dob || null,
+    }),
+  });
+}
+
+/**
+ * Creates a subject property row in the DB linked to a loan.
+ */
+export async function createPropertyForLoan(
+  loanId: string,
+  property: Partial<PropertyDraft>,
+): Promise<PropertyOut | null> {
+  const token = getToken();
+  if (!token || loanId.startsWith("draft-")) return null;
+
+  return apiRequest<PropertyOut>("/properties/", {
+    method: "POST",
+    token,
+    body: JSON.stringify({
+      loan_id: loanId,
+      is_subject: true,
+      address1: property.street1 || null,
+      address2: property.street2 || null,
+      city: property.city || null,
+      state: property.state || null,
+      postal_code: property.postalCode || null,
+      property_type: property.propertyType || null,
+      units: property.units ?? null,
+    }),
+  });
+}
+
+/**
+ * PATCHes an existing subject property row with current draft values.
+ */
+export async function updatePropertyInDb(
+  propertyDbId: string,
+  property: Partial<PropertyDraft>,
+): Promise<void> {
+  const token = getToken();
+  if (!token) return;
+
+  await apiRequest<PropertyOut>(`/properties/${propertyDbId}`, {
+    method: "PATCH",
+    token,
+    body: JSON.stringify({
+      address1: property.street1 || null,
+      address2: property.street2 || null,
+      city: property.city || null,
+      state: property.state || null,
+      postal_code: property.postalCode || null,
+      property_type: property.propertyType || null,
+      units: property.units ?? null,
+    }),
   });
 }
