@@ -12,7 +12,7 @@ import type { LoanSummary } from "@/types/loan";
 type Props = { loan: LoanSummary };
 
 const fmt    = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
-const fmtPct = (v: number | null | undefined) => (v != null ? `${(v * 100).toFixed(1)}%` : "-");
+const fmtPct = (v: number | string | null | undefined) => { if (v == null) return "-"; const n = Number(v); return isNaN(n) ? "-" : `${(n * 100).toFixed(1)}%`; };
 
 type IncomeForm = {
   base_income:    string;
@@ -131,7 +131,7 @@ export function WorkspaceIncome({ loan }: Props) {
           <FinancialKpi label="Monthly qualifying income" value={totalMonthly > 0 ? fmt.format(totalMonthly) : "-"} />
           <FinancialKpi label="Annual qualifying income" value={totalAnnual > 0 ? fmt.format(totalAnnual) : "-"} />
           <FinancialKpi label="DTI" value={fmtPct(fin?.debt_to_income)} />
-          <FinancialKpi label="DSCR" value={fin?.dscr != null ? fin.dscr.toFixed(2) : "-"} />
+          <FinancialKpi label="DSCR" value={fin?.dscr != null ? Number(fin.dscr).toFixed(2) : "-"} />
           <FinancialKpi label="Verified assets" value="Pending" />
           <FinancialKpi label="Reserves" value={fin?.cash_reserves != null ? fmt.format(Number(fin.cash_reserves)) : "-"} />
           <FinancialKpi label="Cash to close" value="Pending" />

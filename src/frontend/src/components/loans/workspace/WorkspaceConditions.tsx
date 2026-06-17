@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { LoadingSpinner } from "@/components/feedback/LoadingSpinner";
+import { TemplatePickerModal } from "@/components/loans/workspace/TemplatePickerModal";
 import { useConditions } from "@/hooks/useConditions";
 import {
   clearCondition,
@@ -12,6 +13,7 @@ import {
 import { useAuth } from "@/state/auth";
 import type { ConditionOut, ConditionStage } from "@/types/api";
 import type { LoanSummary } from "@/types/loan";
+import type { ConditionTemplate } from "@/data/templates";
 
 type Props = { loan: LoanSummary };
 
@@ -378,6 +380,7 @@ export function WorkspaceConditions({ loan }: Props) {
   const [filterTab, setFilterTab] = useState<FilterTab>("all");
   const [showAdd, setShowAdd] = useState(false);
   const [addBusy, setAddBusy] = useState(false);
+  const [showTemplate, setShowTemplate] = useState(false);
 
   const filtered = filterTab === "all"
     ? conditions
@@ -414,6 +417,25 @@ export function WorkspaceConditions({ loan }: Props) {
     }
   }
 
+  async function handleApplyTemplate(items: ConditionTemplate[]) {
+    if (!token) return;
+    let nextNumber = conditions.length + 1;
+    for (const item of items) {
+      await createCondition(
+        {
+          loan_id: loan.id,
+          name: item.name,
+          description: item.description,
+          stage: item.stage,
+          condition_number: nextNumber++,
+        },
+        token,
+      );
+    }
+    refetch();
+    setShowTemplate(false);
+  }
+
   if (loading) return <div className="cond-loading"><LoadingSpinner /></div>;
 
   if (error) {
@@ -428,18 +450,34 @@ export function WorkspaceConditions({ loan }: Props) {
 
   return (
     <div className="cond-wrapper">
+      {showTemplate && (
+        <TemplatePickerModal
+          type="condition"
+          onApply={(items) => handleApplyTemplate(items as ConditionTemplate[])}
+          onCancel={() => setShowTemplate(false)}
+        />
+      )}
+
       {/* ── Header ── */}
       <div className="cond-header">
         <div className="cond-header-left">
           <h2 className="cond-title">Conditions</h2>
           <span className="cond-loan-ref">{loan.loanNumber}</span>
         </div>
-        <button
-          className="cond-btn cond-btn--primary"
-          onClick={() => setShowAdd((v) => !v)}
-        >
-          {showAdd ? "Cancel" : "+ Add Condition"}
-        </button>
+        <div style={{ display: "flex", gap: "0.5rem" }}>
+          <button
+            className="cond-btn cond-btn--ghost"
+            onClick={() => setShowTemplate(true)}
+          >
+            Apply Template
+          </button>
+          <button
+            className="cond-btn cond-btn--primary"
+            onClick={() => setShowAdd((v) => !v)}
+          >
+            {showAdd ? "Cancel" : "+ Add Condition"}
+          </button>
+        </div>
       </div>
 
       {/* ── Add form ── */}

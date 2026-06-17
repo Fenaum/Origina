@@ -6,13 +6,17 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { NotificationBell } from "@/components/app/NotificationBell";
 import { LoanWorkspaceRail } from "@/components/loans/LoanWorkspaceRail";
+import { WorkspaceAppraisal } from "@/components/loans/workspace/WorkspaceAppraisal";
 import { WorkspaceAuditLog } from "@/components/loans/workspace/WorkspaceAuditLog";
 import { WorkspaceBorrowerURLA } from "@/components/loans/workspace/WorkspaceBorrowerURLA";
 import { WorkspaceClosing } from "@/components/loans/workspace/WorkspaceClosing";
 import { WorkspaceConditions } from "@/components/loans/workspace/WorkspaceConditions";
+import { WorkspaceExceptions } from "@/components/loans/workspace/WorkspaceExceptions";
 import { WorkspaceConversation } from "@/components/loans/workspace/WorkspaceConversation";
+import { WorkspaceCredit } from "@/components/loans/workspace/WorkspaceCredit";
 import { WorkspaceDisclosures } from "@/components/loans/workspace/WorkspaceDisclosures";
 import { WorkspaceDocuments } from "@/components/loans/workspace/WorkspaceDocuments";
+import { WorkspaceEscrow } from "@/components/loans/workspace/WorkspaceEscrow";
 import { WorkspaceFunding } from "@/components/loans/workspace/WorkspaceFunding";
 import { WorkspaceHMDA } from "@/components/loans/workspace/WorkspaceHMDA";
 import { WorkspaceHome } from "@/components/loans/workspace/WorkspaceHome";
@@ -20,6 +24,10 @@ import { WorkspaceIncome } from "@/components/loans/workspace/WorkspaceIncome";
 import { WorkspaceLoanEstimate } from "@/components/loans/workspace/WorkspaceLoanEstimate";
 import { WorkspaceParties } from "@/components/loans/workspace/WorkspaceParties";
 import { WorkspaceProcessing } from "@/components/loans/workspace/WorkspaceProcessing";
+import { WorkspaceStatus } from "@/components/loans/workspace/WorkspaceStatus";
+import { WorkspaceTasks } from "@/components/loans/workspace/WorkspaceTasks";
+import { WorkspaceSubjectProperty } from "@/components/loans/workspace/WorkspaceSubjectProperty";
+import { WorkspaceTitleLegal } from "@/components/loans/workspace/WorkspaceTitleLegal";
 import { WorkspaceUnderwriting } from "@/components/loans/workspace/WorkspaceUnderwriting";
 import {
   resolveWorkspaceSection,
@@ -114,16 +122,24 @@ export function LoanWorkspaceShell({ loan }: Props) {
 }
 
 function WorkspaceContent({ section, loan }: { section: WorkspaceSection; loan: LoanSummary }) {
+  if (section === "status") return <WorkspaceStatus loan={loan} />;
+  if (section === "tasks")  return <WorkspaceTasks loan={loan} />;
   if (section === "home") return <WorkspaceHome loan={loan} />;
   if (section === "borrower-urla") return <WorkspaceBorrowerURLA loan={loan} />;
   if (section === "loan-estimate") return <WorkspaceLoanEstimate loan={loan} />;
   if (section === "conditions") return <WorkspaceConditions loan={loan} />;
+  if (section === "exceptions") return <WorkspaceExceptions loan={loan} />;
   if (section === "underwriting") return <WorkspaceUnderwriting loan={loan} />;
   if (section === "processing") return <WorkspaceProcessing loan={loan} />;
   if (section === "parties") return <WorkspaceParties loan={loan} />;
   if (section === "income") return <WorkspaceIncome loan={loan} />;
+  if (section === "subject-property") return <WorkspaceSubjectProperty loan={loan} />;
+  if (section === "appraisal") return <WorkspaceAppraisal loan={loan} />;
+  if (section === "credit") return <WorkspaceCredit loan={loan} />;
   if (section === "hmda") return <WorkspaceHMDA loan={loan} />;
   if (section === "documents") return <WorkspaceDocuments loan={loan} />;
+  if (section === "escrow") return <WorkspaceEscrow loan={loan} />;
+  if (section === "title-legal") return <WorkspaceTitleLegal loan={loan} />;
   if (section === "disclosures") return <WorkspaceDisclosures loan={loan} />;
   if (section === "funding") return <WorkspaceFunding loan={loan} />;
   if (section === "closing") return <WorkspaceClosing loan={loan} />;

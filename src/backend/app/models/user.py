@@ -47,6 +47,16 @@ class User(BaseModel):
         foreign_keys="LoanException.decided_by",
         back_populates="decider",
     )
+    exception_events_authored: Mapped[list["ExceptionEvent"]] = relationship(
+        "ExceptionEvent",
+        foreign_keys="ExceptionEvent.actor_user_id",
+        back_populates="actor",
+    )
+    exception_comments_authored: Mapped[list["ExceptionComment"]] = relationship(
+        "ExceptionComment",
+        foreign_keys="ExceptionComment.created_by",
+        back_populates="creator",
+    )
     assigned_tasks: Mapped[list["Task"]] = relationship(
         "Task",
         foreign_keys="Task.assigned_to",

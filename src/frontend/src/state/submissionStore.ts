@@ -8,10 +8,16 @@ import {
   submissionSteps,
 } from "@/data/submissionConfig";
 import {
+  createBorrowerForLoan,
   createLoanDraft,
+  createPropertyForLoan,
   fetchLoanDraft,
+  patchBorrowerInDb,
+  patchLoanHeader,
   saveLoanDraft,
   submitLoanApplication,
+  updatePropertyInDb,
+  upsertLoanFinancials,
 } from "@/services/submissionService";
 import {
   validateStep,
@@ -35,6 +41,9 @@ type SubmissionStore = {
   saveStatus: SaveStatus;
   lastSavedAt: string | null;
   submitResult: SubmitResult | null;
+  // Track server-assigned UUIDs so repeated saves PATCH instead of POST
+  borrowerDbIds: Record<string, string>; // client UUID → server UUID
+  propertyDbId: string | null;
   startNewDraft: (source: "manual" | "mismo") => Promise<string>;
   setStep: (step: SubmissionStep) => void;
   updateSetup: (partial: Partial<LoanSetupDraft>) => void;
@@ -60,6 +69,8 @@ export const useLoanSubmissionStore = create<SubmissionStore>()(
         saveStatus: "idle",
         lastSavedAt: null,
         submitResult: null,
+        borrowerDbIds: {},
+        propertyDbId: null,
         startNewDraft: async (source) => {
           const draft = await createLoanDraft();
           set((state) => {
@@ -70,6 +81,8 @@ export const useLoanSubmissionStore = create<SubmissionStore>()(
             state.saveStatus = "saved";
             state.lastSavedAt = new Date().toISOString();
             state.submitResult = null;
+            state.borrowerDbIds = {};
+            state.propertyDbId = null;
           });
           return draft.loanId!;
         },
@@ -148,12 +161,80 @@ export const useLoanSubmissionStore = create<SubmissionStore>()(
         saveDraft: async () => {
           set({ saveStatus: "saving" });
           try {
-            const saved = await saveLoanDraft(get().draft);
-            set((state) => {
-              state.draft = saved;
-              state.saveStatus = "saved";
-              state.lastSavedAt = new Date().toISOString();
-            });
+            const { draft, borrowerDbIds, propertyDbId } = get();
+            const loanId = draft.loanId;
+
+            // 1. Snapshot to localStorage immediately (crash safety).
+            //    Do NOT use the returned value to overwrite state.draft — the user
+            //    may continue typing while the async backend calls run below, and
+            //    setting state.draft = snapshot would revert their in-flight input,
+            //    causing the next auto-save to PATCH null names back to the DB.
+            await saveLoanDraft(draft);
+
+            // 2. If we have a real DB loan ID, sync all form data to backend
+            if (loanId && !loanId.startsWith("draft-")) {
+              // 2a. PATCH loan header (program, purpose, occupancy)
+              await patchLoanHeader(loanId, {
+                loan_program: draft.setup.product,
+                purpose: draft.setup.purpose,
+                occupancy_type: draft.setup.occupancyType,
+              });
+
+              // 2b. PUT financials
+              const primary = draft.borrowers.find((b) => b.type === "primary_borrower");
+              await upsertLoanFinancials(loanId, {
+                loan_amount: draft.setup.loanAmount,
+                appraised_value: draft.property.estimatedValue,
+                purchase_price: draft.property.purchasePrice,
+                fico_score: primary?.estimatedFico ?? null,
+              });
+
+              // 2c. Sync borrowers — PATCH if already in DB, POST otherwise
+              const newBorrowerDbIds = { ...borrowerDbIds };
+              for (const borrower of draft.borrowers) {
+                const dbId = newBorrowerDbIds[borrower.id];
+                if (dbId) {
+                  await patchBorrowerInDb(dbId, borrower);
+                } else {
+                  const created = await createBorrowerForLoan(loanId, {
+                    type: borrower.type,
+                    first_name: borrower.firstName || null,
+                    last_name: borrower.lastName || null,
+                    email: borrower.email || null,
+                    phone: borrower.phone || null,
+                    dob: borrower.dob || null,
+                  });
+                  if (created) newBorrowerDbIds[borrower.id] = created.id;
+                }
+              }
+
+              // 2d. Sync subject property — PATCH if exists, POST otherwise
+              let newPropertyDbId = propertyDbId;
+              const prop = draft.property;
+              const hasPropertyData = !!(prop.street1 || prop.city || prop.state || prop.postalCode);
+              if (hasPropertyData) {
+                if (newPropertyDbId) {
+                  await updatePropertyInDb(newPropertyDbId, prop);
+                } else {
+                  const created = await createPropertyForLoan(loanId, prop);
+                  if (created) newPropertyDbId = created.id;
+                }
+              }
+
+              set((state) => {
+                state.draft.isDraft = true;
+                state.saveStatus = "saved";
+                state.lastSavedAt = new Date().toISOString();
+                state.borrowerDbIds = newBorrowerDbIds;
+                state.propertyDbId = newPropertyDbId;
+              });
+            } else {
+              set((state) => {
+                state.draft.isDraft = true;
+                state.saveStatus = "saved";
+                state.lastSavedAt = new Date().toISOString();
+              });
+            }
           } catch {
             set({ saveStatus: "error" });
           }
@@ -182,8 +263,14 @@ export const useLoanSubmissionStore = create<SubmissionStore>()(
             saveStatus: "idle",
             lastSavedAt: null,
             submitResult: null,
+            borrowerDbIds: {},
+            propertyDbId: null,
           }),
         hydrateFromApi: async (loanId) => {
+          // If the current Zustand draft is already for this loan, the persist
+          // store has the latest in-memory state — don't overwrite it with the
+          // potentially-stale localStorage autosave snapshot.
+          if (get().draft.loanId === loanId) return;
           const draft = await fetchLoanDraft(loanId);
           set((state) => {
             state.draft = draft;
@@ -214,6 +301,9 @@ export const useLoanSubmissionStore = create<SubmissionStore>()(
             })),
           },
           lastSavedAt: state.lastSavedAt,
+          // Persist DB IDs so repeated saves after page reload PATCH instead of POST
+          borrowerDbIds: state.borrowerDbIds,
+          propertyDbId: state.propertyDbId,
         }),
       },
     ),

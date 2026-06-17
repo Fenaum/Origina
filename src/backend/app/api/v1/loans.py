@@ -439,7 +439,35 @@ def submit_loan(
     db.add(event)
     db.commit()
     db.refresh(loan)
-    return loan
+
+    # JOIN borrowers and financials to populate response fields that don't
+    # live on the loans row itself.
+    primary = (
+        db.query(Borrower)
+        .filter(
+            Borrower.loan_id == loan.id,
+            Borrower.tenant_id == current_user.tenant_id,
+            Borrower.type == "primary_borrower",
+        )
+        .first()
+    )
+    fin = db.query(LoanFinancials).filter(LoanFinancials.loan_id == loan.id).first()
+
+    borrower_name: str | None = None
+    if primary:
+        parts = [p for p in [primary.first_name, primary.last_name] if p]
+        borrower_name = " ".join(parts) if parts else None
+
+    return LoanSubmitOut(
+        id=loan.id,
+        loan_number=loan.loan_number,
+        status=loan.status,
+        submitted_at=loan.submitted_at,
+        updated_at=loan.updated_at,
+        borrower_name=borrower_name,
+        loan_amount=fin.loan_amount if fin else None,
+        loan_program=loan.loan_program,
+    )
 
 
 @router.post("/{loan_id}/sandbox", response_model=SandboxOut)

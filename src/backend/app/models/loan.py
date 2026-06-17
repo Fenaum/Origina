@@ -147,6 +147,10 @@ class Loan(BaseModel):
         cascade="all, delete-orphan",
     )
     snapshots: Mapped[list["Snapshot"]] = relationship("Snapshot", back_populates="loan", cascade="all, delete-orphan")
+    appraisals: Mapped[list["AppraisalOrder"]] = relationship("AppraisalOrder", back_populates="loan", cascade="all, delete-orphan")
+    credit_reports: Mapped[list["CreditReport"]] = relationship("CreditReport", back_populates="loan", cascade="all, delete-orphan")
+    escrow: Mapped["EscrowDetail | None"] = relationship("EscrowDetail", back_populates="loan", cascade="all, delete-orphan", uselist=False)
+    title_orders: Mapped[list["TitleOrder"]] = relationship("TitleOrder", back_populates="loan", cascade="all, delete-orphan")
 
 
 class LoanFinancials(TimestampMixin, TenantMixin, Base):

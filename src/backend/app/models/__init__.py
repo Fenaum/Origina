@@ -3,16 +3,24 @@
 
 from app.models.base import AppendOnlyModel, Base, BaseModel, TenantMixin, TimestampMixin, UUIDMixin
 from app.models.audit import AuditLog, Snapshot
+from app.models.appraisal import AppraisalOrder
 from app.models.borrowers import Address, Borrower, BorrowerIncomeType, BorrowerRelationship, BorrowerType
 from app.models.conditions import Condition, ConditionStatus
+from app.models.credit import CreditEvent, CreditLiability, CreditReport
 from app.models.decisioning import EligibilityRun, PricingRun
 from app.models.document import Document
+from app.models.escrow import EscrowDetail
 from app.models.intake import IntakeAnswer, IntakeHandoff, IntakeSession
 from app.models.loan import Loan, LoanFinancials, LoanParty, LoanPartyRole, LoanPurpose, LoanStatus, LoanTerms
 from app.models.parties import Party, PartyType
 from app.models.properties import Property
+from app.models.title import TitleException, TitleOrder
 from app.models.user import Role, Tenant, User, UserParty, UserRole
 from app.models.workflow import (
+    ExceptionAuthorityRule,
+    ExceptionComment,
+    ExceptionDocument,
+    ExceptionEvent,
     ExceptionSeverity,
     ExceptionStatus,
     LoanException,
@@ -34,6 +42,7 @@ __all__ = [
     "UUIDMixin",
     # Entities
     "Address",
+    "AppraisalOrder",
     "AuditLog",
     "Borrower",
     "BorrowerIncomeType",
@@ -41,11 +50,19 @@ __all__ = [
     "BorrowerType",
     "Condition",
     "ConditionStatus",
+    "CreditEvent",
+    "CreditLiability",
+    "CreditReport",
     "Document",
     "EligibilityRun",
+    "EscrowDetail",
     "IntakeAnswer",
     "IntakeHandoff",
     "IntakeSession",
+    "ExceptionAuthorityRule",
+    "ExceptionComment",
+    "ExceptionDocument",
+    "ExceptionEvent",
     "ExceptionSeverity",
     "ExceptionStatus",
     "Loan",
@@ -68,6 +85,8 @@ __all__ = [
     "TaskPriority",
     "TaskStatus",
     "Tenant",
+    "TitleException",
+    "TitleOrder",
     "User",
     "UserParty",
     "UserRole",
