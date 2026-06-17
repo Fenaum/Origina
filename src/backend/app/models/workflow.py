@@ -1,9 +1,10 @@
 from datetime import datetime
+from decimal import Decimal
 from enum import Enum
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, String, Text, func
+from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Numeric, String, Text, func
 from sqlalchemy.dialects.postgresql import ENUM, JSONB, UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -126,19 +127,71 @@ class LoanException(BaseModel):
     actual_value: Mapped[str | None] = mapped_column(Text)
     variance: Mapped[str | None] = mapped_column(Text)
     justification: Mapped[str | None] = mapped_column(Text)
-    compensating_factors: Mapped[str | None] = mapped_column(Text)
-    risk_factors: Mapped[str | None] = mapped_column(Text)
+    # ── Structured factor arrays (migration 120) ──────────────────────────────
+    # JSONB arrays of {code: str, notes: str|null} objects.
+    # Replaces the old TEXT columns. See exception_schema.py for allowed codes.
+    compensating_factors: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB,
+        nullable=False,
+        server_default="[]",
+    )
+    risk_factors: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB,
+        nullable=False,
+        server_default="[]",
+    )
     loan_snapshot: Mapped[dict[str, Any]] = mapped_column(
         JSONB,
         nullable=False,
         server_default="{}",
     )
-    # 'pre_file' | 'loan_file'
+    loan_snapshot_hash: Mapped[str | None] = mapped_column(String)
+
+    # ── Classification fields (migration 120) ─────────────────────────────────
+    # 'pre_file' | 'loan_file' (legacy — use context_type for new code)
     exception_source: Mapped[str] = mapped_column(
         String,
         nullable=False,
         server_default="loan_file",
     )
+    # context_type supersedes exception_source with a richer controlled vocabulary
+    context_type: Mapped[str] = mapped_column(
+        String,
+        nullable=False,
+        server_default="loan_file",
+    )
+    primary_category: Mapped[str] = mapped_column(
+        String,
+        nullable=False,
+        server_default="other",
+    )
+    reason_code: Mapped[str] = mapped_column(
+        String,
+        nullable=False,
+        server_default="other",
+    )
+    related_categories: Mapped[list[str]] = mapped_column(
+        JSONB,
+        nullable=False,
+        server_default="[]",
+    )
+
+    # ── Workflow assignment (migration 120) ───────────────────────────────────
+    assigned_to: Mapped[UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+    )
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    # ── Structured numeric metrics (migration 120) ────────────────────────────
+    # Parallel to guideline_value/actual_value TEXT display fields.
+    # Use these for reporting queries (variance thresholds, aggregations).
+    metric_type: Mapped[str | None] = mapped_column(String)
+    guideline_operator: Mapped[str | None] = mapped_column(String)
+    metric_guideline: Mapped[Decimal | None] = mapped_column(Numeric(10, 4))
+    metric_actual: Mapped[Decimal | None] = mapped_column(Numeric(10, 4))
+    metric_variance: Mapped[Decimal | None] = mapped_column(Numeric(10, 4))
+    metric_variance_unit: Mapped[str | None] = mapped_column(String)
 
     loan: Mapped["Loan | None"] = relationship("Loan", back_populates="exceptions")
     requester: Mapped["User | None"] = relationship(
@@ -167,6 +220,10 @@ class LoanException(BaseModel):
         "ExceptionDocument",
         back_populates="exception",
         cascade="all, delete-orphan",
+    )
+    assigned_user: Mapped["User | None"] = relationship(
+        "User",
+        foreign_keys=[assigned_to],
     )
 
 

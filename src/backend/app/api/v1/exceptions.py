@@ -26,12 +26,15 @@ from app.schemas.exception_schema import (
 )
 from app.security.roles import IT_ADMIN, ACCOUNT_MANAGER, UNDERWRITER, require_roles
 from app.security.security import get_audited_db, get_current_user
+from app.schemas.exception_schema import ExceptionAssignRequest
 from app.services.exception_repo import (
     add_comment,
     approve_exception,
+    assign_exception,
     attach_document,
     deny_exception,
     log_event,
+    submit_exception,
     withdraw_exception,
 )
 
@@ -221,6 +224,29 @@ def withdraw(
 ):
     exc = _get_or_404(exception_id, db, current_user.tenant_id)
     return withdraw_exception(db, exc, payload.reason, current_user)
+
+
+# ── Workflow state transitions ────────────────────────────────────────────────
+
+@router.post("/{exception_id}/submit", response_model=ExceptionOut)
+def submit(
+    exception_id: UUID,
+    db: Session = Depends(get_audited_db),
+    current_user: User = Depends(get_current_user),
+):
+    exc = _get_or_404(exception_id, db, current_user.tenant_id)
+    return submit_exception(db, exc, current_user)
+
+
+@router.post("/{exception_id}/assign", response_model=ExceptionOut)
+def assign(
+    exception_id: UUID,
+    payload: ExceptionAssignRequest,
+    db: Session = Depends(get_audited_db),
+    current_user: User = Depends(get_current_user),
+):
+    exc = _get_or_404(exception_id, db, current_user.tenant_id)
+    return assign_exception(db, exc, payload.assigned_to, current_user)
 
 
 # ── Events ────────────────────────────────────────────────────────────────────

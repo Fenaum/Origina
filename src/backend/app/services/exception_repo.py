@@ -145,6 +145,48 @@ def withdraw_exception(
     return exception
 
 
+def submit_exception(
+    db: Session,
+    exception: LoanException,
+    actor: User,
+) -> LoanException:
+    from datetime import datetime, timezone
+    from app.models.workflow import ExceptionStatus
+
+    if exception.status not in ("open", "draft", "additional_info_requested"):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Cannot submit an exception with status '{exception.status}'.",
+        )
+    exception.status = ExceptionStatus.SUBMITTED
+    exception.submitted_at = datetime.now(timezone.utc)
+    log_event(db, exception, "exception_submitted", actor)
+    db.commit()
+    db.refresh(exception)
+    return exception
+
+
+def assign_exception(
+    db: Session,
+    exception: LoanException,
+    assigned_to_id,
+    actor: User,
+) -> LoanException:
+    from app.models.workflow import ExceptionStatus
+
+    if exception.status not in ("submitted", "under_review"):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Cannot assign an exception with status '{exception.status}'.",
+        )
+    exception.assigned_to = assigned_to_id
+    exception.status = ExceptionStatus.ASSIGNED
+    log_event(db, exception, "exception_assigned", actor, {"assigned_to": str(assigned_to_id)})
+    db.commit()
+    db.refresh(exception)
+    return exception
+
+
 def add_comment(
     db: Session,
     exception: LoanException,

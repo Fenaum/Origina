@@ -460,23 +460,53 @@ export type ExceptionStatus =
 export type ExceptionSeverity = "low" | "medium" | "high" | "critical";
 export type ExceptionSource = "pre_file" | "loan_file";
 
+// A single compensating or risk factor selection.
+export type ExceptionFactor = {
+  code: string;
+  notes: string | null;
+};
+
 export type ExceptionOut = {
   id: string;
   tenant_id: string;
   loan_id: string | null;
   exception_type: string;
-  exception_source: ExceptionSource;
   title: string;
   description: string | null;
   status: ExceptionStatus;
   severity: ExceptionSeverity;
+
+  // Classification (Phase 2)
+  primary_category: string;
+  reason_code: string;
+  related_categories: string[];
+  context_type: string;
+  exception_source: ExceptionSource;
+
+  // Workflow (Phase 2)
+  assigned_to: string | null;
+  submitted_at: string | null;
+
+  // Display text fields (kept for rendering)
   guideline_value: string | null;
   actual_value: string | null;
   variance: string | null;
   justification: string | null;
-  compensating_factors: string | null;
-  risk_factors: string | null;
+
+  // Structured numeric metrics (Phase 2)
+  metric_type: string | null;
+  guideline_operator: string | null;
+  metric_guideline: number | null;
+  metric_actual: number | null;
+  metric_variance: number | null;
+  metric_variance_unit: string | null;
+
+  // Structured factor arrays (Phase 2)
+  compensating_factors: ExceptionFactor[];
+  risk_factors: ExceptionFactor[];
+
   loan_snapshot: Record<string, unknown>;
+  loan_snapshot_hash: string | null;
   requested_by: string | null;
   decided_by: string | null;
   decided_at: string | null;
