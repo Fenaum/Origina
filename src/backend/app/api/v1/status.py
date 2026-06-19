@@ -110,6 +110,32 @@ def transition_status(
             detail=f"Cannot transition from '{current}' to '{target}'. Allowed: {allowed}",
         )
 
+    # Funding gate: block if required exception conditions are unsatisfied.
+    # Loans with approved_with_conditions exceptions cannot fund until all
+    # required conditions (pricing, escrow, LTV, etc.) are resolved.
+    if target == "funded":
+        from app.models.workflow import ExceptionDecisionCondition as _Cond, LoanException as _Exc
+        pending = (
+            db.query(_Cond)
+            .join(_Exc, _Exc.id == _Cond.exception_id)
+            .filter(
+                _Exc.loan_id == loan_id,
+                _Exc.tenant_id == current_user.tenant_id,
+                _Exc.status == "approved_with_conditions",
+                _Cond.status == "pending",
+                _Cond.is_required.is_(True),
+            )
+            .count()
+        )
+        if pending:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"Cannot fund: {pending} required exception condition(s) are still pending. "
+                    "All required conditions must be satisfied or waived before funding."
+                ),
+            )
+
     event = LoanStatusEvent(
         tenant_id=current_user.tenant_id,
         loan_id=loan_id,

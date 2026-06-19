@@ -105,6 +105,20 @@ RISK_FACTOR_CODES = frozenset({
     "other",
 })
 
+DECISION_TYPES = frozenset({
+    "as_requested",
+    "with_conditions",
+    "denied",
+    "information_requested",
+})
+
+CONDITION_CATEGORIES = frozenset({
+    "pricing", "escrow", "collateral", "credit",
+    "documentation", "funding", "compliance", "other",
+})
+
+CONDITION_STATUSES = frozenset({"pending", "satisfied", "waived", "expired"})
+
 EXCEPTION_STATUSES_ALL = frozenset({
     "open", "draft", "submitted", "assigned", "under_review",
     "additional_info_requested", "approved", "approved_with_conditions",
@@ -328,6 +342,86 @@ class ExceptionOut(ExceptionBase):
     updated_at: datetime
 
 
+# ── Decision / condition schemas (Phase 3) ────────────────────────────────────
+
+class ExceptionDecisionConditionCreate(BaseModel):
+    condition_category: str = "other"
+    action: str
+    target: Optional[str] = None
+    imposed_value: Optional[str] = None
+    imposed_value_numeric: Optional[Decimal] = None
+    is_required: bool = True
+    expires_at: Optional[datetime] = None
+
+    @field_validator("condition_category")
+    @classmethod
+    def _validate_category(cls, v: str) -> str:
+        if v not in CONDITION_CATEGORIES:
+            raise ValueError(
+                f"condition_category must be one of: {sorted(CONDITION_CATEGORIES)}"
+            )
+        return v
+
+
+class ExceptionDecisionCreate(BaseModel):
+    decision_type: str
+    rationale: Optional[str] = None
+    conditions: list[ExceptionDecisionConditionCreate] = []
+
+    @field_validator("decision_type")
+    @classmethod
+    def _validate_decision_type(cls, v: str) -> str:
+        if v not in DECISION_TYPES:
+            raise ValueError(
+                f"decision_type must be one of: {sorted(DECISION_TYPES)}"
+            )
+        return v
+
+
+class ExceptionDecisionConditionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    tenant_id: UUID
+    exception_id: UUID
+    decision_id: UUID
+    condition_category: str
+    action: str
+    target: Optional[str] = None
+    imposed_value: Optional[str] = None
+    imposed_value_numeric: Optional[Decimal] = None
+    is_required: bool
+    status: str
+    satisfaction_date: Optional[datetime] = None
+    satisfaction_user_id: Optional[UUID] = None
+    expires_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class ExceptionDecisionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    tenant_id: UUID
+    exception_id: UUID
+    decision_type: str
+    decided_by: Optional[UUID] = None
+    decided_at: datetime
+    rationale: Optional[str] = None
+    created_at: datetime
+    conditions: list[ExceptionDecisionConditionOut]
+
+
+# ── Analytics / reporting schemas (Phase 4) ───────────────────────────────────
+
+class ExceptionSummaryOut(BaseModel):
+    total: int
+    by_status: dict[str, int]
+    by_category: dict[str, int]
+    by_severity: dict[str, int]
+
+
 # ── Workflow action schemas ────────────────────────────────────────────────────
 
 class ExceptionSubmitRequest(BaseModel):
@@ -343,6 +437,10 @@ class ExceptionAssignRequest(BaseModel):
 
 class DecisionRequest(BaseModel):
     reason: Optional[str] = None
+
+
+class LinkLoanRequest(BaseModel):
+    loan_id: UUID
 
 
 # ── Exception events ──────────────────────────────────────────────────────────
