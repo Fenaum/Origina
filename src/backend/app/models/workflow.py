@@ -8,7 +8,7 @@ from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Numeric, 
 from sqlalchemy.dialects.postgresql import ENUM, JSONB, UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.models.base import Base, BaseModel, TenantMixin, UUIDMixin
+from app.models.base import AppendOnlyModel, Base, BaseModel, TenantMixin, UUIDMixin
 from app.models.loan import LoanStatus
 
 
@@ -225,6 +225,17 @@ class LoanException(BaseModel):
         "User",
         foreign_keys=[assigned_to],
     )
+    decisions: Mapped[list["ExceptionDecision"]] = relationship(
+        "ExceptionDecision",
+        back_populates="exception",
+        cascade="all, delete-orphan",
+        order_by="ExceptionDecision.decided_at",
+    )
+    decision_conditions: Mapped[list["ExceptionDecisionCondition"]] = relationship(
+        "ExceptionDecisionCondition",
+        back_populates="exception",
+        cascade="all, delete-orphan",
+    )
 
 
 class ExceptionEvent(TenantMixin, UUIDMixin, Base):
@@ -318,6 +329,86 @@ class ExceptionDocument(TenantMixin, UUIDMixin, Base):
     attacher: Mapped["User | None"] = relationship(
         "User",
         foreign_keys=[attached_by],
+    )
+
+
+class ExceptionDecision(AppendOnlyModel):
+    """Immutable record of each approval decision. Never update these rows."""
+    __tablename__ = "exception_decisions"
+
+    exception_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("exceptions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    decision_type: Mapped[str] = mapped_column(String, nullable=False)
+    decided_by: Mapped[UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+    )
+    decided_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+    rationale: Mapped[str | None] = mapped_column(Text)
+
+    exception: Mapped["LoanException"] = relationship(
+        "LoanException", back_populates="decisions"
+    )
+    decider: Mapped["User | None"] = relationship(
+        "User", foreign_keys=[decided_by]
+    )
+    conditions: Mapped[list["ExceptionDecisionCondition"]] = relationship(
+        "ExceptionDecisionCondition",
+        back_populates="decision",
+        cascade="all, delete-orphan",
+        order_by="ExceptionDecisionCondition.created_at",
+    )
+
+
+class ExceptionDecisionCondition(BaseModel):
+    """Mutable condition imposed as part of an approved-with-conditions decision."""
+    __tablename__ = "exception_decision_conditions"
+
+    exception_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("exceptions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    decision_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("exception_decisions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    condition_category: Mapped[str] = mapped_column(
+        String, nullable=False, server_default="other"
+    )
+    action: Mapped[str] = mapped_column(String, nullable=False)
+    target: Mapped[str | None] = mapped_column(String)
+    imposed_value: Mapped[str | None] = mapped_column(Text)
+    imposed_value_numeric: Mapped[Decimal | None] = mapped_column(Numeric(10, 4))
+    is_required: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="true"
+    )
+    status: Mapped[str] = mapped_column(
+        String, nullable=False, server_default="pending"
+    )
+    satisfaction_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    satisfaction_user_id: Mapped[UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+    )
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    exception: Mapped["LoanException"] = relationship(
+        "LoanException", back_populates="decision_conditions"
+    )
+    decision: Mapped["ExceptionDecision"] = relationship(
+        "ExceptionDecision", back_populates="conditions"
+    )
+    satisfier: Mapped["User | None"] = relationship(
+        "User", foreign_keys=[satisfaction_user_id]
     )
 
 

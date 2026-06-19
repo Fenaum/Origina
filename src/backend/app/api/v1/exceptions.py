@@ -12,29 +12,37 @@ from app.models.workflow import (
 )
 from app.schemas.exception_schema import (
     DecisionRequest,
+    ExceptionAssignRequest,
     ExceptionAuthorityRuleCreate,
     ExceptionAuthorityRuleOut,
     ExceptionAuthorityRuleUpdate,
     ExceptionCommentCreate,
     ExceptionCommentOut,
     ExceptionCreate,
+    ExceptionDecisionCreate,
+    ExceptionDecisionOut,
     ExceptionDocumentCreate,
     ExceptionDocumentOut,
     ExceptionEventOut,
     ExceptionOut,
+    ExceptionSummaryOut,
     ExceptionUpdate,
+    LinkLoanRequest,
 )
 from app.security.roles import IT_ADMIN, ACCOUNT_MANAGER, UNDERWRITER, require_roles
 from app.security.security import get_audited_db, get_current_user
-from app.schemas.exception_schema import ExceptionAssignRequest
 from app.services.exception_repo import (
     add_comment,
     approve_exception,
     assign_exception,
     attach_document,
+    decide_exception,
     deny_exception,
+    link_exception_to_loan,
     log_event,
+    satisfy_condition,
     submit_exception,
+    waive_condition,
     withdraw_exception,
 )
 
@@ -101,6 +109,66 @@ def update_authority_rule(
     db.commit()
     db.refresh(rule)
     return rule
+
+
+# ── Analytics / Reporting (Phase 4) ──────────────────────────────────────────
+# IMPORTANT: These static-path routes MUST be registered before /{exception_id}
+# for the same reason as the authority-rules routes above.
+
+@router.get("/summary", response_model=ExceptionSummaryOut)
+def get_summary(
+    loan_id: UUID | None = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    query = db.query(LoanException).filter(LoanException.tenant_id == current_user.tenant_id)
+    if loan_id:
+        query = query.filter(LoanException.loan_id == loan_id)
+    exceptions = query.all()
+
+    by_status: dict[str, int] = {}
+    by_category: dict[str, int] = {}
+    by_severity: dict[str, int] = {}
+    for exc in exceptions:
+        by_status[exc.status] = by_status.get(exc.status, 0) + 1
+        by_category[exc.primary_category] = by_category.get(exc.primary_category, 0) + 1
+        by_severity[exc.severity] = by_severity.get(exc.severity, 0) + 1
+
+    return ExceptionSummaryOut(
+        total=len(exceptions),
+        by_status=by_status,
+        by_category=by_category,
+        by_severity=by_severity,
+    )
+
+
+@router.get("/approver-queue", response_model=list[ExceptionOut])
+def get_approver_queue(
+    skip: int = 0,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    from sqlalchemy import case as sql_case
+
+    severity_rank = sql_case(
+        (LoanException.severity == "critical", 0),
+        (LoanException.severity == "high",     1),
+        (LoanException.severity == "medium",   2),
+        (LoanException.severity == "low",      3),
+        else_=4,
+    )
+    return (
+        db.query(LoanException)
+        .filter(
+            LoanException.tenant_id == current_user.tenant_id,
+            LoanException.status.in_(["submitted", "assigned", "under_review"]),
+        )
+        .order_by(severity_rank, LoanException.submitted_at.asc().nulls_last())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
 
 
 # ── CRUD ──────────────────────────────────────────────────────────────────────
@@ -249,6 +317,92 @@ def assign(
     return assign_exception(db, exc, payload.assigned_to, current_user)
 
 
+# ── Structured decisions (Phase 3) ───────────────────────────────────────────
+
+@router.post("/{exception_id}/decide", response_model=ExceptionDecisionOut,
+             status_code=status.HTTP_201_CREATED)
+def decide(
+    exception_id: UUID,
+    payload: ExceptionDecisionCreate,
+    db: Session = Depends(get_audited_db),
+    current_user: User = Depends(get_current_user),
+):
+    exc = _get_or_404(exception_id, db, current_user.tenant_id)
+    conditions = [
+        c.model_dump(exclude_none=True)
+        for c in payload.conditions
+    ]
+    return decide_exception(db, exc, payload.decision_type, payload.rationale, conditions, current_user)
+
+
+@router.get("/{exception_id}/decisions", response_model=list[ExceptionDecisionOut])
+def list_decisions(
+    exception_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    from app.models.workflow import ExceptionDecision as _ExceptionDecision
+    _get_or_404(exception_id, db, current_user.tenant_id)
+    return (
+        db.query(_ExceptionDecision)
+        .filter(_ExceptionDecision.exception_id == exception_id)
+        .order_by(_ExceptionDecision.decided_at)
+        .all()
+    )
+
+
+@router.get("/{exception_id}/conditions", response_model=list)
+def list_conditions(
+    exception_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    from app.models.workflow import ExceptionDecisionCondition as _Cond
+    from app.schemas.exception_schema import ExceptionDecisionConditionOut
+    _get_or_404(exception_id, db, current_user.tenant_id)
+    rows = (
+        db.query(_Cond)
+        .filter(_Cond.exception_id == exception_id)
+        .order_by(_Cond.created_at)
+        .all()
+    )
+    return [ExceptionDecisionConditionOut.model_validate(r) for r in rows]
+
+
+@router.post("/{exception_id}/conditions/{condition_id}/satisfy")
+def satisfy_cond(
+    exception_id: UUID,
+    condition_id: UUID,
+    db: Session = Depends(get_audited_db),
+    current_user: User = Depends(get_current_user),
+):
+    from app.models.workflow import ExceptionDecisionCondition as _Cond
+    from app.schemas.exception_schema import ExceptionDecisionConditionOut
+    _get_or_404(exception_id, db, current_user.tenant_id)
+    cond = db.get(_Cond, condition_id)
+    if not cond or cond.exception_id != exception_id:
+        raise HTTPException(status_code=404, detail="Condition not found")
+    result = satisfy_condition(db, cond, current_user)
+    return ExceptionDecisionConditionOut.model_validate(result)
+
+
+@router.post("/{exception_id}/conditions/{condition_id}/waive")
+def waive_cond(
+    exception_id: UUID,
+    condition_id: UUID,
+    db: Session = Depends(get_audited_db),
+    current_user: User = Depends(get_current_user),
+):
+    from app.models.workflow import ExceptionDecisionCondition as _Cond
+    from app.schemas.exception_schema import ExceptionDecisionConditionOut
+    _get_or_404(exception_id, db, current_user.tenant_id)
+    cond = db.get(_Cond, condition_id)
+    if not cond or cond.exception_id != exception_id:
+        raise HTTPException(status_code=404, detail="Condition not found")
+    result = waive_condition(db, cond, current_user)
+    return ExceptionDecisionConditionOut.model_validate(result)
+
+
 # ── Events ────────────────────────────────────────────────────────────────────
 
 @router.get("/{exception_id}/events", response_model=list[ExceptionEventOut])
@@ -321,3 +475,16 @@ def list_exception_docs(
         .filter(ExceptionDocument.exception_id == exception_id)
         .all()
     )
+
+
+# ── Pre-file link ─────────────────────────────────────────────────────────────
+
+@router.post("/{exception_id}/link-loan", response_model=ExceptionOut)
+def link_loan(
+    exception_id: UUID,
+    payload: LinkLoanRequest,
+    db: Session = Depends(get_audited_db),
+    current_user: User = Depends(get_current_user),
+):
+    exc = _get_or_404(exception_id, db, current_user.tenant_id)
+    return link_exception_to_loan(db, exc, payload.loan_id, current_user)

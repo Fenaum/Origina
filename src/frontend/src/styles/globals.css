@@ -10597,3 +10597,167 @@ th {
 .exc-badge--submitted { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
 
 .title-alert-block span  { font-size: 0.82rem; color: #b91c1c; }
+
+/* ── Exception decision form (Phase 3) ──────────────────────────────────────── */
+.exc-decide-form { border: 1px solid var(--line); border-radius: var(--radius); padding: 1rem; background: #f8fafc; display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.5rem; }
+
+.exc-decide-type-row { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.exc-decide-type-option { padding: 0.35rem 0.8rem; border-radius: 6px; border: 1px solid var(--line); background: #fff; font-size: 0.8rem; font-weight: 500; cursor: pointer; color: var(--text-secondary); transition: border-color 0.1s, background 0.1s; user-select: none; }
+.exc-decide-type-option--active { border-color: var(--accent); background: #eff6ff; color: var(--accent); font-weight: 600; }
+
+.exc-btn-decide { padding: 0.4rem 0.9rem; border-radius: 6px; border: 1px solid #2563eb; background: #eff6ff; color: #1d4ed8; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
+.exc-btn-decide:hover { background: #dbeafe; }
+
+/* ── Imposed conditions builder ──────────────────────────────────────────────── */
+.exc-conditions-builder { display: flex; flex-direction: column; gap: 0.5rem; padding: 0.75rem; background: #fff; border-radius: 6px; border: 1px solid var(--line); }
+.exc-conditions-builder-header { display: flex; align-items: center; justify-content: space-between; }
+.exc-conditions-empty { font-size: 0.8rem; color: var(--text-secondary); margin: 0; font-style: italic; }
+
+.exc-condition-row { display: flex; align-items: flex-start; gap: 0.4rem; }
+.exc-condition-row-fields { display: grid; grid-template-columns: 130px 1fr 120px auto; gap: 0.4rem; align-items: center; flex: 1; }
+.exc-condition-req-label { display: flex; align-items: center; gap: 0.3rem; font-size: 0.78rem; color: var(--text-secondary); white-space: nowrap; cursor: pointer; }
+
+.exc-btn-add-condition { padding: 0.25rem 0.65rem; border-radius: 5px; border: 1px dashed var(--accent); background: none; color: var(--accent); font-size: 0.78rem; font-weight: 600; cursor: pointer; }
+.exc-btn-add-condition:hover { background: #eff6ff; }
+.exc-btn-remove-condition { padding: 0.25rem 0.45rem; border-radius: 4px; border: 1px solid #fecaca; background: none; color: #dc2626; font-size: 0.75rem; cursor: pointer; flex-shrink: 0; }
+.exc-btn-remove-condition:hover { background: #fef2f2; }
+
+/* ── Summary stats bar (Phase 4) ─────────────────────────────────────────────── */
+.exc-summary-stats { display: flex; align-items: center; gap: 1.25rem; padding: 0.6rem 0.75rem; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+.exc-stat-item { display: flex; flex-direction: column; align-items: center; gap: 0.05rem; }
+.exc-stat-count { font-size: 1.1rem; font-weight: 700; line-height: 1; color: var(--text-primary); }
+.exc-stat-count--warning  { color: #92400e; }
+.exc-stat-count--success  { color: #166534; }
+.exc-stat-count--danger   { color: #991b1b; }
+.exc-stat-count--critical { color: #991b1b; }
+.exc-stat-label { font-size: 0.68rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-secondary); }
+.exc-stat-divider { width: 1px; height: 28px; background: var(--line); flex-shrink: 0; }
+
+/* ── Imposed condition list in ExceptionCard ─────────────────────────────────── */
+.exc-conditions-list { display: flex; flex-direction: column; gap: 0.45rem; padding: 0.75rem; background: #f8fafc; border-radius: 6px; border: 1px solid var(--line); }
+.exc-conditions-list-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.1rem; }
+.exc-conditions-loading { font-size: 0.78rem; color: var(--text-secondary); margin: 0; font-style: italic; }
+
+.exc-conditions-pending-badge { padding: 0.12rem 0.5rem; border-radius: 999px; font-size: 0.68rem; font-weight: 600; background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+.exc-conditions-clear-badge   { padding: 0.12rem 0.5rem; border-radius: 999px; font-size: 0.68rem; font-weight: 600; background: #f0fdf4; color: #166534; border: 1px solid #86efac; }
+
+.exc-condition-item { display: flex; flex-direction: column; gap: 0.3rem; padding: 0.55rem 0.7rem; border-radius: 5px; border: 1px solid var(--line); background: #fff; }
+.exc-condition-item--satisfied { background: #f0fdf4; border-color: #86efac; }
+.exc-condition-item--waived    { background: #f8fafc; border-color: #cbd5e1; }
+.exc-condition-item--expired   { background: #fff7ed; border-color: #fed7aa; }
+
+.exc-condition-item-top { display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap; }
+
+.exc-cond-cat-badge { padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.67rem; font-weight: 600; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; text-transform: capitalize; }
+
+.exc-cond-status-badge { padding: 0.1rem 0.4rem; border-radius: 999px; font-size: 0.67rem; font-weight: 600; }
+.exc-cond-status--pending   { background: #fef3c7; color: #92400e;  border: 1px solid #fcd34d; }
+.exc-cond-status--satisfied { background: #f0fdf4; color: #166534;  border: 1px solid #86efac; }
+.exc-cond-status--waived    { background: #f1f5f9; color: #475569;  border: 1px solid #cbd5e1; }
+.exc-cond-status--expired   { background: #fff7ed; color: #9a3412;  border: 1px solid #fed7aa; }
+
+.exc-cond-required-tag { padding: 0.08rem 0.35rem; border-radius: 3px; font-size: 0.63rem; font-weight: 700; background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; text-transform: uppercase; letter-spacing: 0.04em; }
+
+.exc-condition-action-text { font-size: 0.85rem; color: var(--text-primary); margin: 0; font-weight: 500; line-height: 1.4; }
+.exc-cond-imposed-value    { font-size: 0.78rem; color: var(--text-secondary); margin: 0; }
+.exc-cond-resolved-date    { font-size: 0.72rem; color: var(--text-secondary); margin: 0; font-style: italic; }
+
+.exc-cond-actions { display: flex; gap: 0.4rem; margin-top: 0.1rem; }
+
+.exc-btn-satisfy { padding: 0.28rem 0.7rem; border-radius: 5px; border: none; background: #16a34a; color: #fff; font-size: 0.78rem; font-weight: 600; cursor: pointer; }
+.exc-btn-satisfy:hover    { background: #15803d; }
+.exc-btn-satisfy:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.exc-btn-waive-cond { padding: 0.28rem 0.7rem; border-radius: 5px; border: 1px solid var(--line); background: none; font-size: 0.78rem; font-weight: 600; cursor: pointer; color: var(--text-secondary); }
+.exc-btn-waive-cond:hover    { background: #f1f5f9; }
+.exc-btn-waive-cond:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* ── Pre-file exceptions page ─────────────────────────────────────────────── */
+
+.preexc-page { max-width: 860px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+.preexc-page-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; }
+.preexc-page-title  { font-size: 1.35rem; font-weight: 700; color: var(--text-primary); margin: 0 0 0.25rem; }
+.preexc-page-subtitle { font-size: 0.85rem; color: var(--text-secondary); margin: 0; max-width: 520px; line-height: 1.5; }
+
+.preexc-approved-banner {
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  font-size: 0.85rem;
+  color: #166534;
+  margin-bottom: 1.25rem;
+}
+.preexc-approved-banner strong { font-weight: 700; }
+
+.preexc-approved-note {
+  font-size: 0.82rem;
+  color: #166534;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 5px;
+  padding: 0.5rem 0.75rem;
+  margin-top: 0.5rem;
+}
+.preexc-approved-note--cond { color: #92400e; background: #fffbeb; border-color: #fde68a; }
+
+.preexc-pending-label { font-size: 0.8rem; color: var(--text-secondary); font-style: italic; }
+
+.preexc-terminal-note { font-size: 0.82rem; color: var(--text-secondary); font-style: italic; margin-top: 0.5rem; }
+
+.exc-form-subtitle { font-size: 0.8rem; color: var(--text-secondary); margin: -0.25rem 0 0.75rem; line-height: 1.45; }
+
+/* ── Pre-file exceptions in ReviewSummary ─────────────────────────────────── */
+
+.preexc-review-section { margin-top: 1.25rem; }
+
+.preexc-review-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #86efac;
+  border-radius: 12px;
+  padding: 0.1rem 0.55rem;
+}
+
+.preexc-review-error { font-size: 0.82rem; color: #dc2626; margin: 0.5rem 0; }
+
+.preexc-review-group { margin-top: 0.75rem; }
+.preexc-review-group--warning .preexc-review-group-label { color: #92400e; }
+.preexc-review-group--denied  .preexc-review-group-label { color: #991b1b; }
+
+.preexc-review-group-label { font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 0.4rem; }
+
+.preexc-review-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.preexc-review-item:last-child { border-bottom: none; }
+.preexc-review-item--pending { opacity: 0.8; }
+.preexc-review-item--denied  { opacity: 0.65; }
+
+.preexc-review-item-meta { display: flex; align-items: center; gap: 0.4rem; flex: 1; min-width: 0; }
+.preexc-review-item-title { font-size: 0.82rem; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.preexc-review-attached { font-size: 0.78rem; color: #16a34a; font-weight: 600; white-space: nowrap; }
+.preexc-review-no-loan  { font-size: 0.78rem; color: var(--text-secondary); white-space: nowrap; font-style: italic; }
+
+.preexc-review-attach-btn {
+  padding: 0.28rem 0.7rem;
+  border-radius: 5px;
+  border: 1px solid #16a34a;
+  background: none;
+  color: #16a34a;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.preexc-review-attach-btn:hover    { background: #f0fdf4; }
+.preexc-review-attach-btn:disabled { opacity: 0.55; cursor: not-allowed; }

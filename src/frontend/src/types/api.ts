@@ -543,6 +543,46 @@ export type ExceptionDocumentOut = {
   attached_at: string;
 };
 
+// ── Exception decisions (Phase 3) ────────────────────────────────────────────
+export type ExceptionDecisionConditionOut = {
+  id: string;
+  tenant_id: string;
+  exception_id: string;
+  decision_id: string;
+  condition_category: string;
+  action: string;
+  target: string | null;
+  imposed_value: string | null;
+  imposed_value_numeric: number | null;
+  is_required: boolean;
+  status: string;
+  satisfaction_date: string | null;
+  satisfaction_user_id: string | null;
+  expires_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ExceptionDecisionOut = {
+  id: string;
+  tenant_id: string;
+  exception_id: string;
+  decision_type: string;
+  decided_by: string | null;
+  decided_at: string;
+  rationale: string | null;
+  created_at: string;
+  conditions: ExceptionDecisionConditionOut[];
+};
+
+// ── Exception summary (Phase 4) ───────────────────────────────────────────────
+export type ExceptionSummaryOut = {
+  total: number;
+  by_status: Record<string, number>;
+  by_category: Record<string, number>;
+  by_severity: Record<string, number>;
+};
+
 // ── API error ─────────────────────────────────────────────────────────────────
 export type ApiError = {
   detail: string;

@@ -25,6 +25,11 @@ const navItems: NavItem[] = [
     roles: ["account_executive", "broker", "underwriter"],
   },
   {
+    label: "Exceptions",
+    href: "/exceptions",
+    roles: ["account_executive", "broker"],
+  },
+  {
     label: "New Submission",
     href: "/loans/new",
     isCreateAction: true,
