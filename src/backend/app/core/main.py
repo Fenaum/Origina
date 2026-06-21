@@ -17,6 +17,7 @@ from app.api.v1 import (
     health,
     intake,
     loans,
+    metadata,
     parties,
     properties,
     roles,
@@ -81,6 +82,7 @@ app.include_router(workflow.router,     prefix=_V1)
 app.include_router(parties.router,      prefix=_V1)
 app.include_router(decisioning.router,  prefix=_V1)
 app.include_router(audit.router,        prefix=_V1)
+app.include_router(metadata.router,     prefix=_V1)
 app.include_router(appraisal.router,    prefix=_V1)
 app.include_router(credit.router,       prefix=_V1)
 app.include_router(escrow.router,       prefix=_V1)

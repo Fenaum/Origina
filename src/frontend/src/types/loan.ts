@@ -20,7 +20,7 @@ export type LoanProgram =
   | "bank_statement"
   | "asset_depletion"
   | "interest_only"
-  | "jumbo_nonqm"
+  | "jumbo_non_qm"
   | "conventional"
   | "other";
 
@@ -38,7 +38,7 @@ export const loanProgramLabels: Record<LoanProgram, string> = {
   bank_statement:   "Bank Statement",
   asset_depletion:  "Asset Depletion",
   interest_only:    "Interest Only",
-  jumbo_nonqm:      "Jumbo Non-QM",
+  jumbo_non_qm:     "Jumbo Non-QM",
   conventional:     "Conventional",
   other:            "Other",
 };

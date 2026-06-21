@@ -1,81 +1,86 @@
 from datetime import date, datetime
 from decimal import Decimal
-from enum import Enum
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, Numeric, String, func
-from sqlalchemy.dialects.postgresql import ENUM, JSONB, UUID as PG_UUID
+from sqlalchemy import Boolean, CheckConstraint, Date, DateTime, ForeignKey, Integer, Numeric, String, func
+from sqlalchemy.dialects.postgresql import JSONB, UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, BaseModel, TenantMixin, TimestampMixin
 
 
-class LoanStatus(str, Enum):
-    NEW_DRAFT = "new_draft"
-    SUBMITTED = "submitted"
+class LoanStatus:
+    """
+    Allowed values for loans.status (TEXT + CHECK after migration 122).
+    Plain class — no .value boilerplate, works directly as string comparisons.
+    """
+    NEW_DRAFT         = "new_draft"
+    SUBMITTED         = "submitted"
     CONDITIONS_REVIEW = "conditions_review"
-    APPROVED_PENDING = "approved_pending"
-    APPROVED = "approved"
-    DENIED = "denied"
-    CLOSED = "closed"
-    FUNDED = "funded"
-    POST_CLOSING = "post_closing"
-    ARCHIVED = "archived"
-    WITHDRAWN = "withdrawn"
-    CANCELLED = "cancelled"
+    APPROVED_PENDING  = "approved_pending"
+    APPROVED          = "approved"
+    DENIED            = "denied"
+    CLOSED            = "closed"
+    FUNDED            = "funded"
+    POST_CLOSING      = "post_closing"
+    ARCHIVED          = "archived"
+    WITHDRAWN         = "withdrawn"
+    CANCELLED         = "cancelled"
+
+    TERMINAL: frozenset[str] = frozenset({
+        "denied", "withdrawn", "cancelled", "archived"
+    })
+    ALL: frozenset[str] = frozenset({
+        "new_draft", "submitted", "conditions_review", "approved_pending",
+        "approved", "funded", "closed", "post_closing",
+        "denied", "withdrawn", "cancelled", "archived",
+    })
 
 
-class LoanPurpose(str, Enum):
-    PURCHASE = "purchase"
+class LoanPurpose:
+    """Canonical loan purpose codes. Matches controlled_values set 'loan_purpose'."""
+    PURCHASE  = "purchase"
     REFINANCE = "refinance"
-    CASH_OUT = "cash_out"
-    OTHER = "other"
+    CASH_OUT  = "cash_out"
+    OTHER     = "other"
+
+    ALL: frozenset[str] = frozenset({"purchase", "refinance", "cash_out", "other"})
 
 
-class LoanPartyRole(str, Enum):
-    BORROWER = "borrower"
-    CO_BORROWER = "co_borrower"
-    BROKER = "broker"
-    SELLER = "seller"
-    REALTOR = "realtor"
+class LoanPartyRole:
+    """Canonical loan party role codes. Matches controlled_values set 'loan_party_role'."""
+    BORROWER     = "borrower"
+    CO_BORROWER  = "co_borrower"
+    BROKER       = "broker"
+    SELLER       = "seller"
+    REALTOR      = "realtor"
     LOAN_OFFICER = "loan_officer"
-    PROCESSOR = "processor"
-    UNDERWRITER = "underwriter"
-    OTHER = "other"
-
-
-# WHY _ENUM_KWARGS pattern:
-#   create_type=False tells SQLAlchemy "this ENUM type already exists in the
-#   database — do not try to CREATE it." Without this flag, SQLAlchemy would
-#   attempt to CREATE TYPE loan_status ... when create_all() or Alembic runs,
-#   and fail with "type already exists" because 030_types.sql already defined
-#   it. Every ENUM column that references a type from 030_types.sql needs this.
-_LOAN_STATUS_COL = dict(
-    name="loan_status",
-    values_callable=lambda e: [v.value for v in e],
-    create_type=False,
-)
-_LOAN_PURPOSE_COL = dict(
-    name="loan_purpose",
-    values_callable=lambda e: [v.value for v in e],
-    create_type=False,
-)
-_LOAN_PARTY_ROLE_COL = dict(
-    name="loan_party_role",
-    values_callable=lambda e: [v.value for v in e],
-    create_type=False,
-)
+    PROCESSOR    = "processor"
+    UNDERWRITER  = "underwriter"
+    OTHER        = "other"
 
 
 class Loan(BaseModel):
     __tablename__ = "loans"
 
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('new_draft','submitted','conditions_review','approved_pending',"
+            "'approved','funded','closed','post_closing','denied','withdrawn','cancelled','archived')",
+            name="ck_loan_status",
+        ),
+        CheckConstraint(
+            "purpose IN ('purchase','refinance','cash_out','other')",
+            name="ck_loan_purpose",
+        ),
+    )
+
     loan_number: Mapped[str | None] = mapped_column(String)
-    status: Mapped[LoanStatus] = mapped_column(
-        ENUM(LoanStatus, **_LOAN_STATUS_COL),
+    status: Mapped[str] = mapped_column(
+        String,
         nullable=False,
-        server_default=LoanStatus.NEW_DRAFT.value,
+        server_default=LoanStatus.NEW_DRAFT,
     )
     assigned_to: Mapped[UUID | None] = mapped_column(
         PG_UUID(as_uuid=True),
@@ -94,10 +99,10 @@ class Loan(BaseModel):
     le_redisclosure_date: Mapped[date | None] = mapped_column(Date)
 
     # ── Loan descriptor fields ─────────────────────────────────────────────────
-    purpose: Mapped[LoanPurpose] = mapped_column(
-        ENUM(LoanPurpose, **_LOAN_PURPOSE_COL),
+    purpose: Mapped[str] = mapped_column(
+        String,
         nullable=False,
-        server_default=LoanPurpose.PURCHASE.value,
+        server_default=LoanPurpose.PURCHASE,
     )
     occupancy_type: Mapped[str | None] = mapped_column(String)
     loan_program: Mapped[str | None] = mapped_column(String)
@@ -226,6 +231,14 @@ class LoanTerms(TimestampMixin, TenantMixin, Base):
 class LoanParty(Base):
     __tablename__ = "loan_parties"
 
+    __table_args__ = (
+        CheckConstraint(
+            "role IN ('borrower','co_borrower','broker','seller','realtor',"
+            "'loan_officer','processor','underwriter','other')",
+            name="ck_loan_party_role",
+        ),
+    )
+
     tenant_id: Mapped[UUID] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("tenants.id", ondelete="RESTRICT"),
@@ -241,10 +254,7 @@ class LoanParty(Base):
         ForeignKey("parties.id", ondelete="RESTRICT"),
         primary_key=True,
     )
-    role: Mapped[LoanPartyRole] = mapped_column(
-        ENUM(LoanPartyRole, **_LOAN_PARTY_ROLE_COL),
-        primary_key=True,
-    )
+    role: Mapped[str] = mapped_column(String, primary_key=True)
     is_primary: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

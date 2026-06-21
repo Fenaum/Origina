@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
-from app.models.loan import Loan, LoanStatus
+from app.models.loan import Loan
 from app.models.workflow import LoanStatusEvent
 from app.schemas.workflow_schema import StatusEventCreate, StatusEventOut
 from app.security.security import get_audited_db, get_current_user
@@ -60,7 +60,7 @@ def get_loan_status(
     current_user: User = Depends(get_current_user),
 ):
     loan = _get_or_404(loan_id, db, current_user.tenant_id)
-    current = loan.status.value if hasattr(loan.status, "value") else str(loan.status)
+    current = str(loan.status)
     available = ALLOWED_TRANSITIONS.get(current, [])
     return {
         "loan_id": str(loan_id),
@@ -100,8 +100,8 @@ def transition_status(
     current_user: User = Depends(get_current_user),
 ):
     loan = _get_or_404(loan_id, db, current_user.tenant_id)
-    current = loan.status.value if hasattr(loan.status, "value") else str(loan.status)
-    target = payload.to_status if isinstance(payload.to_status, str) else payload.to_status.value
+    current = str(loan.status)
+    target = str(payload.to_status)
 
     allowed = ALLOWED_TRANSITIONS.get(current, [])
     if target not in allowed:

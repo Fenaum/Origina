@@ -40,7 +40,7 @@ export const mockLoans: LoanSummary[] = [
     channel: "Correspondent",
     status: "approved",
     loanAmount: 980000,
-    loanProgram: "jumbo_nonqm",
+    loanProgram: "jumbo_non_qm",
     propertyState: "FL",
     submittedAt: "2026-05-11",
     updatedAt: "2026-06-03",

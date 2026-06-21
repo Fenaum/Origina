@@ -19,7 +19,7 @@ const PROGRAM_OPTIONS: LoanProgram[] = [
   "bank_statement",
   "asset_depletion",
   "interest_only",
-  "jumbo_nonqm",
+  "jumbo_non_qm",
   "conventional",
   "other",
 ];

@@ -12,8 +12,8 @@ const productOptions = Object.entries(productLabels).map(([value, label]) => ({
 
 const purposeOptions: { value: LoanPurpose; label: string }[] = [
   { value: "purchase", label: "Purchase" },
-  { value: "rate_term_refi", label: "Rate-Term Refi" },
-  { value: "cash_out_refi", label: "Cash-Out Refi" },
+  { value: "refinance", label: "Rate-Term Refi" },
+  { value: "cash_out", label: "Cash-Out Refi" },
 ];
 
 const occupancyOptions: { value: OccupancyType; label: string }[] = [
