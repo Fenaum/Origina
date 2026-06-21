@@ -1,15 +1,13 @@
 from datetime import datetime
 from decimal import Decimal
-from enum import Enum
 from typing import Any
 from uuid import UUID
 
 from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Numeric, String, Text, func
-from sqlalchemy.dialects.postgresql import ENUM, JSONB, UUID as PG_UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import AppendOnlyModel, Base, BaseModel, TenantMixin, UUIDMixin
-from app.models.loan import LoanStatus
 
 
 class ExceptionStatus:
@@ -52,28 +50,33 @@ class ExceptionSeverity:
     ALL: frozenset[str] = frozenset({"low", "medium", "high", "critical"})
 
 
-class TaskStatus(str, Enum):
-    TODO = "todo"
+class TaskStatus:
+    """Allowed values for tasks.status (TEXT + CHECK after migration 123)."""
+    TODO        = "todo"
     IN_PROGRESS = "in_progress"
-    BLOCKED = "blocked"
-    DONE = "done"
-    CANCELLED = "cancelled"
+    BLOCKED     = "blocked"
+    DONE        = "done"
+    CANCELLED   = "cancelled"
+
+    TERMINAL: frozenset[str] = frozenset({"done", "cancelled"})
+    ALL: frozenset[str] = frozenset({"todo", "in_progress", "blocked", "done", "cancelled"})
 
 
-class TaskPriority(str, Enum):
-    LOW = "low"
+class TaskPriority:
+    """Allowed values for tasks.priority (TEXT + CHECK after migration 123)."""
+    LOW    = "low"
     NORMAL = "normal"
-    HIGH = "high"
+    HIGH   = "high"
     URGENT = "urgent"
 
+    ALL: frozenset[str] = frozenset({"low", "normal", "high", "urgent"})
 
-# create_type=False on every ENUM column: these types were created by
-# 030_types.sql. SQLAlchemy must not try to CREATE them a second time.
-# _EXCEPTION_STATUS and _EXCEPTION_SEVERITY are intentionally absent:
-# those columns are now TEXT + CHECK (migration 119_exceptions_stabilize.sql).
-_TASK_STATUS = dict(name="task_status", values_callable=lambda e: [v.value for v in e], create_type=False)
-_TASK_PRIORITY = dict(name="task_priority", values_callable=lambda e: [v.value for v in e], create_type=False)
-_LOAN_STATUS = dict(name="loan_status", values_callable=lambda e: [v.value for v in e], create_type=False)
+
+# loan_status ENUM type still exists in PostgreSQL (the type itself was not
+# dropped by migration 122 — only the column type was changed to TEXT).
+# LoanStatusEvent.from_status / to_status are now TEXT columns; the _LOAN_STATUS
+# dict is no longer used but kept here for reference until the orphan type is dropped.
+# _TASK_STATUS / _TASK_PRIORITY dicts are also retired after migration 123.
 
 
 class LoanException(BaseModel):
@@ -444,6 +447,10 @@ class ExceptionAuthorityRule(TenantMixin, UUIDMixin, Base):
 
 class Task(BaseModel):
     __tablename__ = "tasks"
+    __table_args__ = (
+        CheckConstraint("status IN ('todo','in_progress','blocked','done','cancelled')", name="ck_task_status"),
+        CheckConstraint("priority IN ('low','normal','high','urgent')", name="ck_task_priority"),
+    )
 
     loan_id: Mapped[UUID] = mapped_column(
         PG_UUID(as_uuid=True),
@@ -452,15 +459,15 @@ class Task(BaseModel):
     )
     title: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
-    status: Mapped[TaskStatus] = mapped_column(
-        ENUM(TaskStatus, **_TASK_STATUS),
+    status: Mapped[str] = mapped_column(
+        String,
         nullable=False,
-        server_default=TaskStatus.TODO.value,
+        server_default=TaskStatus.TODO,
     )
-    priority: Mapped[TaskPriority] = mapped_column(
-        ENUM(TaskPriority, **_TASK_PRIORITY),
+    priority: Mapped[str] = mapped_column(
+        String,
         nullable=False,
-        server_default=TaskPriority.NORMAL.value,
+        server_default=TaskPriority.NORMAL,
     )
     assigned_to: Mapped[UUID | None] = mapped_column(
         PG_UUID(as_uuid=True),
@@ -522,13 +529,8 @@ class LoanStatusEvent(TenantMixin, UUIDMixin, Base):
         ForeignKey("loans.id", ondelete="CASCADE"),
         nullable=False,
     )
-    from_status: Mapped[LoanStatus | None] = mapped_column(
-        ENUM(LoanStatus, **_LOAN_STATUS),
-    )
-    to_status: Mapped[LoanStatus] = mapped_column(
-        ENUM(LoanStatus, **_LOAN_STATUS),
-        nullable=False,
-    )
+    from_status: Mapped[str | None] = mapped_column(String)
+    to_status: Mapped[str] = mapped_column(String, nullable=False)
     reason: Mapped[str | None] = mapped_column(Text)
     actor_user_id: Mapped[UUID | None] = mapped_column(
         PG_UUID(as_uuid=True),

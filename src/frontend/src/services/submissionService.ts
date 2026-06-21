@@ -183,17 +183,9 @@ export async function createBorrowerForLoan(
   });
 }
 
-// Frontend purpose values → backend loan_purpose enum
-const PURPOSE_MAP: Record<string, string> = {
-  rate_term_refi: "refinance",
-  cash_out_refi: "cash_out",
-};
-
 /**
  * PATCHes header fields on a loan (loan_program, purpose, occupancy_type, etc.).
- *
- * Only sends fields that are non-null to avoid overwriting NOT NULL columns.
- * Maps frontend purpose values to the backend loan_purpose enum.
+ * Purpose and program values are now canonical (match DB controlled_values).
  */
 export async function patchLoanHeader(
   loanId: string,
@@ -208,7 +200,7 @@ export async function patchLoanHeader(
 
   const body: Record<string, string> = {};
   if (patch.loan_program != null) body.loan_program = patch.loan_program;
-  if (patch.purpose != null) body.purpose = PURPOSE_MAP[patch.purpose] ?? patch.purpose;
+  if (patch.purpose != null) body.purpose = patch.purpose;
   if (patch.occupancy_type != null) body.occupancy_type = patch.occupancy_type;
 
   if (Object.keys(body).length === 0) return;

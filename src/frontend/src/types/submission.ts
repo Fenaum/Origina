@@ -13,6 +13,8 @@ export type StepStatus = "empty" | "partial" | "complete" | "skipped" | "error";
 export type SaveStatus = "idle" | "saving" | "saved" | "error";
 export type ImportSource = "manual" | "mismo" | null;
 
+// Non-QM products supported by the submission wizard.
+// Uses canonical controlled_value codes (see loan_program set in controlled_values table).
 export type LoanProgram =
   | "dscr"
   | "bank_statement"
@@ -20,7 +22,9 @@ export type LoanProgram =
   | "interest_only"
   | "jumbo_non_qm";
 
-export type LoanPurpose = "purchase" | "rate_term_refi" | "cash_out_refi";
+// Canonical values matching the loan_purpose controlled_value set and DB column.
+// "rate_term_refi" and "cash_out_refi" were UI aliases — the DB stores "refinance" and "cash_out".
+export type LoanPurpose = "purchase" | "refinance" | "cash_out" | "other";
 export type OccupancyType = "owner_occupied" | "second_home" | "investment";
 export type PropertyType =
   | "single_family"
