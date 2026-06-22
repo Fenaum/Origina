@@ -17,17 +17,17 @@ const navItems: NavItem[] = [
   {
     label: "Loan Pipeline",
     href: "/loans",
-    roles: ["account_executive", "broker", "underwriter"],
+    roles: ["account_executive", "broker", "underwriter", "processor", "funder", "manager"],
   },
   {
     label: "Analytics",
     href: "/analytics",
-    roles: ["account_executive", "broker", "underwriter"],
+    roles: ["account_executive", "broker", "underwriter", "manager"],
   },
   {
     label: "Exceptions",
     href: "/exceptions",
-    roles: ["account_executive", "broker"],
+    roles: ["account_executive", "broker", "underwriter", "manager"],
   },
   {
     label: "New Submission",
@@ -54,24 +54,24 @@ const navItems: NavItem[] = [
 
 export function Sidebar() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, effectiveRole } = useAuth();
   const recentLoans = useRecentLoansStore((state) => state.recent);
 
-  if (!user) {
+  if (!user || !effectiveRole) {
     return null;
   }
 
   const visibleItems = navItems
     .map((item) =>
       item.href === "/dashboard"
-        ? { ...item, href: roleDashboardPaths[user.role] }
+        ? { ...item, href: roleDashboardPaths[effectiveRole] }
         : item,
     )
-    .filter((item) => !item.roles || item.roles.includes(user.role));
+    .filter((item) => !item.roles || item.roles.includes(effectiveRole) || user.role === "admin");
 
   return (
     <aside className="app-sidebar">
-      <OriginaLogo href={roleDashboardPaths[user.role]} subtitle="LOS / TPO" />
+      <OriginaLogo href={roleDashboardPaths[effectiveRole]} subtitle="LOS / TPO" />
 
       <nav className="nav-list" aria-label="Primary navigation">
         {visibleItems.map((item) => {
@@ -126,7 +126,7 @@ export function Sidebar() {
 
       <div className="sidebar-footer">
         <small>Signed in as</small>
-        <strong>{roleLabels[user.role]}</strong>
+        <strong>{roleLabels[effectiveRole]}</strong>
       </div>
     </aside>
   );

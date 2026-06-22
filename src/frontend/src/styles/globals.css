@@ -279,6 +279,133 @@ th {
   padding: 0.55rem 0.8rem;
 }
 
+/* Preview banner */
+.preview-banner {
+  align-items: center;
+  background: #fff8e8;
+  border-bottom: 1px solid #f5d980;
+  color: #7a5200;
+  display: flex;
+  font-size: 0.82rem;
+  font-weight: 500;
+  gap: 0.5rem;
+  padding: 0.55rem 2rem;
+}
+
+.preview-banner strong {
+  font-weight: 700;
+}
+
+.preview-banner-icon {
+  color: #c47f00;
+  flex: 0 0 auto;
+  line-height: 0;
+}
+
+.preview-banner-reset {
+  background: transparent;
+  border: 1px solid #d4a800;
+  border-radius: var(--radius-sm);
+  color: #7a5200;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 600;
+  margin-left: auto;
+  padding: 0.3rem 0.65rem;
+  white-space: nowrap;
+}
+
+.preview-banner-reset:hover {
+  background: #fef3c7;
+}
+
+/* Role switcher */
+.role-switcher {
+  position: relative;
+}
+
+.role-switcher-trigger {
+  align-items: center;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--foreground);
+  cursor: pointer;
+  display: flex;
+  font-size: 0.82rem;
+  font-weight: 500;
+  gap: 0.4rem;
+  padding: 0.45rem 0.75rem;
+  white-space: nowrap;
+}
+
+.role-switcher-trigger:hover {
+  background: var(--bg-hover);
+}
+
+.role-switcher-trigger.is-active {
+  background: #fff8e8;
+  border-color: #f5d980;
+  color: #7a5200;
+}
+
+.role-switcher-dropdown {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  min-width: 200px;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 100;
+}
+
+.role-switcher-header {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 0.6rem 0.85rem 0.35rem;
+  text-transform: uppercase;
+}
+
+.role-switcher-option {
+  background: transparent;
+  border: none;
+  color: var(--foreground);
+  cursor: pointer;
+  display: block;
+  font-size: 0.875rem;
+  padding: 0.55rem 0.85rem;
+  text-align: left;
+  width: 100%;
+}
+
+.role-switcher-option:hover {
+  background: var(--bg-hover);
+}
+
+.role-switcher-option.selected {
+  background: var(--bg-accent-faint);
+  color: var(--brand-strong);
+  font-weight: 600;
+}
+
+.role-switcher-divider {
+  border-top: 1px solid var(--line);
+  margin: 0.3rem 0;
+}
+
+.role-switcher-reset {
+  color: var(--warning);
+  font-size: 0.82rem;
+}
+
+.role-switcher-reset:hover {
+  background: #fff8e8;
+}
+
 .page-content {
   display: grid;
   gap: 1.4rem;

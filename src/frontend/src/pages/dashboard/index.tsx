@@ -6,13 +6,13 @@ import { roleDashboardPaths } from "@/types/auth";
 
 export default function DashboardRouterPage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, effectiveRole } = useAuth();
 
   useEffect(() => {
-    if (user) {
-      void router.replace(roleDashboardPaths[user.role]);
+    if (user && effectiveRole) {
+      void router.replace(roleDashboardPaths[effectiveRole]);
     }
-  }, [router, user]);
+  }, [router, user, effectiveRole]);
 
   return (
     <ProtectedRoute>

@@ -2,6 +2,12 @@ import type { DashboardMetric, StatusItem } from "@/types/dashboard";
 import type { UserRole } from "@/types/auth";
 
 export const dashboardMetrics: Record<UserRole, DashboardMetric[]> = {
+  admin: [
+    { label: "Pipeline Volume", value: "$18.4M", detail: "42 active loans" },
+    { label: "Recent Submissions", value: "11", detail: "Last 7 days", tone: "success" },
+    { label: "Broker Follow-ups", value: "8", detail: "Due this week", tone: "warning" },
+    { label: "Conditions Needing Action", value: "17", detail: "Across assigned pipeline" },
+  ],
   account_executive: [
     { label: "Pipeline Volume", value: "$18.4M", detail: "42 active loans" },
     { label: "Recent Submissions", value: "11", detail: "Last 7 days", tone: "success" },
@@ -14,11 +20,29 @@ export const dashboardMetrics: Record<UserRole, DashboardMetric[]> = {
     { label: "Recent Submissions", value: "5", detail: "Last 7 days", tone: "success" },
     { label: "Approved Loans", value: "$3.2M", detail: "Ready for closing" },
   ],
+  processor: [
+    { label: "Active Files", value: "18", detail: "In processing" },
+    { label: "Conditions Pending", value: "11", detail: "Awaiting borrower response", tone: "warning" },
+    { label: "Cleared This Week", value: "6", detail: "Conditions resolved", tone: "success" },
+    { label: "Ready for UW", value: "4", detail: "Files packaged" },
+  ],
   underwriter: [
     { label: "Underwriting Queue", value: "31", detail: "Oldest file: 2 business days", tone: "warning" },
     { label: "Conditions Submitted", value: "14", detail: "Ready for review" },
     { label: "Approvals This Week", value: "7", detail: "Across Non-QM programs", tone: "success" },
     { label: "Exceptions", value: "4", detail: "Pending decision" },
+  ],
+  funder: [
+    { label: "Approved Files", value: "9", detail: "Ready to fund" },
+    { label: "Docs Outstanding", value: "3", detail: "Awaiting final docs", tone: "warning" },
+    { label: "Funded This Week", value: "5", detail: "Total: $4.1M", tone: "success" },
+    { label: "Wire Confirmations", value: "5", detail: "Confirmed" },
+  ],
+  manager: [
+    { label: "Team Pipeline", value: "$22.7M", detail: "58 active loans" },
+    { label: "SLA At Risk", value: "4", detail: "Files past 48 hrs", tone: "warning" },
+    { label: "Funded MTD", value: "$9.2M", detail: "Monthly target: $12M", tone: "success" },
+    { label: "Open Exceptions", value: "6", detail: "Pending decisions" },
   ],
   borrower: [
     { label: "Application Progress", value: "62%", detail: "Income and assets next" },
@@ -29,6 +53,11 @@ export const dashboardMetrics: Record<UserRole, DashboardMetric[]> = {
 };
 
 export const dashboardStatusItems: Record<UserRole, StatusItem[]> = {
+  admin: [
+    { label: "Northline Lending", value: "3 new submissions", meta: "Broker partner" },
+    { label: "Martinez refinance", value: "Conditions pending", meta: "Updated today" },
+    { label: "Park purchase", value: "Ready for UW", meta: "Loan #OR-1028" },
+  ],
   account_executive: [
     { label: "Northline Lending", value: "3 new submissions", meta: "Broker partner" },
     { label: "Martinez refinance", value: "Conditions pending", meta: "Updated today" },
@@ -39,10 +68,25 @@ export const dashboardStatusItems: Record<UserRole, StatusItem[]> = {
     { label: "Conditions", value: "5 open across pipeline", meta: "Action needed" },
     { label: "Submissions", value: "3 files accepted", meta: "This week" },
   ],
+  processor: [
+    { label: "Chen file", value: "Stips outstanding", meta: "Loan #OR-1031" },
+    { label: "Patel refinance", value: "Packaged for UW", meta: "Loan #OR-1029" },
+    { label: "Williams purchase", value: "Appraisal needed", meta: "Loan #OR-1033" },
+  ],
   underwriter: [
     { label: "Queue priority", value: "6 purchase files", meta: "SLA focus" },
     { label: "Submitted conditions", value: "14 ready to clear", meta: "Review queue" },
     { label: "Exception requests", value: "4 pending", meta: "Decisioning" },
+  ],
+  funder: [
+    { label: "Rodriguez closing", value: "Wire ready", meta: "Loan #OR-1024" },
+    { label: "Park purchase", value: "Final docs pending", meta: "Loan #OR-1028" },
+    { label: "Thompson refi", value: "Funded", meta: "Confirmed 2:14pm" },
+  ],
+  manager: [
+    { label: "Team SLA", value: "4 files at risk", meta: "Escalate to UW" },
+    { label: "Monthly target", value: "76% to goal", meta: "$9.2M of $12M" },
+    { label: "Exception backlog", value: "6 pending", meta: "Avg age: 1.8 days" },
   ],
   borrower: [
     { label: "Identity", value: "Complete", meta: "Application step" },
