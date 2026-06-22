@@ -1,14 +1,17 @@
 # Origina LOS — Project Roadmap
 
+> **Cross-links:** [ARCHITECTURE.md](ARCHITECTURE.md) | [DECISIONS.md](DECISIONS.md) | [BUILD_HISTORY.md](BUILD_HISTORY.md)
+
 ## Current State (as of June 2026)
 
 The platform has a working end-to-end demo path:
 1. Borrower visits `/borrower/welcome` → completes intake → sees program recommendations → submits handoff
 2. AE logs in at `/login` → sees pipeline of 202 real seeded loans → opens any loan file → browses workspace sections
 3. AE views analytics at `/analytics` → KPIs, charts, volume trends
+4. AE manages exceptions at `/exceptions` → creates pre-file exceptions → attaches approved exceptions to loans
 
-**What is real:** Auth, pipeline API, 202 seeded Non-QM loans, borrower intake sessions (DB), analytics from live data.
-**What is mock:** Loan submission to DB, document upload, pricing, MISMO parsing.
+**What is real:** Auth, pipeline API, 202 seeded Non-QM loans, borrower intake (DB), analytics from live data, full exception module (25 routes), controlled values architecture (18 sets, 144 values), metadata API.
+**What is mock:** Loan submission wizard not wired to API (drafts in localStorage), document upload (simulated), pricing (hardcoded scenarios), MISMO parsing (stub).
 
 ---
 
@@ -25,6 +28,10 @@ The platform has a working end-to-end demo path:
 - [x] 202 realistic seeded Non-QM loans across 5 programs with realistic distributions
 - [x] Anonymous intake sessions — no auth wall before borrower engagement
 - [x] RBAC dependency factory — one line per route to enforce roles
+- [x] Exception module (25 routes) — full lifecycle, structured UW fields, authority rules, decisions with conditions
+- [x] Controlled values architecture — zero PostgreSQL ENUMs, TEXT+CHECK, 18 value sets, tenant override model
+- [x] Metadata API (`GET /api/v1/metadata/values`) — frontend bootstrap endpoint for all controlled values
+- [x] Pre-file exceptions — `loan_id` nullable, global `/exceptions` page, `link-loan` endpoint
 
 ### Frontend
 - [x] Modular component architecture — each workspace section is independent
@@ -111,8 +118,8 @@ The platform has a working end-to-end demo path:
 - [ ] Document storage (S3 integration — currently simulated)
 - [ ] Notification system (email on handoff, status change)
 - [ ] Loan status transition validation (enforce state machine)
-- [ ] Exception tracking endpoints (table exists, no API yet)
-- [ ] Task management endpoints (table exists, no API yet)
+- [x] Exception module — 25 routes, full lifecycle, decisions, conditions, pre-file
+- [x] Task management endpoints — full CRUD + status transitions
 - [ ] Notes/internal conversation endpoint
 - [ ] Full URLA (1003) data model and API
 
@@ -156,7 +163,7 @@ The platform has a working end-to-end demo path:
 | JWT in localStorage → httpOnly cookie | High — security | Medium | Requires server-side session handling |
 | `allow_origins=["*"]` | High — security | Low | Config change only |
 | JWT secret in code | High — security | Low | Environment variable |
-| `loans.status` as `text` vs enum | Medium | Low | One ALTER TABLE migration |
+| ~~`loans.status` as `text` vs enum~~ | ~~Medium~~ | ~~Low~~ | ✅ Done — migrations 122–125, zero ENUMs remain |
 | No React Query / SWR | Medium — UX | Medium | Add before live API for caching |
 | `submissionStore.ts` not wired to API | Medium | Medium | Core demo flow |
 | `@shadcn/ui` package is a dummy v0.0.4 | Low | Low | Run `npx shadcn@latest init` when ready for UI primitives |
@@ -224,3 +231,13 @@ cd src/backend && python3 -m uvicorn app.core.main:app --reload
 # Terminal 3
 cd src/frontend && npm run dev
 ```
+
+---
+
+## Documentation Maintenance Rules
+
+- **Update "Current State"** at the start of every major feature session.
+- **Move items from Priority lists to "What We Did Well"** when completed — keep the history of what was built and why it mattered.
+- **Update the Technical Debt Tracker** when items are resolved (mark ✅) or when new debt is incurred.
+- **Update Projection timelines** after major milestones — stale estimates mislead planning.
+- Architecture decisions that justify roadmap choices belong in [DECISIONS.md](DECISIONS.md).

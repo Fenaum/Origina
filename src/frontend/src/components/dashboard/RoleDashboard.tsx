@@ -7,6 +7,11 @@ import { dashboardMetrics, dashboardStatusItems } from "@/data/mockDashboard";
 import { roleLabels, type UserRole } from "@/types/auth";
 
 const dashboardCopy: Record<UserRole, { title: string; description: string }> = {
+  admin: {
+    title: "Admin Dashboard",
+    description:
+      "Platform-wide view of all activity, users, and pipeline health.",
+  },
   account_executive: {
     title: "Account Executive Dashboard",
     description:
@@ -17,10 +22,25 @@ const dashboardCopy: Record<UserRole, { title: string; description: string }> = 
     description:
       "Track borrower files, open conditions, recent submissions, and approvals.",
   },
+  processor: {
+    title: "Processor Dashboard",
+    description:
+      "Manage active files, track outstanding conditions, and package loans for underwriting.",
+  },
   underwriter: {
     title: "Underwriter Dashboard",
     description:
       "Review queue health, condition submissions, approvals, and exceptions.",
+  },
+  funder: {
+    title: "Funder Dashboard",
+    description:
+      "Track approved files, coordinate final docs, and confirm wire disbursements.",
+  },
+  manager: {
+    title: "Manager Dashboard",
+    description:
+      "Team pipeline overview, SLA tracking, exception management, and production targets.",
   },
   borrower: {
     title: "Borrower Portal",

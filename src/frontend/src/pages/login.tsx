@@ -6,17 +6,17 @@ import { roleDashboardPaths } from "@/types/auth";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { isAuthenticated, isLoading: authLoading, user, login } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, user, effectiveRole, login } = useAuth();
   const [email, setEmail] = useState("admin@origina.dev");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (isAuthenticated && user && !authLoading) {
-      void router.replace(roleDashboardPaths[user.role]);
+    if (isAuthenticated && user && effectiveRole && !authLoading) {
+      void router.replace(roleDashboardPaths[effectiveRole]);
     }
-  }, [isAuthenticated, authLoading, router, user]);
+  }, [isAuthenticated, authLoading, router, user, effectiveRole]);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();

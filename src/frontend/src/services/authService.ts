@@ -5,9 +5,9 @@ import type { SessionUser, UserRole } from "@/types/auth";
 // Maps email prefixes to frontend roles for the dev environment.
 // Replace with a real /auth/me-roles endpoint once RBAC is wired to users.
 const EMAIL_PREFIX_TO_ROLE: Record<string, UserRole> = {
-  admin: "account_executive",
+  admin: "admin",
   underwriter: "underwriter",
-  processor: "account_executive",
+  processor: "processor",
   broker: "broker",
   borrower: "borrower",
 };
