@@ -54,7 +54,7 @@ const navItems: NavItem[] = [
 
 export function Sidebar() {
   const router = useRouter();
-  const { user, effectiveRole } = useAuth();
+  const { user, effectiveRole, isPreviewMode } = useAuth();
   const recentLoans = useRecentLoansStore((state) => state.recent);
 
   if (!user || !effectiveRole) {
@@ -67,7 +67,7 @@ export function Sidebar() {
         ? { ...item, href: roleDashboardPaths[effectiveRole] }
         : item,
     )
-    .filter((item) => !item.roles || item.roles.includes(effectiveRole) || user.role === "admin");
+    .filter((item) => !item.roles || item.roles.includes(effectiveRole) || (user.role === "admin" && !isPreviewMode));
 
   return (
     <aside className="app-sidebar">
