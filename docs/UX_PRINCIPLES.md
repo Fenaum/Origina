@@ -342,6 +342,90 @@ Avoid:
 
 ---
 
+## Consistency Standards
+
+Consistency in Origina means users can predict how work behaves across roles, files, and modules.
+
+### Terminology
+
+Use the same term for the same concept everywhere.
+
+Examples:
+
+- Use "condition" consistently, not a mix of condition, requirement, item, and stip.
+- Use "blocker" only for something preventing progress.
+- Use "owner" for the person, role, or department responsible for the next action.
+- Use "status" for lifecycle state, not task priority or risk level.
+
+### Visual consistency
+
+Shared patterns should use consistent:
+
+- Spacing
+- Type scale
+- Button hierarchy
+- Icon style
+- Status colors
+- Empty states
+- Table behavior
+- Form validation
+- Loading treatment
+
+### Tone
+
+Origina should sound calm, direct, and operational.
+
+Use:
+
+- Clear action language
+- Human-readable explanations
+- Minimal internal jargon for external users
+- Specific recovery guidance in errors
+
+Avoid:
+
+- Marketing copy inside workflows
+- Clever labels
+- Ambiguous action text like "Submit" when a more specific verb is available
+
+---
+
+## Design System Standards
+
+Origina should feel like one product, even as modules grow.
+
+Use shared components and tokens for:
+
+- Buttons
+- Inputs
+- Selects
+- Tables
+- Status pills
+- Owner chips
+- Cards
+- Slide-overs
+- Modals
+- Empty states
+- Error states
+- Loading skeletons
+- Toasts and save states
+
+Do not create a new visual pattern when an existing shared component can express the same behavior.
+
+### Component behavior must be consistent
+
+A component should behave the same way wherever it appears.
+
+Examples:
+
+- Status pills always pair color with text.
+- Owner chips always identify person, role, or department.
+- Primary buttons always represent the next meaningful action.
+- Destructive actions always require confirmation.
+- Tables use the same sorting, filtering, loading, and empty-state patterns.
+
+---
+
 ## Interaction Standards
 
 ### Animation must communicate
@@ -459,6 +543,41 @@ Broker and seller users should never have to understand Origina's internal depar
 
 ---
 
+## Onboarding and Time to Value
+
+Origina should help each user reach useful work quickly.
+
+### First session
+
+A new user should immediately understand:
+
+- Their role
+- Their assigned queue or pipeline
+- Which loans need attention
+- What action they are expected to take first
+- Where to get help if they are blocked
+
+### Progressive guidance
+
+Do not explain the whole system upfront. Introduce guidance at the point of action.
+
+Use:
+
+- Role-specific default views
+- Helpful empty states
+- Inline hints for unfamiliar workflows
+- Checklists for setup-heavy flows
+- Guided first actions for brokers and sellers
+- Secondary onboarding when advanced features become relevant
+
+Avoid:
+
+- Long tours before the user can work
+- Generic help text detached from the current task
+- Exposing advanced configuration before basic use is clear
+
+---
+
 ## Operational Experience
 
 Internal users need speed, density, and clarity.
@@ -523,6 +642,45 @@ Reserve modals for short confirmations and destructive actions.
 
 ---
 
+## Scalability Principles
+
+Origina must scale by adding workflow depth without making the interface feel heavier.
+
+### Design for extension
+
+New features should attach to the existing loan workspace model instead of creating isolated destinations by default.
+
+Prefer:
+
+- New contextual panels inside the loan file
+- Queue filters over new dashboards
+- Reusable status, blocker, owner, and action patterns
+- Shared timeline and activity events
+- Role-aware visibility rules
+
+Avoid:
+
+- One-off modules with their own navigation model
+- Duplicate status concepts
+- Feature-specific layouts that cannot be reused
+- Adding new top-level navigation for secondary workflows
+
+### Large data must remain scannable
+
+As loan volume grows, operational views must preserve speed and clarity.
+
+Pipelines and queues should support:
+
+- Saved views
+- Fast filtering
+- Sortable columns
+- Column customization
+- Bulk actions
+- Pagination or virtualization where needed
+- Stable empty, loading, and error states
+
+---
+
 ## Accessibility Requirements
 
 These are non-negotiable:
@@ -538,6 +696,34 @@ These are non-negotiable:
 - Color is never the only state indicator
 - All animations respect `prefers-reduced-motion`
 - Touch targets are at least 44px where touch use is expected
+
+### Readability and contrast
+
+- Text must meet WCAG AA contrast expectations.
+- Body text should remain readable at common browser zoom levels.
+- Do not rely on color alone to communicate risk, status, or completion.
+- Use plain, task-oriented language where possible.
+
+### Forms and controls
+
+- Every input must have a visible label or an accessible label.
+- Error messages must identify the field and explain how to recover.
+- Required fields must be communicated before submit.
+- Focus order must follow the visual workflow.
+- Keyboard users must be able to complete core workflows.
+
+### Non-text content
+
+- Informational images need meaningful alt text.
+- Decorative images should be hidden from assistive technology.
+- Icons that trigger actions need accessible names.
+- Charts must expose the key value or summary outside color alone.
+
+### Screen reader behavior
+
+- Async updates must use appropriate live regions.
+- Loading, success, and failure states must be announced where relevant.
+- Dialogs and slide-overs must manage focus correctly.
 
 ---
 
@@ -591,6 +777,9 @@ Use this before implementing or approving any feature.
 - [ ] Are icon-only controls labeled?
 - [ ] Is color paired with text or iconography?
 - [ ] Is heading structure correct?
+- [ ] Do form fields have visible or accessible labels?
+- [ ] Do errors explain what happened and how to recover?
+- [ ] Are chart values understandable without color alone?
 
 ### Resilience
 
@@ -598,6 +787,19 @@ Use this before implementing or approving any feature.
 - [ ] Does the empty state provide a next action?
 - [ ] Does the error state provide a retry?
 - [ ] Is entered data preserved when an operation fails?
+
+### Scalability and consistency
+
+- [ ] Does this reuse an existing component or pattern?
+- [ ] Does this introduce a new term for an existing concept?
+- [ ] Will this layout still work with more loans, more conditions, or more roles?
+- [ ] Can this feature scale without adding a new top-level module?
+
+### Onboarding
+
+- [ ] Does a new user know what to do first?
+- [ ] Is guidance shown at the point of action?
+- [ ] Does the empty state help the user reach value?
 
 ---
 

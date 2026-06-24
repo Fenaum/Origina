@@ -40,4 +40,13 @@ def login(
 @router.get("/me", response_model=UserOut)
 def me(current_user: User = Depends(get_current_user)):
     """Return the authenticated user's own profile."""
-    return current_user
+    return {
+        "id": current_user.id,
+        "tenant_id": current_user.tenant_id,
+        "email": current_user.email,
+        "full_name": current_user.full_name,
+        "is_active": current_user.is_active,
+        "created_at": current_user.created_at,
+        "updated_at": current_user.updated_at,
+        "roles": [ur.role.name for ur in current_user.roles],
+    }

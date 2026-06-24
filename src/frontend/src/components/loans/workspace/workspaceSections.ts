@@ -1,3 +1,5 @@
+import type { UserRole } from "@/types/auth";
+
 // Central registry for the loan workspace rail.
 // Keep labels and IDs here so routing, validation, and navigation rendering
 // share one source of truth as the workspace grows past horizontal-tab scale.
@@ -76,4 +78,30 @@ export function isWorkspaceSection(value: string): value is WorkspaceSection {
 export function resolveWorkspaceSection(value: string): WorkspaceSection {
   if (isWorkspaceSection(value)) return value;
   return SECTION_ALIASES[value] ?? "home";
+}
+
+// Per-role primary sections — UX Principles §Workspace Architecture.
+// Roles not listed here (admin, account_executive) receive the full grouped rail.
+export const ROLE_PRIMARY_SECTIONS: Partial<Record<UserRole, WorkspaceSection[]>> = {
+  broker: ["home", "conditions", "documents", "conversation", "status"],
+  processor: ["home", "tasks", "documents", "conditions", "processing", "title-legal", "conversation"],
+  underwriter: ["home", "income", "credit", "borrower-urla", "exceptions", "conditions", "underwriting", "conversation"],
+  funder: ["home", "funding", "conditions", "closing", "audit-log"],
+  manager: ["home", "exceptions", "tasks", "status", "audit-log", "conversation"],
+};
+
+export function getPrimaryForRole(role?: UserRole | null): WorkspaceSectionDef[] | null {
+  if (!role) return null;
+  const ids = ROLE_PRIMARY_SECTIONS[role];
+  if (!ids) return null;
+  return ids
+    .map((id) => ALL_SECTIONS.find((s) => s.id === id))
+    .filter((s): s is WorkspaceSectionDef => s !== undefined);
+}
+
+export function getSecondaryForRole(role?: UserRole | null): WorkspaceSectionDef[] {
+  const primary = getPrimaryForRole(role);
+  if (!primary) return [];
+  const primaryIds = new Set(primary.map((s) => s.id));
+  return ALL_SECTIONS.filter((s) => !primaryIds.has(s.id));
 }

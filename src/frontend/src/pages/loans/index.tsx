@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/router";
 import { AppLayout } from "@/components/app/AppLayout";
 import { ErrorState } from "@/components/feedback/ErrorState";
 import { PipelinePageSkeleton } from "@/components/loans/PipelinePageSkeleton";
@@ -8,17 +9,33 @@ import { PipelineKpis } from "@/components/loans/pipeline/PipelineKpis";
 import { PipelineToolbar } from "@/components/loans/pipeline/PipelineToolbar";
 import { applyPipelineFilters, applyPipelineSort } from "@/data/pipelineFilters";
 import { listLoans } from "@/services/loanService";
-import { usePipelineStore } from "@/state/pipelineStore";
+import { EMPTY_FILTERS, usePipelineStore } from "@/state/pipelineStore";
 import { useAuth } from "@/state/auth";
-import type { LoanSummary } from "@/types/loan";
+import type { LoanStatus, LoanSummary } from "@/types/loan";
 
 export default function LoanPipelinePage() {
   const { token, isLoading: authLoading } = useAuth();
+  const router = useRouter();
   const store = usePipelineStore();
   const [loans, setLoans] = useState<LoanSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
+
+  // Apply URL filter params from dashboard card deep-links (one-time on mount).
+  const appliedQueryRef = useRef(false);
+  useEffect(() => {
+    if (!router.isReady || appliedQueryRef.current) return;
+    const q = router.query;
+    if (!q.status && !q.actionNeeded && !q.conditionsOutstanding) return;
+
+    appliedQueryRef.current = true;
+    const patch = { ...EMPTY_FILTERS };
+    if (typeof q.status === "string") patch.statuses = [q.status as LoanStatus];
+    if (q.actionNeeded === "true") patch.actionNeeded = true;
+    if (q.conditionsOutstanding === "true") patch.conditionsOutstanding = true;
+    store.setFilters(patch);
+  }, [router.isReady, router.query, store]);
 
   const loadLoans = useCallback(
     async (isRetry = false) => {
@@ -70,7 +87,7 @@ export default function LoanPipelinePage() {
   );
 
   return (
-    <AppLayout allowedRoles={["account_executive", "broker", "underwriter"]}>
+    <AppLayout allowedRoles={["admin", "account_executive", "broker", "processor", "underwriter", "funder", "manager"]}>
       <div className="pipeline-workspace">
         <PipelineToolbar
           totalCount={loans.length}
