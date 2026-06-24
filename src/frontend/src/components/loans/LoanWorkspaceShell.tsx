@@ -4,6 +4,7 @@
 // its dedicated workspace module.
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { useAuth } from "@/state/auth";
 import { NotificationBell } from "@/components/app/NotificationBell";
 import { LoanWorkspaceRail } from "@/components/loans/LoanWorkspaceRail";
 import { WorkspaceAppraisal } from "@/components/loans/workspace/WorkspaceAppraisal";
@@ -48,6 +49,7 @@ type Props = {
 
 export function LoanWorkspaceShell({ loan }: Props) {
   const router = useRouter();
+  const { effectiveRole } = useAuth();
   const rawSection = String(router.query.section ?? "");
   const section = resolveWorkspaceSection(rawSection);
 
@@ -61,6 +63,7 @@ export function LoanWorkspaceShell({ loan }: Props) {
   }
 
   const riskMetric = loan.loanProgram === "dscr" ? "DSCR pending" : "DTI pending";
+  const cmd = resolveCommandBar(loan);
 
   return (
     <>
@@ -105,12 +108,37 @@ export function LoanWorkspaceShell({ loan }: Props) {
           </div>
         </div>
 
+        <div className="loan-cmd-strip" aria-label="Loan command summary">
+          {cmd.blocker ? (
+            <span className="loan-cmd-blocker">
+              <span className="loan-cmd-dot" aria-hidden />
+              {cmd.blocker}
+            </span>
+          ) : (
+            <span className="loan-cmd-blocker loan-cmd-blocker--clear">
+              <span className="loan-cmd-dot" aria-hidden />
+              No blockers
+            </span>
+          )}
+          <span className="loan-cmd-sep" aria-hidden>·</span>
+          <span className={`loan-cmd-owner loan-cmd-owner--${cmd.ownerType}`}>
+            {cmd.owner}
+          </span>
+          <button
+            type="button"
+            className="loan-cmd-action"
+            onClick={() => goTo(cmd.nextActionSection)}
+          >
+            {cmd.nextAction} →
+          </button>
+        </div>
       </div>
 
       <div className="loan-workspace-body">
         <LoanWorkspaceRail
           activeSection={section}
           loan={loan}
+          role={effectiveRole}
           onSectionChange={goTo}
         />
         <div className="loan-workspace-content">
@@ -119,6 +147,47 @@ export function LoanWorkspaceShell({ loan }: Props) {
       </div>
     </>
   );
+}
+
+type CommandBar = {
+  blocker: string | null;
+  owner: string;
+  ownerType: "internal" | "broker" | "borrower" | "none";
+  nextAction: string;
+  nextActionSection: WorkspaceSection;
+};
+
+function resolveCommandBar(loan: LoanSummary): CommandBar {
+  const open = loan.conditionsOpen;
+  const needed = loan.actionsNeeded;
+
+  switch (loan.status) {
+    case "new_draft":
+      return { blocker: "Awaiting submission", owner: "Broker", ownerType: "broker", nextAction: "Start Submission", nextActionSection: "processing" };
+    case "submitted":
+      return { blocker: "Pending UW assignment", owner: "Account Executive", ownerType: "internal", nextAction: "Assign File", nextActionSection: "status" };
+    case "conditions_review":
+      if (open > 0) {
+        return { blocker: `${open} open condition${open !== 1 ? "s" : ""}`, owner: "Processor", ownerType: "internal", nextAction: "Review Conditions", nextActionSection: "conditions" };
+      }
+      return { blocker: "Package complete — awaiting UW", owner: "Underwriter", ownerType: "internal", nextAction: "Underwrite File", nextActionSection: "underwriting" };
+    case "approved_pending":
+      return { blocker: needed > 0 ? `${needed} item${needed !== 1 ? "s" : ""} outstanding` : "Prior-to-doc conditions", owner: "Processor", ownerType: "internal", nextAction: "Clear Conditions", nextActionSection: "conditions" };
+    case "approved":
+      return { blocker: "Awaiting closing documents", owner: "Closer", ownerType: "internal", nextAction: "Prepare Closing", nextActionSection: "closing" };
+    case "funded":
+      return { blocker: null, owner: "Funder", ownerType: "internal", nextAction: "View Funding", nextActionSection: "funding" };
+    case "closed":
+    case "post_closing":
+    case "archived":
+      return { blocker: null, owner: "Post-Closing", ownerType: "none", nextAction: "View Audit", nextActionSection: "audit-log" };
+    case "denied":
+    case "withdrawn":
+    case "cancelled":
+      return { blocker: null, owner: "Closed", ownerType: "none", nextAction: "View Status", nextActionSection: "status" };
+    default:
+      return { blocker: null, owner: "Team", ownerType: "internal", nextAction: "Open File", nextActionSection: "home" };
+  }
 }
 
 function WorkspaceContent({ section, loan }: { section: WorkspaceSection; loan: LoanSummary }) {

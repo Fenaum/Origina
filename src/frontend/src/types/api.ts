@@ -45,6 +45,7 @@ export type UserOut = {
   full_name: string | null;
   is_active: boolean;
   created_at: string;
+  roles: string[];
 };
 
 // ── Loans ─────────────────────────────────────────────────────────────────────

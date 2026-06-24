@@ -36,10 +36,10 @@ export const roleDashboardPaths: Record<UserRole, string> = {
   admin: "/dashboard/account-executive",
   account_executive: "/dashboard/account-executive",
   broker: "/dashboard/broker",
-  processor: "/dashboard/account-executive",
+  processor: "/dashboard/processor",
   underwriter: "/dashboard/underwriter",
-  funder: "/dashboard/account-executive",
-  manager: "/dashboard/account-executive",
+  funder: "/dashboard/funder",
+  manager: "/dashboard/manager",
   borrower: "/dashboard/borrower",
 };
 

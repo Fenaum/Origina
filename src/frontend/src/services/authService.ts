@@ -2,19 +2,28 @@ import { apiRequest } from "@/services/apiClient";
 import type { TokenResponse, UserOut } from "@/types/api";
 import type { SessionUser, UserRole } from "@/types/auth";
 
-// Maps email prefixes to frontend roles for the dev environment.
-// Replace with a real /auth/me-roles endpoint once RBAC is wired to users.
-const EMAIL_PREFIX_TO_ROLE: Record<string, UserRole> = {
+// Maps backend role names (from the roles table) to frontend UserRole values.
+const BACKEND_ROLE_MAP: Record<string, UserRole> = {
   admin: "admin",
-  underwriter: "underwriter",
-  processor: "processor",
+  it_admin: "admin",
+  account_manager: "account_executive",
+  account_executive: "account_executive",
+  loan_officer: "broker",
   broker: "broker",
+  loan_processor: "processor",
+  processor: "processor",
+  underwriter: "underwriter",
+  funder: "funder",
+  manager: "manager",
   borrower: "borrower",
 };
 
-function deriveRole(email: string): UserRole {
-  const prefix = email.split("@")[0].toLowerCase();
-  return EMAIL_PREFIX_TO_ROLE[prefix] ?? "account_executive";
+function resolveRole(roles: string[]): UserRole {
+  for (const r of roles) {
+    const mapped = BACKEND_ROLE_MAP[r];
+    if (mapped) return mapped;
+  }
+  return "account_executive";
 }
 
 function toSessionUser(out: UserOut): SessionUser {
@@ -22,7 +31,7 @@ function toSessionUser(out: UserOut): SessionUser {
     id: out.id,
     name: out.full_name ?? out.email,
     email: out.email,
-    role: deriveRole(out.email),
+    role: resolveRole(out.roles ?? []),
     tenantName: "Origina",
   };
 }

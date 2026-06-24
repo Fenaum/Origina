@@ -45,6 +45,7 @@ class UserOut(UserBase):
     tenant_id: UUID
     created_at: datetime
     updated_at: datetime
+    roles: list[str] = []
 
 
 class RoleBase(BaseModel):

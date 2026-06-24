@@ -3,6 +3,7 @@ export type DashboardMetric = {
   value: string;
   detail: string;
   tone?: "default" | "success" | "warning";
+  href?: string;
 };
 
 export type StatusItem = {
