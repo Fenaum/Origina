@@ -1,78 +1,58 @@
-// Account settings landing page.
-// Each card represents a future settings module; the grid gives users a clear
-// map of what can be configured without exposing unfinished controls yet.
-import { AppLayout } from "@/components/app/AppLayout";
+import { SettingsHub, type SettingsHubCard } from "@/components/settings/SettingsHub";
+import { HubIcon } from "@/components/settings/settingsNav";
 import { useAuth } from "@/state/auth";
 
-const SECTIONS = [
-  {
-    id: "profile",
-    label: "Profile",
-    icon: "PR",
-    description: "Your name, email address, and contact information.",
-    meta: "Account identity",
-  },
-  {
-    id: "preferences",
-    label: "Preferences",
-    icon: "WF",
-    description: "Default views, date formats, and workflow preferences.",
-    meta: "Workspace defaults",
-  },
-  {
-    id: "notifications",
-    label: "Notifications",
-    icon: "NT",
-    description: "Control which events send you notifications and how.",
-    meta: "Alerts and delivery",
-  },
-  {
-    id: "security",
-    label: "Security",
-    icon: "SC",
-    description: "Password, two-factor authentication, and active sessions.",
-    meta: "Access control",
-  },
-  {
-    id: "appearance",
-    label: "Appearance",
-    icon: "UI",
-    description: "Theme, density, and display options.",
-    meta: "Interface",
-  },
-];
+export default function SettingsIndex() {
+  const { user, effectiveRole } = useAuth();
+  const isAdmin = effectiveRole === "it_admin" || effectiveRole === "admin";
+  const showAdmin = isAdmin && user?.role === "admin";
 
-export default function SettingsPage() {
-  const { user } = useAuth();
+  const cards: SettingsHubCard[] = [
+    {
+      id: "account",
+      label: "Account",
+      href: "/settings/account",
+      meta: "Your profile",
+      description: "Manage your name, email, contact details, and active sessions.",
+      icon: HubIcon.account,
+    },
+    {
+      id: "preferences",
+      label: "User Preferences",
+      href: "/settings/preferences",
+      meta: "Personal defaults",
+      description: "Default views, date and number formats, theme, and notifications.",
+      icon: HubIcon.preferences,
+    },
+    {
+      id: "configuration",
+      label: "Configuration",
+      href: "/settings/configuration",
+      meta: "Workspace setup",
+      description: "Loan programs, products, fee schedules, and pipeline defaults.",
+      icon: HubIcon.configuration,
+    },
+    {
+      id: "reports",
+      label: "Reporting",
+      href: "/settings/reports",
+      meta: "Performance & ops",
+      description: "Commission, production, underwriting, and funding reports.",
+      icon: HubIcon.reports,
+    },
+  ];
 
-  return (
-    <AppLayout>
-      <div className="settings-wrapper">
-        <div className="settings-page-header">
-          <p className="eyebrow">Account</p>
-          <h2>Settings</h2>
-          {user && <p className="settings-user-hint">Signed in as {user.email}</p>}
-        </div>
+  if (showAdmin) {
+    cards.push({
+      id: "admin",
+      label: "Admin",
+      href: "/settings/admin",
+      meta: "Workspace admin",
+      description: "Organization identity, branding, members, and security policy.",
+      icon: HubIcon.admin,
+      badge: "Admin",
+    });
+  }
 
-        <div className="settings-grid">
-          {SECTIONS.map((s) => (
-            <div key={s.id} className="settings-section-card">
-              <div className="settings-card-header">
-                <div className="settings-section-icon" aria-hidden>{s.icon}</div>
-                <div className="settings-section-body">
-                  <h3 className="settings-section-title">{s.label}</h3>
-                  <p className="settings-section-meta">{s.meta}</p>
-                </div>
-              </div>
-              <p className="settings-section-desc">{s.description}</p>
-              <div className="settings-section-footer">
-                <span className="settings-section-coming">Coming soon</span>
-                <span className="settings-section-arrow" aria-hidden>→</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </AppLayout>
-  );
+  return <SettingsHub cards={cards} />;
 }

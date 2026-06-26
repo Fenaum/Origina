@@ -7,6 +7,9 @@ export function MarketingFooter() {
       <div className="mkt-footer-inner">
         <OriginaLogo className="mkt-footer-brand" subtitle="LOS" />
         <nav className="mkt-footer-links">
+          <Link href="/product">Products</Link>
+          <Link href="/guideline">Guidelines</Link>
+          <Link href="/about">About</Link>
           <a href="#">Privacy</a>
           <a href="#">Terms</a>
           <a href="#">Contact</a>

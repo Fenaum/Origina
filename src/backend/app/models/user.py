@@ -97,6 +97,11 @@ class User(BaseModel):
         foreign_keys="Snapshot.created_by",
         back_populates="creator",
     )
+    sessions: Mapped[list["UserSession"]] = relationship(
+        "UserSession",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
 
 
 class Role(TenantMixin, UUIDMixin, Base):

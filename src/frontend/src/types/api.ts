@@ -32,6 +32,18 @@ export type LoanSubmitOut = {
   loan_program: string | null;
 };
 
+// ── Activity feed ─────────────────────────────────────────────────────────────
+export type ActivityEventType = "note" | "status_change" | "condition_change" | "document_upload";
+
+export type ActivityEventOut = {
+  id: string;
+  event_type: ActivityEventType;
+  occurred_at: string;
+  actor_name: string | null;
+  detail: string;
+  body: string | null;
+};
+
 // ── Auth ─────────────────────────────────────────────────────────────────────
 export type TokenResponse = {
   access_token: string;
@@ -582,6 +594,67 @@ export type ExceptionSummaryOut = {
   by_status: Record<string, number>;
   by_category: Record<string, number>;
   by_severity: Record<string, number>;
+};
+
+// ── User / current user settings ────────────────────────────────────────────────
+export type UserMeOut = {
+  id: string;
+  tenant_id: string;
+  email: string;
+  full_name: string | null;
+  phone: string | null;
+  title: string | null;
+  avatar_url: string | null;
+  locale: string;
+  timezone: string;
+  bio: string | null;
+  mfa_enabled: boolean;
+  is_active: boolean;
+  created_at: string;
+  roles: string[];
+};
+
+export type UserSessionOut = {
+  id: string;
+  user_id: string;
+  ip_address: string | null;
+  user_agent: string | null;
+  last_active_at: string;
+  expires_at: string;
+  revoked_at: string | null;
+  created_at: string;
+};
+
+// ── Tenant / organization settings ──────────────────────────────────────────────
+export type TenantSettingsOut = {
+  id: string;
+  name: string;
+  logo_url: string | null;
+  primary_color: string;
+  support_email: string | null;
+  business_hours: Record<string, string | null>;
+  audit_retention_days: number;
+  mfa_required: boolean;
+  created_at: string;
+};
+
+export type AuditLogEntry = {
+  id: string;
+  tenant_id: string;
+  table_name: string;
+  record_id: string;
+  action: string;
+  actor_user_id: string | null;
+  actor_name: string | null;
+  changes: Record<string, unknown> | null;
+  created_at: string;
+};
+
+export type AuditLogResponse = {
+  items: AuditLogEntry[];
+  total: number;
+  skip: number;
+  limit: number;
 };
 
 // ── API error ─────────────────────────────────────────────────────────────────

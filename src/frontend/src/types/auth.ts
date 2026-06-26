@@ -1,5 +1,7 @@
 export type UserRole =
   | "admin"
+  | "it_admin"
+  | "account_manager"
   | "account_executive"
   | "broker"
   | "processor"
@@ -23,6 +25,8 @@ export type SessionState = {
 
 export const roleLabels: Record<UserRole, string> = {
   admin: "Admin",
+  it_admin: "IT Admin",
+  account_manager: "Account Manager",
   account_executive: "Account Executive",
   broker: "Broker / Seller",
   processor: "Processor",
@@ -34,6 +38,8 @@ export const roleLabels: Record<UserRole, string> = {
 
 export const roleDashboardPaths: Record<UserRole, string> = {
   admin: "/dashboard/account-executive",
+  it_admin: "/dashboard/account-executive",
+  account_manager: "/dashboard/account-executive",
   account_executive: "/dashboard/account-executive",
   broker: "/dashboard/broker",
   processor: "/dashboard/processor",

@@ -14,6 +14,9 @@ export function MarketingNav() {
         <a href="#borrowers">For Borrowers</a>
         <a href="#brokers">For Brokers</a>
         <a href="#how-it-works">How It Works</a>
+        <Link href="/product">Products</Link>
+        <Link href="/guideline">Guidelines</Link>
+        <Link href="/about">About</Link>
       </div>
 
       <div>

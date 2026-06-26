@@ -13,7 +13,7 @@ psycopg2-binary
 alembic
 
 # Validation / settings
-pydantic
+pydantic[email]
 pydantic-settings
 python-dotenv
 

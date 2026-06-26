@@ -201,6 +201,20 @@ class LoanQuickInfoOut(BaseModel):
     dscr: Optional[Decimal]
 
 
+class ActivityEventOut(BaseModel):
+    """A single item in the loan activity feed."""
+    id: str
+    event_type: str  # "note" | "status_change" | "condition_change" | "document_upload"
+    occurred_at: datetime
+    actor_name: Optional[str] = None
+    detail: str
+    body: Optional[str] = None
+
+
+class LoanNoteCreate(BaseModel):
+    body: str
+
+
 class SandboxOut(BaseModel):
     """Placeholder response for the Open in Sandbox action. Not yet provisioned."""
 

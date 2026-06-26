@@ -7,7 +7,15 @@ import {
   useRef,
   useState,
 } from "react";
-import { loginWithCredentials, fetchCurrentUser } from "@/services/authService";
+import { useRouter } from "next/router";
+import {
+  loginWithCredentials,
+  fetchCurrentUser,
+} from "@/services/authService";
+import {
+  setAuthToken,
+  setUnauthorizedHandler,
+} from "@/services/apiClient";
 import type { SessionUser, UserRole } from "@/types/auth";
 
 type AuthContextValue = {
@@ -38,11 +46,36 @@ function getStoredPreviewRole(): UserRole | null {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
   const [token, setToken] = useState<string | null>(getStoredToken);
   const [user, setUser] = useState<SessionUser | null>(null);
   const [isLoading, setIsLoading] = useState(Boolean(getStoredToken()));
   const [previewRole, setPreviewRoleState] = useState<UserRole | null>(null);
   const hydratedRef = useRef(false);
+
+  // Keep the apiClient's module-level token in sync with auth state so any
+  // service that calls apiRequest without threading the token through still
+  // gets an Authorization header.
+  useEffect(() => {
+    setAuthToken(token);
+  }, [token]);
+
+  // Register a single 401 handler that clears the token and bounces the
+  // user to /login. This is the safety net for stale tokens left over from
+  // a previous session.
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      window.localStorage.removeItem(TOKEN_KEY);
+      setToken(null);
+      setUser(null);
+      const onLogin = router.pathname === "/login";
+      if (!onLogin) {
+        const next = router.asPath && router.asPath !== "/" ? `?next=${encodeURIComponent(router.asPath)}` : "";
+        void router.replace(`/login${next}`);
+      }
+    });
+    return () => setUnauthorizedHandler(null);
+  }, [router]);
 
   useEffect(() => {
     if (hydratedRef.current) return;

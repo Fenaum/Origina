@@ -10,11 +10,16 @@ from app.models.borrowers import Borrower
 from app.models.loan import Loan, LoanFinancials, LoanParty, LoanTerms
 from app.models.user import Tenant, User
 from app.models.workflow import LoanStatusEvent
+from app.models.conditions import Condition
+from app.models.document import Document
+from app.models.workflow import Note
 from app.schemas.loan_schema import (
+    ActivityEventOut,
     ArchiveLoanRequest,
     LoanCreate,
     LoanFinancialsOut,
     LoanFinancialsUpdate,
+    LoanNoteCreate,
     LoanOut,
     LoanPartyCreate,
     LoanPartyOut,
@@ -537,3 +542,122 @@ def move_loan_tenant(
     db.commit()
     db.refresh(loan)
     return loan
+
+
+# ── Activity feed ──────────────────────────────────────────────────────────────
+
+_STATUS_LABELS: dict[str, str] = {
+    "new_draft": "New Draft",
+    "submitted": "Submitted",
+    "conditions_review": "Conditions Review",
+    "approved_pending": "Approved — Pending",
+    "approved": "Approved",
+    "funded": "Funded",
+    "closed": "Closed",
+    "post_closing": "Post-Closing",
+    "archived": "Archived",
+    "denied": "Denied",
+    "withdrawn": "Withdrawn",
+    "cancelled": "Cancelled",
+}
+
+
+@router.get("/{loan_id}/activity", response_model=list[ActivityEventOut])
+def get_loan_activity(
+    loan_id: UUID,
+    limit: int = 60,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Unified activity feed: notes, status changes, condition changes, document uploads."""
+    loan = _get_or_404(loan_id, db, current_user.tenant_id)
+    events: list[ActivityEventOut] = []
+
+    # Status events
+    for e in db.query(LoanStatusEvent).filter(LoanStatusEvent.loan_id == loan.id).all():
+        actor = e.actor.full_name or e.actor.email if e.actor else None
+        to_l = _STATUS_LABELS.get(e.to_status, e.to_status)
+        from_l = _STATUS_LABELS.get(e.from_status, e.from_status) if e.from_status else None
+        detail = f"{from_l} → {to_l}" if from_l else f"Status → {to_l}"
+        events.append(ActivityEventOut(
+            id=f"status:{e.id}",
+            event_type="status_change",
+            occurred_at=e.occurred_at,
+            actor_name=actor,
+            detail=detail,
+            body=e.reason,
+        ))
+
+    # Notes
+    for n in db.query(Note).filter(Note.loan_id == loan.id, Note.tenant_id == current_user.tenant_id).all():
+        author = n.creator.full_name or n.creator.email if n.creator else None
+        events.append(ActivityEventOut(
+            id=f"note:{n.id}",
+            event_type="note",
+            occurred_at=n.created_at,
+            actor_name=author,
+            detail="Note",
+            body=n.body,
+        ))
+
+    # Condition changes
+    for c in db.query(Condition).filter(Condition.loan_id == loan.id, Condition.tenant_id == current_user.tenant_id).all():
+        events.append(ActivityEventOut(
+            id=f"condition:created:{c.id}",
+            event_type="condition_change",
+            occurred_at=c.created_at,
+            detail=f"Condition added: {c.name}",
+        ))
+        if c.status != "open" and c.updated_at > c.created_at:
+            events.append(ActivityEventOut(
+                id=f"condition:updated:{c.id}",
+                event_type="condition_change",
+                occurred_at=c.updated_at,
+                detail=f"Condition {c.status}: {c.name}",
+            ))
+
+    # Document uploads
+    for d in db.query(Document).filter(
+        Document.loan_id == loan.id,
+        Document.tenant_id == current_user.tenant_id,
+        Document.archived_at.is_(None),
+    ).all():
+        uploader = d.uploader.full_name or d.uploader.email if d.uploader else None
+        events.append(ActivityEventOut(
+            id=f"document:{d.id}",
+            event_type="document_upload",
+            occurred_at=d.uploaded_at,
+            actor_name=uploader,
+            detail=f"Document: {d.file_name}",
+        ))
+
+    events.sort(key=lambda e: e.occurred_at, reverse=True)
+    return events[:limit]
+
+
+@router.post("/{loan_id}/notes", response_model=ActivityEventOut, status_code=status.HTTP_201_CREATED)
+def create_loan_note(
+    loan_id: UUID,
+    payload: LoanNoteCreate,
+    db: Session = Depends(get_audited_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Post a note on the loan. Appears immediately in the activity feed."""
+    loan = _get_or_404(loan_id, db, current_user.tenant_id)
+    note = Note(
+        tenant_id=current_user.tenant_id,
+        loan_id=loan.id,
+        body=payload.body,
+        created_by=current_user.id,
+    )
+    db.add(note)
+    db.commit()
+    db.refresh(note)
+    return ActivityEventOut(
+        id=f"note:{note.id}",
+        event_type="note",
+        occurred_at=note.created_at,
+        actor_name=current_user.full_name or current_user.email,
+        detail="Note",
+        body=note.body,
+    )

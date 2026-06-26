@@ -834,3 +834,303 @@ Registered in `core/main.py`.
 - `loan_party_role` orphan ENUM type cleanup — column is TEXT; `DROP TYPE loan_party_role` deferred until confirmed no other references
 - FK enforcement from domain columns → `controlled_values` (backfill + FK column) — future phase
 - Role taxonomy alignment — backend roles (`loan_officer`, `loan_processor`) vs frontend roles (`account_executive`, `broker`) are fragmented; needs a unified controlled_value set
+
+---
+
+## Session 26 — Marketing Pages: Guideline, Product, and About Us
+
+**Type:** New feature — public-facing marketing pages
+
+---
+
+### What was built
+
+Added three new static marketing pages to the Origina website to provide prospective brokers and borrowers with information about guidelines, loan products, and company background.
+
+#### 1. `/guideline` — Lending Guidelines Page
+
+**File**: `src/frontend/src/pages/guideline.tsx`
+
+Comprehensive lending guidelines page with 4 categories:
+- **Eligibility Guidelines** — Credit Requirements, Income Documentation, Property Types, Loan Amounts
+- **Documentation Standards** — Bank Statement Loans, Asset Depletion, DSCR Requirements, Interest Only Products
+- **Loan Terms** — Fixed Rate Options, Interest Only Periods, Prepayment Penalties, Balloon Provisions
+- **Broker Responsibilities** — Disclosure Requirements, Condition Fulfillment, Rate Locks, Compliance Standards
+
+Features scroll reveal animations using `useInView` hook, feature card grid layout, and CTA section.
+
+#### 2. `/product` — Non-QM Loan Products Page
+
+**File**: `src/frontend/src/pages/product.tsx`
+
+Detailed product showcase featuring 6 Non-QM loan products:
+- **DSCR Loans** — Investment property financing using rental income
+- **Bank Statement Loans** — Self-employment income verification
+- **Asset Depletion** — Qualify based on accumulated assets
+- **Interest Only** — Maximized cash flow options
+- **Jumbo Non-QM** — Luxury property solutions ($1M-$15M)
+- **Foreign National** — International borrowers welcome
+
+Each product includes tagline, description, highlights list, program details panel (min/max loan, LTV, credit score), and "Submit a Loan" CTA button. Anchored sections with product-specific accent colors.
+
+#### 3. `/about` — About Us Page
+
+**File**: `src/frontend/src/pages/about.tsx`
+
+Company about page featuring:
+- **Company story** — "Built by Lenders, for Lenders" narrative
+- **Statistics panel** — $1B+ funded, 50 states licensed, 5K+ broker partners, 6 loan products
+- **Core values** — 6 value cards (Borrower-Focused, Speed & Efficiency, Broker Partnership, Transparency, Compliance First, Sustainable Growth)
+- **Leadership team** — 4 executive profiles (CEO, CTO, VP Underwriting, VP Sales)
+- **Company timeline** — 2019-2024 milestones (founding through Platform 2.0)
+- **CTA section** — Join the Origina Network
+
+#### 4. Navigation Integration
+
+**Files**: `src/frontend/src/components/marketing/MarketingNav.tsx`, `src/frontend/src/components/marketing/MarketingFooter.tsx`
+
+- Added `Products`, `Guidelines`, and `About` links to navigation bar
+- Added same links to footer section
+- All pages use consistent `Link` component from Next.js
+
+#### 5. Styling: `.mkt-section-header h1` CSS Rule
+
+**File**: `src/frontend/src/styles/globals.css`
+
+Added h1 styling for marketing page headers:
+```css
+.mkt-section-header h1 {
+  font-size: clamp(2.4rem, 5vw, 3.5rem);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1.08;
+  margin: 0.55rem 0 0.8rem;
+  color: var(--foreground);
+}
+
+.dark .mkt-section-header h1 {
+  color: #ffffff;
+}
+```
+
+Complements existing h2 styling with responsive clamp-based sizing, heavy font weight (900), and dark mode support.
+
+---
+
+### Files changed
+
+| File | Type | Change |
+|---|---|---|
+| `src/frontend/src/pages/guideline.tsx` | NEW | Lending guidelines page with 4 categories of content |
+| `src/frontend/src/pages/product.tsx` | NEW | Product showcase with 6 Non-QM loan products |
+| `src/frontend/src/pages/about.tsx` | NEW | Company about page with story, values, team, timeline |
+| `src/frontend/src/components/marketing/MarketingNav.tsx` | UPDATED | Added Products, Guidelines, About links |
+| `src/frontend/src/components/marketing/MarketingFooter.tsx` | UPDATED | Added Products, Guidelines, About links |
+| `src/frontend/src/styles/globals.css` | UPDATED | Added `.mkt-section-header h1` CSS rule |
+| `docs/BUILD_HISTORY.md` | UPDATED | This session entry |
+
+---
+
+### Validation performed
+
+- All pages render correctly with scroll reveal animations
+- Navigation links route to correct pages
+- Footer links route to correct pages
+- Product page has no broken anchor IDs (Foreign National id fixed from " Foreign nationals")
+- `npm run build` — compiled successfully ✓
+
+---
+
+## Session 27 — Bug Fix: Analytics Dashboard 500s + Frontend Auth Race Condition
+
+**Type:** Bug fix — SQL errors in two analytics queries + first-fetch auth race in apiClient
+
+---
+
+### What was broken
+
+`GET /api/v1/analytics/summary` returned 500 with `psycopg2.errors.UndefinedTable: missing FROM-clause entry for table "l"` and a follow-on 500 from a second query. The dashboard visuals did not render, and the user reported being bounced back to `/login` repeatedly.
+
+Two distinct backend bugs and one frontend race condition — all surfaced by hitting the analytics page after login.
+
+---
+
+### Root causes
+
+#### 1. SQL in `_kpi_sla_breaches` referenced `l.status` inside a CTE
+
+**File**: `src/backend/app/services/analytics_repo.py`
+
+The KPI query attempted to filter `loan_status_events.to_status` against the *current* status of each loan inside a `WITH status_entry AS (...)` CTE that only saw `loan_status_events` — `loans l` had not been joined in yet, so `l.status` was out of scope.
+
+```sql
+-- broken
+WITH status_entry AS (
+    SELECT DISTINCT ON (loan_id) loan_id, occurred_at
+    FROM loan_status_events
+    WHERE tenant_id = :tenant_id
+      AND to_status = l.status        -- ❌ "l" is not in scope here
+    ORDER BY loan_id, occurred_at DESC
+)
+SELECT COUNT(*) FROM loans l JOIN status_entry se ON ...
+```
+
+#### 2. SQL in `_chart_aging_by_status` was missing an aggregate
+
+The same call triggered a second 500 because `max_days` was a per-row scalar inside a `GROUP BY l.status` block:
+
+```sql
+-- broken
+(EXTRACT(EPOCH FROM (now() - le.occurred_at)) / 86400)::int AS max_days,
+...
+GROUP BY l.status
+-- ❌ le.occurred_at not aggregated and not in GROUP BY
+```
+
+#### 3. Frontend: React Query's first fetch fired before `AuthProvider` synced the token
+
+**File**: `src/frontend/src/services/apiClient.ts`
+
+`AuthProvider` syncs the module-level `authToken` via `useEffect(() => setAuthToken(token), [token])`. React's effect order is bottom-up (children before parents), so on a hard reload of `/analytics`, React Query's first `useQuery` fetch was dispatched *before* `AuthProvider`'s effect ran. The request landed with no `Authorization` header → backend 401 → `apiClient`'s 401 handler cleared the token and redirected to `/login`, even though the JWT was still valid in `localStorage`.
+
+---
+
+### Fixes
+
+#### 1. `_kpi_sla_breaches` — correlated subquery instead of CTE
+
+```sql
+SELECT COUNT(*) AS n
+FROM loans l
+WHERE l.status IN ('submitted','conditions_review')
+  AND now() > (
+      SELECT MAX(lse.occurred_at) + interval '5 days'
+      FROM loan_status_events lse
+      WHERE lse.loan_id = l.id
+        AND lse.tenant_id = l.tenant_id
+        AND lse.to_status = l.status
+  )
+```
+
+The correlated subquery correctly handles loans that re-entered the same status — `MAX(lse.occurred_at)` returns the timestamp of the most recent entry.
+
+#### 2. `_chart_aging_by_status` — wrap `max_days` in `MAX()`
+
+```sql
+MAX(EXTRACT(EPOCH FROM (now() - le.occurred_at)) / 86400)::int AS max_days
+```
+
+Matches the existing `AVG(...)` next to it. Now both projections are valid aggregates.
+
+#### 3. `apiClient.ts` — synchronous `localStorage` fallback
+
+Added a `readStoredToken()` helper and extended the effective-token chain:
+
+```ts
+const effectiveToken = token ?? authToken ?? readStoredToken();
+if (effectiveToken) {
+  headers.set("Authorization", `Bearer ${effectiveToken}`);
+}
+```
+
+`readStoredToken()` is a tiny SSR-safe helper that returns `localStorage.getItem("origina.token")` (the same key `AuthProvider` writes). The first fetch now picks up the JWT synchronously, before any effect fires — no more spurious 401 → `/login` redirects on hard reload.
+
+Also added an explanatory comment block so the next person doesn't accidentally remove the fallback thinking it's redundant with `AuthProvider`'s effect.
+
+---
+
+### Files changed
+
+| File | Type | Change |
+|---|---|---|
+| `src/backend/app/services/analytics_repo.py` | UPDATED | `_kpi_sla_breaches` rewritten with correlated subquery; `_chart_aging_by_status` `max_days` wrapped in `MAX()` |
+| `src/frontend/src/services/apiClient.ts` | UPDATED | Added `readStoredToken()` and `?? readStoredToken()` fallback in `effectiveToken` chain |
+| `docs/BUILD_HISTORY.md` | UPDATED | This session entry |
+
+---
+
+### Validation performed
+
+- `python3 -c "import ast; ast.parse(...)"` on the modified backend file — parses clean
+- Direct PostgreSQL run of the new SLA query against `originadb` tenant `513597bb-177f-4ba1-adfd-0fd04dd000b9` — returns 94 breach rows in < 50ms
+- Restarted uvicorn against the live DB; `curl -H "Authorization: Bearer $TOKEN" /api/v1/analytics/summary?sort_field=updated_at&sort_dir=desc` returns **HTTP 200** with the full payload:
+  - KPIs: 159 active loans, $189.9M pipeline, $1.2M avg loan, 3 submitted MTD, 345 open conditions, 0 open exceptions, 159 stale files, **94 SLA breaches**
+  - Charts: 8 status counts, 8 status volumes, 5 program buckets (DSCR 34%, Bank Stmt 30%, Asset Depletion 13%, Jumbo NonQM 12%, Interest Only 10%), 13 monthly submission buckets, 4 aging buckets (max_days = 528 / 504 / 502 / 15), action-needed summary (389 / 127 / 0 / 448)
+- No errors in `/tmp/uvicorn.log` after the request
+- `npx tsc --noEmit` — no new errors in touched files (4 pre-existing errors in `RoleDashboard.tsx`, `mockDashboard.ts`, `AnalyticsFilterBar.tsx` are unrelated and untouched)
+
+---
+
+### Heads-up: `analytics_repo.py` was untracked in git
+
+When the file got accidentally overwritten during the session, `git status` showed it as **untracked** — it had never been committed. Recovered the original content from VS Code's local history at `~/Library/Application Support/Code/User/History/259e9ef4/PvQV.py`, then applied both SQL fixes on top. Worth committing this file (`git add src/backend/app/services/analytics_repo.py`) so a future restore isn't a one-line recovery away from being lost again.
+
+---
+
+## Session 28 — UX: Settings Module Sidebar — Heading Promotion + Icons
+
+**Type:** UX enhancement — settings section in the app sidebar
+
+---
+
+### What was changed
+
+#### 1. `components/app/Sidebar.tsx` — inline SVG icons + type update
+
+Added 5 inline SVG icon components at module level (no new package dependency — plain JSX SVGs):
+
+| Function | Icon | Used for |
+|---|---|---|
+| `IconUser` | Person silhouette + shoulders arc | Account |
+| `IconSliders` | 3 horizontal lines with filled handle dots | User Preferences |
+| `IconGear` | 8-tooth cog + inner circle | Configuration |
+| `IconChart` | 3 ascending bars (rect elements) | Reporting |
+| `IconShield` | Shield path + checkmark polyline | Admin |
+
+All icons are `15×15`, `viewBox="0 0 24 24"`, `fill="none"`, `stroke="currentColor"`, `strokeWidth="1.75"`, `aria-hidden="true"`. They inherit color from the parent link and animate with it.
+
+Extended `SettingsSubItem` type:
+```typescript
+// before
+type SettingsSubItem = { label: string; href: string; adminOnly?: boolean; };
+// after
+type SettingsSubItem = { label: string; href: string; adminOnly?: boolean; icon: JSX.Element; };
+```
+
+Added icon prop to each `SETTINGS_SUB_ITEMS` entry and rendered `{item.icon}` before `{item.label}` in the link JSX.
+
+#### 2. `styles/globals.css` — settings sub-nav block
+
+**`.sidebar-bottom`**
+- Added `border-top: 1px solid rgba(255, 255, 255, 0.1)` — visual separator from the main nav
+- Changed padding from `0.5rem 0.75rem 0` → `1rem 0 0` — more breathing room above the heading
+
+**`.sidebar-section-label` ("Settings" heading)**
+- `font-size`: `0.7rem` → `0.82rem` — clearly a heading, not a tiny eyebrow label
+- `font-weight`: `700` → `600` — slightly less dense, more elegant
+- `color`: `rgba(255,255,255,0.55)` → `rgba(255,255,255,0.88)` — much more visible
+- Removed `text-transform: uppercase` and `letter-spacing: 0.08em` — reads as a real section heading
+- Adjusted margin/padding to align with the link left edge
+
+**`.sidebar-section-link`**
+- `gap`: `0.5rem` → `0.6rem` — slightly more space between icon and label
+- `color`: `rgba(255,255,255,0.7)` → `rgba(255,255,255,0.68)` — subtle de-emphasis of inactive state
+
+**`.sidebar-section-link svg` (new rule)**
+- `flex-shrink: 0` — icons never squish on narrow sidebars
+- `opacity: 0.8` at rest, transitions to `1` on hover/active — icons track link color
+
+---
+
+### Files changed
+
+| File | Type | Change |
+|---|---|---|
+| `src/frontend/src/components/app/Sidebar.tsx` | UPDATED | 5 inline SVG icon functions; `icon: JSX.Element` on `SettingsSubItem`; icons added to all 5 settings items; `{item.icon}` rendered in link JSX |
+| `src/frontend/src/styles/globals.css` | UPDATED | `.sidebar-bottom` border-top + padding; `.sidebar-section-label` bigger/brighter/no-uppercase; `.sidebar-section-link` icon gap + opacity rules |
+
+---
+
+### Validation performed
+
+- `npm run lint` — 0 new errors in touched files (pre-existing errors in unrelated analytics/settings components unchanged) ✓

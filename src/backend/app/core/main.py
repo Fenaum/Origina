@@ -4,6 +4,8 @@ from fastapi.responses import JSONResponse
 
 import app.models  # noqa: F401 — registers all SQLAlchemy models so relationships resolve
 from app.api.v1 import (
+    admin_settings,
+    analytics,
     appraisal,
     audit,
     auth,
@@ -25,6 +27,7 @@ from app.api.v1 import (
     tenants,
     title,
     users,
+    users_me,
     workflow,
 )
 from app.core.config import APP_ENV
@@ -65,28 +68,31 @@ async def server_error_handler(request: Request, exc):
 
 _V1 = "/api/v1"
 
-app.include_router(health.router,       prefix=_V1)
-app.include_router(intake.router,       prefix=_V1)
-app.include_router(auth.router,         prefix=_V1)
-app.include_router(tenants.router,      prefix=_V1)
-app.include_router(users.router,        prefix=_V1)
-app.include_router(roles.router,        prefix=_V1)
-app.include_router(status.router,       prefix=_V1)
-app.include_router(loans.router,        prefix=_V1)
-app.include_router(borrowers.router,    prefix=_V1)
-app.include_router(properties.router,   prefix=_V1)
-app.include_router(documents.router,    prefix=_V1)
-app.include_router(conditions.router,   prefix=_V1)
-app.include_router(exceptions.router,   prefix=_V1)
-app.include_router(workflow.router,     prefix=_V1)
-app.include_router(parties.router,      prefix=_V1)
-app.include_router(decisioning.router,  prefix=_V1)
-app.include_router(audit.router,        prefix=_V1)
-app.include_router(metadata.router,     prefix=_V1)
-app.include_router(appraisal.router,    prefix=_V1)
-app.include_router(credit.router,       prefix=_V1)
-app.include_router(escrow.router,       prefix=_V1)
-app.include_router(title.router,        prefix=_V1)
+app.include_router(health.router,         prefix=_V1)
+app.include_router(analytics.router,     prefix=_V1)
+app.include_router(intake.router,         prefix=_V1)
+app.include_router(auth.router,           prefix=_V1)
+app.include_router(tenants.router,        prefix=_V1)
+app.include_router(users_me.router,       prefix=_V1)
+app.include_router(users.router,          prefix=_V1)
+app.include_router(roles.router,          prefix=_V1)
+app.include_router(status.router,         prefix=_V1)
+app.include_router(loans.router,          prefix=_V1)
+app.include_router(borrowers.router,      prefix=_V1)
+app.include_router(properties.router,     prefix=_V1)
+app.include_router(documents.router,      prefix=_V1)
+app.include_router(conditions.router,     prefix=_V1)
+app.include_router(exceptions.router,     prefix=_V1)
+app.include_router(workflow.router,       prefix=_V1)
+app.include_router(parties.router,        prefix=_V1)
+app.include_router(decisioning.router,    prefix=_V1)
+app.include_router(audit.router,          prefix=_V1)
+app.include_router(metadata.router,       prefix=_V1)
+app.include_router(admin_settings.router, prefix=_V1)
+app.include_router(appraisal.router,      prefix=_V1)
+app.include_router(credit.router,         prefix=_V1)
+app.include_router(escrow.router,         prefix=_V1)
+app.include_router(title.router,          prefix=_V1)
 
 
 # ── Root ───────────────────────────────────────────────────────────────────────
