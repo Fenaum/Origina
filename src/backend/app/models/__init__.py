@@ -1,6 +1,7 @@
 # __init__.py — imports all model classes so they are registered with SQLAlchemy.
 # Import order matters: base classes must come before any class that references them.
 
+from app.models.analytics import SavedAnalyticsView
 from app.models.base import AppendOnlyModel, Base, BaseModel, TenantMixin, TimestampMixin, UUIDMixin
 from app.models.audit import AuditLog, Snapshot
 from app.models.appraisal import AppraisalOrder
@@ -16,6 +17,7 @@ from app.models.parties import Party, PartyType
 from app.models.properties import Property
 from app.models.title import TitleException, TitleOrder
 from app.models.user import Role, Tenant, User, UserParty, UserRole
+from app.models.user_session import UserSession
 from app.models.workflow import (
     ExceptionAuthorityRule,
     ExceptionComment,
@@ -80,6 +82,7 @@ __all__ = [
     "PricingRun",
     "Property",
     "Role",
+    "SavedAnalyticsView",
     "Snapshot",
     "Task",
     "TaskPriority",
@@ -90,4 +93,5 @@ __all__ = [
     "User",
     "UserParty",
     "UserRole",
+    "UserSession",
 ]

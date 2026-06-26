@@ -2,9 +2,11 @@
 // Top-level controller for the loan workspace experience.
 // It owns tab selection via the URL query string and delegates each section to
 // its dedicated workspace module.
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useAuth } from "@/state/auth";
+import { WorkspaceActivityRail } from "@/components/loans/WorkspaceActivityRail";
 import { NotificationBell } from "@/components/app/NotificationBell";
 import { LoanWorkspaceRail } from "@/components/loans/LoanWorkspaceRail";
 import { WorkspaceAppraisal } from "@/components/loans/workspace/WorkspaceAppraisal";
@@ -52,6 +54,7 @@ export function LoanWorkspaceShell({ loan }: Props) {
   const { effectiveRole } = useAuth();
   const rawSection = String(router.query.section ?? "");
   const section = resolveWorkspaceSection(rawSection);
+  const [railOpen, setRailOpen] = useState(true);
 
   function goTo(next: WorkspaceSection) {
     // Use shallow routing so tab changes do not remount the full page shell.
@@ -104,6 +107,17 @@ export function LoanWorkspaceShell({ loan }: Props) {
             >
               Move File
             </button>
+            <button
+              type="button"
+              className={`activity-rail-toggle${railOpen ? " activity-rail-toggle--active" : ""}`}
+              onClick={() => setRailOpen((o) => !o)}
+              aria-label={railOpen ? "Hide activity" : "Show activity"}
+              title={railOpen ? "Hide activity" : "Show activity"}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              </svg>
+            </button>
             <NotificationBell />
           </div>
         </div>
@@ -134,7 +148,7 @@ export function LoanWorkspaceShell({ loan }: Props) {
         </div>
       </div>
 
-      <div className="loan-workspace-body">
+      <div className={`loan-workspace-body${railOpen ? " has-activity-rail" : ""}`}>
         <LoanWorkspaceRail
           activeSection={section}
           loan={loan}
@@ -144,6 +158,12 @@ export function LoanWorkspaceShell({ loan }: Props) {
         <div className="loan-workspace-content">
           <WorkspaceContent section={section} loan={loan} />
         </div>
+        {railOpen && (
+          <WorkspaceActivityRail
+            loanId={loan.id}
+            onClose={() => setRailOpen(false)}
+          />
+        )}
       </div>
     </>
   );

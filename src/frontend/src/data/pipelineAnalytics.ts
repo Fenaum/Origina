@@ -1,11 +1,22 @@
-import {
-  loanStatusLabels,
-  type ChartDatum,
-  type LoanStatus,
-  type LoanSummary,
-  type MonthlySubmissionDatum,
-  type PipelineKpi,
-} from "@/types/loan";
+// ⚠️ DEPRECATED — kept for backward compatibility.
+//
+// The dashboard now reads KPIs and chart aggregates from the backend
+// (GET /api/v1/analytics/summary). The frontend no longer aggregates loan
+// lists in TypeScript — that pattern was a dead-end for an operational LOS
+// because every number became unactionable (no path from the chart to the
+// underlying loans).
+//
+// All aggregation now lives in:
+//   - src/backend/app/services/analytics_repo.py
+//   - src/backend/app/core/analytics_filters.py
+//   - src/backend/app/api/v1/analytics.py
+//
+// These helpers are no longer imported by the analytics page. They remain
+// exported here so any leftover callers (none expected) get a clear runtime
+// warning instead of silent failure. Delete this file once the build has
+// been clean for a sprint.
+
+import type { ChartDatum, LoanSummary, MonthlySubmissionDatum } from "@/types/loan";
 
 const currencyFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -24,123 +35,45 @@ const monthFormatter = new Intl.DateTimeFormat("en-US", {
   month: "short",
 });
 
-const statusOrder: LoanStatus[] = [
-  "new_draft",
-  "submitted",
-  "conditions_review",
-  "approved",
-  "funded",
-  "closed",
-];
-
-function isSameMonth(dateValue: string, now = new Date()): boolean {
-  const date = new Date(`${dateValue}T00:00:00`);
-  return (
-    date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth()
-  );
+function warnDeprecated(name: string): void {
+  if (typeof console !== "undefined") {
+    console.warn(
+      `[Origina] pipelineAnalytics.${name} is deprecated. Use the analytics service instead (see src/services/analyticsService.ts).`,
+    );
+  }
 }
 
-export function buildPipelineKpis(loans: LoanSummary[]): PipelineKpi[] {
-  const activeLoans = loans.filter((loan) => !["funded", "closed"].includes(loan.status));
-  const totalVolume = activeLoans.reduce((sum, loan) => sum + loan.loanAmount, 0);
-  const averageAmount = activeLoans.length ? totalVolume / activeLoans.length : 0;
-  const actionsNeeded = loans.reduce((sum, loan) => sum + loan.actionsNeeded, 0);
-  const submittedThisMonth = loans.filter(
-    (loan) => loan.submittedAt && isSameMonth(loan.submittedAt),
-  ).length;
-
-  return [
-    {
-      label: "Total Active Loans",
-      value: String(activeLoans.length),
-      detail: `${loans.length} total in pipeline`,
-    },
-    {
-      label: "Pipeline Volume",
-      value: compactCurrencyFormatter.format(totalVolume),
-      detail: currencyFormatter.format(totalVolume),
-    },
-    {
-      label: "Average Loan Amount",
-      value: compactCurrencyFormatter.format(averageAmount),
-      detail: "Active files only",
-    },
-    {
-      label: "Loans Needing Action",
-      value: String(actionsNeeded),
-      detail: "Open borrower or team actions",
-    },
-    {
-      label: "Submitted This Month",
-      value: String(submittedThisMonth),
-      detail: "Based on submittedAt",
-    },
-  ];
+export function buildPipelineKpis(_loans: LoanSummary[]) {
+  warnDeprecated("buildPipelineKpis");
+  return [];
 }
 
-export function buildStatusCountData(loans: LoanSummary[]): ChartDatum[] {
-  return statusOrder.map((status) => ({
-    name: loanStatusLabels[status],
-    value: loans.filter((loan) => loan.status === status).length,
-  }));
+export function buildStatusCountData(_loans: LoanSummary[]): ChartDatum[] {
+  warnDeprecated("buildStatusCountData");
+  return [];
 }
 
-export function buildStatusAmountData(loans: LoanSummary[]): ChartDatum[] {
-  return statusOrder.map((status) => ({
-    name: loanStatusLabels[status],
-    value: loans
-      .filter((loan) => loan.status === status)
-      .reduce((sum, loan) => sum + loan.loanAmount, 0),
-  }));
+export function buildStatusAmountData(_loans: LoanSummary[]): ChartDatum[] {
+  warnDeprecated("buildStatusAmountData");
+  return [];
 }
 
-export function buildChannelCountData(loans: LoanSummary[]): ChartDatum[] {
-  const counts = loans.reduce<Record<string, number>>((acc, loan) => {
-    acc[loan.channel] = (acc[loan.channel] ?? 0) + 1;
-    return acc;
-  }, {});
-
-  return Object.entries(counts).map(([name, value]) => ({ name, value }));
+export function buildChannelCountData(_loans: LoanSummary[]): ChartDatum[] {
+  warnDeprecated("buildChannelCountData");
+  return [];
 }
 
-export function buildActionNeededData(loans: LoanSummary[]): ChartDatum[] {
-  return [
-    {
-      name: "Open Conditions",
-      value: loans.reduce((sum, loan) => sum + loan.conditionsOpen, 0),
-    },
-    {
-      name: "Submitted Conditions",
-      value: loans.reduce((sum, loan) => sum + loan.conditionsSubmitted, 0),
-    },
-    {
-      name: "Actions Needed",
-      value: loans.reduce((sum, loan) => sum + loan.actionsNeeded, 0),
-    },
-  ];
+export function buildActionNeededData(_loans: LoanSummary[]): ChartDatum[] {
+  warnDeprecated("buildActionNeededData");
+  return [];
 }
 
-export function buildMonthlySubmissionData(
-  loans: LoanSummary[],
-): MonthlySubmissionDatum[] {
-  const monthBuckets = new Map<string, MonthlySubmissionDatum>();
-
-  loans.forEach((loan) => {
-    if (!loan.submittedAt) return;
-    const date = new Date(`${loan.submittedAt}T00:00:00`);
-    const key = `${date.getFullYear()}-${String(date.getMonth()).padStart(2, "0")}`;
-    const current = monthBuckets.get(key) ?? {
-      month: monthFormatter.format(date),
-      submissions: 0,
-    };
-
-    monthBuckets.set(key, {
-      ...current,
-      submissions: current.submissions + 1,
-    });
-  });
-
-  return Array.from(monthBuckets.entries())
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([, value]) => value);
+export function buildMonthlySubmissionData(_loans: LoanSummary[]): MonthlySubmissionDatum[] {
+  warnDeprecated("buildMonthlySubmissionData");
+  return [];
 }
+
+// Re-export the formatters so legacy callers that depended on them don't
+// break at import time. They remain the source of truth for loan-level
+// currency formatting outside the analytics dashboard.
+export { currencyFormatter, compactCurrencyFormatter, monthFormatter };

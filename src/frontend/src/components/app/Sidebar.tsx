@@ -12,6 +12,65 @@ type NavItem = {
   roles?: UserRole[];
 };
 
+type SettingsSubItem = {
+  label: string;
+  href: string;
+  adminOnly?: boolean;
+  icon: JSX.Element;
+};
+
+function IconUser() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
+  );
+}
+
+function IconSliders() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <line x1="3" y1="6" x2="21" y2="6" />
+      <line x1="3" y1="12" x2="21" y2="12" />
+      <line x1="3" y1="18" x2="21" y2="18" />
+      <circle cx="8" cy="6" r="2" fill="currentColor" stroke="none" />
+      <circle cx="16" cy="12" r="2" fill="currentColor" stroke="none" />
+      <circle cx="11" cy="18" r="2" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+function IconGear() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+function IconChart() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="12" width="5" height="9" rx="1" />
+      <rect x="9.5" y="7" width="5" height="14" rx="1" />
+      <rect x="16" y="3" width="5" height="18" rx="1" />
+    </svg>
+  );
+}
+
+function IconShield() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 2 4 6v5.5C4 16.2 7.6 20.5 12 22c4.4-1.5 8-5.8 8-10.5V6L12 2z" />
+      <polyline points="9,12 11,14 15,10" />
+    </svg>
+  );
+}
+
+const ADMIN_ALIASES: UserRole[] = ["it_admin", "admin"];
+
 const navItems: NavItem[] = [
   { label: "Dashboard", href: "/dashboard" },
   {
@@ -52,6 +111,14 @@ const navItems: NavItem[] = [
   },
 ];
 
+const SETTINGS_SUB_ITEMS: SettingsSubItem[] = [
+  { label: "Account", href: "/settings/account", icon: <IconUser /> },
+  { label: "User Preferences", href: "/settings/preferences", icon: <IconSliders /> },
+  { label: "Configuration", href: "/settings/configuration", icon: <IconGear /> },
+  { label: "Reporting", href: "/settings/reports", icon: <IconChart /> },
+  { label: "Admin", href: "/settings/admin", adminOnly: true, icon: <IconShield /> },
+];
+
 export function Sidebar() {
   const router = useRouter();
   const { user, effectiveRole, isPreviewMode } = useAuth();
@@ -68,6 +135,12 @@ export function Sidebar() {
         : item,
     )
     .filter((item) => !item.roles || item.roles.includes(effectiveRole) || (user.role === "admin" && !isPreviewMode));
+
+  const isAdmin = ADMIN_ALIASES.includes(effectiveRole);
+  const showAdminSubnav = isAdmin && user.role === "admin";
+  const visibleSettingsItems = SETTINGS_SUB_ITEMS.filter(
+    (item) => !item.adminOnly || showAdminSubnav,
+  );
 
   return (
     <aside className="app-sidebar">
@@ -112,16 +185,22 @@ export function Sidebar() {
       )}
 
       <div className="sidebar-bottom">
-        <Link
-          href="/settings"
-          className={`sidebar-settings-link${router.pathname.startsWith("/settings") ? " active" : ""}`}
-        >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <circle cx="12" cy="12" r="3" />
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-          </svg>
-          Settings
-        </Link>
+        <p className="sidebar-section-label">Settings</p>
+        <nav className="sidebar-section-nav" aria-label="Settings">
+          {visibleSettingsItems.map((item) => {
+            const isActive = router.pathname === item.href;
+            return (
+              <Link
+                key={item.label}
+                href={item.href}
+                className={`sidebar-section-link${isActive ? " active" : ""}`}
+              >
+                {item.icon}
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
       </div>
 
       <div className="sidebar-footer">

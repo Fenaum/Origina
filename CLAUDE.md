@@ -9,6 +9,8 @@ Origina is a Non-QM (Non-Qualified Mortgage) Loan Origination System (LOS) and T
 **Target users:** Wholesale channel — loan officers, processors, underwriters, account managers, and brokers.
 **Product focus:** Non-QM products (DSCR, Bank Statement, Asset Depletion, Interest Only, Jumbo Non-QM). No AI/ML features — intentionally out of scope.
 
+**Architecture docs:** `docs/architecture/` — see [docs/architecture/README.md](docs/architecture/README.md) for the index. Each domain has its own file (backend, database, frontend, loan-workspace, exceptions, integrations, settings, feature-guides).
+
 ---
 
 ## Commands
