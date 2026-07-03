@@ -10,6 +10,10 @@
 
 import { useMemo } from "react";
 import { ActiveFilterChips } from "@/components/analytics/ActiveFilterChips";
+import {
+  ChevronDownIcon,
+  FilterIcon,
+} from "@/components/analytics/ChartIcons";
 import type {
   AnalyticsFilter,
   DatePreset,
@@ -119,7 +123,12 @@ export function AnalyticsFilterBar({ filter, onChange }: AnalyticsFilterBarProps
 
   return (
     <section className="analytics-filter-bar panel" aria-label="Dashboard filters">
+      <div className="analytics-filter-accent" aria-hidden />
       <div className="analytics-filter-row">
+        <div className="analytics-filter-title">
+          <FilterIcon width={14} height={14} />
+          <span>Filters</span>
+        </div>
         <label className="filter-group">
           <span className="filter-label">Date field</span>
           <select
@@ -199,7 +208,9 @@ function MultiSelectGroup({ label, options, selected, onToggle }: MultiSelectGro
       <summary className="filter-summary">
         <span className="filter-label">{label}</span>
         <span className="filter-summary-text">{summary}</span>
-        <span aria-hidden>▾</span>
+        <span className="filter-summary-chevron" aria-hidden>
+          <ChevronDownIcon width={11} height={11} />
+        </span>
       </summary>
       <div className="filter-options">
         {options.map((opt) => {

@@ -1,16 +1,21 @@
 // DrilldownPanel — slide-up panel showing the loans that produced a metric.
-// Opens when a metric_context is set; closes when the user clicks X or clicks
-// outside the panel.
 //
-// The panel reuses the active global filter (so the user's filter bar state is
-// preserved) and layers the metric_context on top. Pagination is local state
-// for now; future versions may persist the page in the URL.
+// Visuals: blurred dark overlay, gradient header strip, branded chip on the
+// title, animated slide-up entrance, polished pagination footer with
+// accessible page indicator. Body reuses DrilldownTable for the row layout.
 
 import { useMemo, useState } from "react";
 import { DrilldownTable } from "@/components/analytics/DrilldownTable";
 import { useAnalyticsDrilldown } from "@/hooks/useAnalyticsDrilldown";
 import { exportDrilldown } from "@/services/analyticsService";
 import { useAuth } from "@/state/auth";
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  CloseIcon,
+  DownloadIcon,
+  SparklesIcon,
+} from "@/components/analytics/ChartIcons";
 import type { AnalyticsFilter, DrilldownRequest } from "@/types/analytics";
 import { formatCurrency } from "@/lib/utils";
 
@@ -55,10 +60,15 @@ export function DrilldownPanel({
     "days_in_status", "open_conditions",
   ];
 
+  const totalAmount = rows.reduce((s, r) => s + (r.loan_amount ?? 0), 0);
+
   async function handleExport() {
     setExporting(true);
     try {
-      const blob = await exportDrilldown({ ...filter, metric_context: metricContext, limit: 5000, page: 1 }, token ?? undefined);
+      const blob = await exportDrilldown(
+        { ...filter, metric_context: metricContext, limit: 5000, page: 1 },
+        token ?? undefined,
+      );
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -78,37 +88,50 @@ export function DrilldownPanel({
     <>
       <div className="drilldown-overlay" onClick={onClose} aria-hidden />
       <aside className="drilldown-panel fade-slide-in" aria-label={`Drill-down: ${title}`}>
+        <div className="drilldown-handle" aria-hidden />
         <header className="drilldown-header">
-          <div>
+          <div className="drilldown-header-titles">
+            <span className="drilldown-chip">
+              <SparklesIcon width={12} height={12} />
+              Drill-down
+            </span>
             <h3>{title}</h3>
             <span className="drilldown-subtitle">
-              {total} loan{total === 1 ? "" : "s"}
-              {total > 0 ? ` · ${formatCurrency(rows.reduce((s, r) => s + (r.loan_amount ?? 0), 0))}` : ""}
+              <strong>{total.toLocaleString()}</strong>
+              <span className="drilldown-subtitle-sep">loan{total === 1 ? "" : "s"}</span>
+              {total > 0 ? (
+                <>
+                  <span className="drilldown-subtitle-sep">·</span>
+                  <span className="drilldown-subtitle-amount">{formatCurrency(totalAmount)}</span>
+                </>
+              ) : null}
             </span>
           </div>
           <div className="drilldown-header-actions">
             <button
               type="button"
-              className="ghost-button"
+              className="drilldown-action drilldown-action--primary"
               onClick={handleExport}
               disabled={exporting || total === 0}
             >
+              <DownloadIcon width={13} height={13} />
               {exporting ? "Exporting…" : "Export CSV"}
             </button>
             <button
               type="button"
-              className="ghost-button"
+              className="drilldown-action drilldown-action--ghost"
               onClick={onClose}
               aria-label="Close drilldown"
             >
-              ✕ Close
+              <CloseIcon width={13} height={13} />
+              Close
             </button>
           </div>
         </header>
 
         {error ? (
-          <div className="inline-empty-state">
-            <h4>Couldn't load loans</h4>
+          <div className="drilldown-empty-state">
+            <h4>Couldn&apos;t load loans</h4>
             <p>{String((error as Error).message ?? error)}</p>
           </div>
         ) : (
@@ -121,25 +144,29 @@ export function DrilldownPanel({
             />
 
             <footer className="drilldown-footer">
-              <span>
-                Page {page} of {lastPage} · {total} total
+              <span className="drilldown-page-info">
+                Page <strong>{page}</strong> of <strong>{lastPage}</strong>
+                <span className="drilldown-page-sep">·</span>
+                <span className="drilldown-page-total">{total.toLocaleString()} total</span>
               </span>
               <div className="drilldown-pagination">
                 <button
                   type="button"
-                  className="ghost-button"
+                  className="drilldown-action drilldown-action--ghost"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page <= 1 || isLoading}
                 >
-                  ← Prev
+                  <ChevronLeftIcon width={12} height={12} />
+                  Prev
                 </button>
                 <button
                   type="button"
-                  className="ghost-button"
+                  className="drilldown-action drilldown-action--ghost"
                   onClick={() => setPage((p) => Math.min(lastPage, p + 1))}
                   disabled={page >= lastPage || isLoading}
                 >
-                  Next →
+                  Next
+                  <ChevronRightIcon width={12} height={12} />
                 </button>
               </div>
             </footer>

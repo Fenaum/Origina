@@ -4,6 +4,10 @@
 // state, recall a previously-saved view, or delete their own views. Shared
 // views are visible to all users in the tenant but only the owner can edit
 // or delete them.
+//
+// Visuals: brand-filled trigger with a gradient pill when a view is active,
+// gradient popover header with a star icon, animated list rows, save form with
+// primary CTA, and a confirmation tooltip for the delete button.
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -13,6 +17,13 @@ import {
   listSavedViews,
 } from "@/services/analyticsService";
 import { useAuth } from "@/state/auth";
+import {
+  ChevronDownIcon,
+  CloseIcon,
+  SparklesIcon,
+  StarIcon,
+  UsersIcon,
+} from "@/components/analytics/ChartIcons";
 import type { AnalyticsFilter, SavedView } from "@/types/analytics";
 
 type SavedViewsDropdownProps = {
@@ -81,38 +92,60 @@ export function SavedViewsDropdown({
     <div className="saved-views">
       <button
         type="button"
-        className="ghost-button saved-views-trigger"
+        className={`saved-views-trigger ${activeView ? "saved-views-trigger--active" : ""}`}
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="true"
         aria-expanded={open}
       >
-        {activeView ? `★ ${activeView.name}` : "☆ Saved views"}
-        <span aria-hidden>▾</span>
+        {activeView ? (
+          <>
+            <StarIcon width={13} height={13} />
+            <span className="saved-views-trigger-name">{activeView.name}</span>
+          </>
+        ) : (
+          <>
+            <SparklesIcon width={13} height={13} />
+            <span>Saved views</span>
+          </>
+        )}
+        <span className="saved-views-trigger-chevron" aria-hidden>
+          <ChevronDownIcon width={11} height={11} />
+        </span>
       </button>
 
       {open ? (
         <div className="saved-views-popover panel fade-slide-in">
-          <header>
-            <h4>Saved views</h4>
+          <header className="saved-views-popover-header">
+            <div>
+              <span className="saved-views-eyebrow">Saved views</span>
+              <h4>Your analytics snapshots</h4>
+            </div>
             <button
               type="button"
-              className="ghost-button"
+              className="saved-views-save-trigger"
               onClick={() => setShowSaveDialog(true)}
             >
-              + Save current
+              <SparklesIcon width={12} height={12} />
+              Save current
             </button>
           </header>
 
           {isLoading ? (
             <p className="saved-views-empty">Loading…</p>
           ) : views.length === 0 ? (
-            <p className="saved-views-empty">No saved views yet. Save your current filter to reuse it later.</p>
+            <p className="saved-views-empty">
+              No saved views yet. Save your current filter to reuse it later.
+            </p>
           ) : (
             <ul className="saved-views-list">
               {views.map((v) => {
                 const ownedByMe = v.created_by === user?.id;
+                const isActive = v.id === currentViewId;
                 return (
-                  <li key={v.id} className={v.id === currentViewId ? "active" : undefined}>
+                  <li
+                    key={v.id}
+                    className={isActive ? "saved-views-item-row saved-views-item-row--active" : "saved-views-item-row"}
+                  >
                     <button
                       type="button"
                       className="saved-views-item"
@@ -121,16 +154,23 @@ export function SavedViewsDropdown({
                         setOpen(false);
                       }}
                     >
-                      <span className="saved-views-name">
-                        {v.is_shared ? <span title="Shared with tenant">👥 </span> : null}
-                        {v.name}
+                      <span className="saved-views-item-icon" aria-hidden>
+                        {v.is_shared ? <UsersIcon width={12} height={12} /> : <StarIcon width={12} height={12} />}
                       </span>
-                      {v.description ? <span className="saved-views-desc">{v.description}</span> : null}
+                      <span className="saved-views-item-text">
+                        <span className="saved-views-name">{v.name}</span>
+                        {v.description ? (
+                          <span className="saved-views-desc">{v.description}</span>
+                        ) : null}
+                      </span>
+                      {isActive ? (
+                        <span className="saved-views-active-dot" aria-hidden />
+                      ) : null}
                     </button>
                     {ownedByMe ? (
                       <button
                         type="button"
-                        className="ghost-button saved-views-delete"
+                        className="saved-views-delete"
                         onClick={() => {
                           if (confirm(`Delete saved view "${v.name}"?`)) {
                             deleteMut.mutate(v.id);
@@ -139,7 +179,7 @@ export function SavedViewsDropdown({
                         aria-label={`Delete ${v.name}`}
                         title="Delete this view"
                       >
-                        ✕
+                        <CloseIcon width={11} height={11} />
                       </button>
                     ) : null}
                   </li>
@@ -152,7 +192,7 @@ export function SavedViewsDropdown({
             <div className="saved-views-dialog">
               <input
                 type="text"
-                placeholder="View name"
+                placeholder="View name (e.g. Q1 Submissions)"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 maxLength={80}
@@ -177,23 +217,24 @@ export function SavedViewsDropdown({
               <div className="saved-views-dialog-actions">
                 <button
                   type="button"
-                  className="ghost-button"
+                  className="saved-views-cancel"
                   onClick={() => setShowSaveDialog(false)}
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
-                  className="primary-button"
+                  className="saved-views-confirm"
                   disabled={newName.trim().length === 0 || createMut.isPending}
                   onClick={() => createMut.mutate()}
                 >
+                  <SparklesIcon width={12} height={12} />
                   {createMut.isPending ? "Saving…" : "Save view"}
                 </button>
               </div>
               {createMut.isError ? (
                 <p className="saved-views-error">
-                  Couldn't save view. Make sure the current filters are valid.
+                  Couldn&apos;t save view. Make sure the current filters are valid.
                 </p>
               ) : null}
             </div>

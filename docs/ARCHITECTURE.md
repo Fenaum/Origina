@@ -15,3 +15,4 @@ This file has been split into modular documents.
 | [integrations.md](architecture/integrations.md) | Integrations and scalability |
 | [settings.md](architecture/settings.md) | Settings module plan (IA, migrations, phases) |
 | [feature-guides.md](architecture/feature-guides.md) | Checklists for adding endpoints, tables, pages |
+| [TESTING.md](TESTING.md) | Test harness setup, running, writing tests, coverage gates |

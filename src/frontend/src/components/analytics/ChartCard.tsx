@@ -7,11 +7,22 @@
 //
 // isEmpty is determined by the parent based on the underlying data array.
 // Empty state shows a "No data" message instead of an empty Recharts render.
+//
+// Visuals: gradient accent strip, title icon, optional chart-type pill badge
+// (bar / pie / line), and a soft hover lift when the card is clickable.
 
 import { type ReactNode } from "react";
-import { ChartPanel } from "@/components/charts/ChartPanel";
+import {
+  BarChartIcon,
+  GaugeIcon,
+  LineChartIcon,
+  PieChartIcon,
+  type IconComponent,
+} from "@/components/analytics/ChartIcons";
 
-type ChartCardProps = {
+type ChartType = "bar" | "pie" | "line" | "donut";
+
+export type ChartCardProps = {
   title: string;
   description?: string;
   isEmpty?: boolean;
@@ -19,6 +30,8 @@ type ChartCardProps = {
   emptyDescription?: string;
   onClick?: () => void;
   children: ReactNode;
+  /** Visual treatment of the panel header — defaults to a generic gauge. */
+  chartType?: ChartType;
 };
 
 export function ChartCard({
@@ -29,8 +42,10 @@ export function ChartCard({
   emptyDescription,
   onClick,
   children,
+  chartType = "bar",
 }: ChartCardProps) {
   const clickable = Boolean(onClick);
+  const { Icon, label } = chartTypeMeta(chartType);
 
   return (
     <section
@@ -46,12 +61,23 @@ export function ChartCard({
       }}
       aria-label={clickable ? `${title} — click to view loans` : title}
     >
-      <div className="panel-heading">
-        <div>
-          <h3>{title}</h3>
-          {description ? <span>{description}</span> : null}
+      <div className="chart-panel-accent" aria-hidden />
+      <div className="panel-heading chart-panel-heading">
+        <div className="chart-panel-title-block">
+          <span className="chart-panel-icon" aria-hidden>
+            <Icon width={14} height={14} />
+          </span>
+          <div className="chart-panel-titles">
+            <h3>{title}</h3>
+            {description ? <span>{description}</span> : null}
+          </div>
         </div>
-        {clickable ? <span className="chart-drilldown-hint">View loans →</span> : null}
+        <div className="chart-panel-meta">
+          <span className="chart-panel-type-pill" aria-label={`Chart type: ${label}`}>
+            {label}
+          </span>
+          {clickable ? <span className="chart-drilldown-hint">View loans →</span> : null}
+        </div>
       </div>
 
       {isEmpty ? (
@@ -64,4 +90,18 @@ export function ChartCard({
       )}
     </section>
   );
+}
+
+function chartTypeMeta(type: ChartType): { Icon: IconComponent; label: string } {
+  switch (type) {
+    case "pie":
+    case "donut":
+      return { Icon: PieChartIcon, label: "Donut" };
+    case "line":
+      return { Icon: LineChartIcon, label: "Trend" };
+    case "bar":
+      return { Icon: BarChartIcon, label: "Bar" };
+    default:
+      return { Icon: GaugeIcon, label: "Chart" };
+  }
 }

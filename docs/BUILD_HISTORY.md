@@ -1134,3 +1134,98 @@ Added icon prop to each `SETTINGS_SUB_ITEMS` entry and rendered `{item.icon}` be
 ### Validation performed
 
 - `npm run lint` — 0 new errors in touched files (pre-existing errors in unrelated analytics/settings components unchanged) ✓
+
+---
+
+## Session 29 — UI Polish: Role Dashboards + Analytics Dashboard Sexy Edition
+
+**Type:** UX enhancement — visual refresh of both the role dashboards (`/dashboard/*`) and the analytics dashboard (`/analytics`).
+
+---
+
+### What was built
+
+#### Phase 1 — Role Dashboards (10 roles: admin, it_admin, account_manager, account_executive, broker, processor, underwriter, funder, manager, borrower)
+
+**New icon library:** `src/frontend/src/components/dashboard/DashboardIcons.tsx` (new)
+15 stroke-based inline SVG icons sharing a 1×1 viewBox, recoloring via `currentColor`:
+`DollarIcon`, `StackIcon`, `ClockIcon`, `TrendUpIcon`, `TrendDownIcon`, `AlertIcon`, `CheckIcon`, `FileIcon`, `BriefcaseIcon`, `UsersIcon`, `ShieldIcon`, `PaperPlaneIcon`, `HandshakeIcon`, `SparklesIcon`, `ListIcon`, `UploadIcon`, `GaugeIcon`. All `aria-hidden`, `focusable={false}`.
+
+**Type model (`src/frontend/src/types/dashboard.ts`):**
+```typescript
+export type DashboardTone = "default" | "success" | "warning" | "info" | "accent";
+export type DashboardTrend = { direction: "up" | "down" | "flat"; label: string };
+export type DashboardMetric = {
+  label: string; value: string; detail: string;
+  tone?: DashboardTone; href?: string;
+  icon?: React.ReactNode;
+  trend?: DashboardTrend;
+  spark?: number[];
+};
+export type StatusItem = {
+  label: string; value: string; meta: string;
+  emphasis?: "default" | "warning" | "success" | "info";
+  monogram?: string;
+};
+```
+
+**Component upgrades**
+
+- `DashboardCard.tsx` — restructured into 5-row grid: gradient icon pill + trend chip on top, uppercase label, big value, detail, tinted SVG sparkline at the bottom. Hover lifts -2px and rotates the icon. Per-tone gradient borders (success/warning/info/accent).
+- `StatusList.tsx` — monogram avatar (2 letters, gradient-tinted per `success`/`warning`/`info`/`default`), pulsing colored pip on the right, hover slide (padding-left + brand-tinted background), "View all →" pill in the heading, staggered slide-in entrance (60ms delay each row).
+- `PageHeader.tsx` — added a `hero` variant: dark gradient backdrop with radial glow, gradient-clipped white heading, optional greeting line above the eyebrow, `trailing` slot for date + live-data pill.
+- `RoleDashboard.tsx` — wires greeting (time-of-day: "Good morning, Maya."), per-role hint copy, live-data pill.
+- `DashboardPageSkeleton.tsx` — updated to match the new skeleton layout (status row uses `.skeleton-circle`).
+- `mockDashboard.tsx` (renamed from `.ts` → `.tsx` for JSX support) — every metric has icon + tone + trend + spark; every status item has monogram + emphasis. Added missing `it_admin` and `account_manager` role entries.
+- `globals.css` — ~280 new lines: hero header, icon pill, trend chip, sparkline, monogram avatar, status-row pip with pulse animations, stagger entrance, full dark-mode parity.
+
+#### Phase 2 — Analytics Dashboard
+
+**New icon library:** `src/frontend/src/components/analytics/ChartIcons.tsx` (new)
+14 stroke-based icons: `BarChartIcon`, `PieChartIcon`, `LineChartIcon`, `GaugeIcon`, `FilterIcon`, `RefreshIcon`, `SearchIcon`, `DownloadIcon`, `CloseIcon`, `ChevronLeftIcon`, `ChevronRightIcon`, `ChevronDownIcon`, `StarIcon`, `UsersIcon`, `SparklesIcon`.
+
+**Component upgrades**
+
+- `MetricCard.tsx` — tone-tinted gradient icon pill (auto-selected from KPI id + tone), deterministic 9-point SVG sparkline, directional drilldown arrow chip, full gradient borders per tone. Hover lifts -2px and rotates the icon.
+- `ChartCard.tsx` — accepts a `chartType` prop (bar / pie / donut / line) and renders a gradient icon badge + chart-type pill ("Bar" / "Donut" / "Trend") in the panel header. Gradient accent strip across the top.
+- `DrilldownPanel.tsx` — slide-up sheet with blurred dark overlay (`backdrop-filter: blur(6px)`), drag-handle pill, branded "Drill-down" chip with sparkles icon, pill-shaped total amount badge, animated slide-up entrance, polished ghost/primary action buttons with icons.
+- `DrilldownTable.tsx` — each row renders: loan number in monospace brand-colored code style, borrower with gradient monogram avatar, status pill with brand gradient (per loan status), program pill, amount in tabular numerals, assigned-to row with brand-colored dot, days pill (warning-tinted when ≥14), open conditions / actions as colored count badges, animated row entrance with staggered delay.
+- `ActiveFilterChips.tsx` — brand-gradient pill chips with monogram close icon, "Active" label with filter icon on the left, brand-tinted empty-state hint.
+- `AnalyticsFilterBar.tsx` — gradient brand accent strip on top, "Filters" title with filter icon, focus glow on selects, rotating chevron on multi-select dropdowns.
+- `SavedViewsDropdown.tsx` — trigger gets a star icon when active / sparkles otherwise. Popover got gradient header, monogram icon on each item (star or users for shared), share checkbox, gradient primary save button.
+- `analytics.css` — complete rewrite (~700 lines) covering all of the above with full dark-mode parity.
+
+---
+
+### Files changed
+
+| File | Type | Change |
+|---|---|---|
+| `src/frontend/src/types/dashboard.ts` | UPDATED | `DashboardTone`, `DashboardTrend` types; `icon`, `trend`, `spark`, `emphasis`, `monogram` fields |
+| `src/frontend/src/components/dashboard/DashboardIcons.tsx` | NEW | 17 inline SVG icon components |
+| `src/frontend/src/components/dashboard/DashboardCard.tsx` | UPDATED | 5-row layout (icon pill + trend chip + sparkline) |
+| `src/frontend/src/components/dashboard/StatusList.tsx` | UPDATED | Monogram avatars, pulse pips, staggered entrance |
+| `src/frontend/src/components/dashboard/PageHeader.tsx` | UPDATED | `hero` variant with gradient backdrop + greeting + trailing slot |
+| `src/frontend/src/components/dashboard/RoleDashboard.tsx` | UPDATED | Wires greeting, hint copy, live-data pill |
+| `src/frontend/src/components/dashboard/DashboardPageSkeleton.tsx` | UPDATED | New skeleton layout with `.skeleton-circle` |
+| `src/frontend/src/data/mockDashboard.tsx` | RENAMED (.ts→.tsx) + UPDATED | Icons, trends, sparklines, monograms on every metric/status item; added `it_admin` + `account_manager` role entries |
+| `src/frontend/src/styles/globals.css` | UPDATED | +280 lines: hero header, icon pills, trend chips, sparklines, monograms, stagger animations |
+| `src/frontend/src/components/analytics/ChartIcons.tsx` | NEW | 15 inline SVG icon components |
+| `src/frontend/src/components/analytics/MetricCard.tsx` | UPDATED | Gradient icon pill + SVG sparkline + drilldown arrow chip |
+| `src/frontend/src/components/analytics/ChartCard.tsx` | UPDATED | `chartType` prop, gradient accent strip, icon badge, type pill |
+| `src/frontend/src/components/analytics/DrilldownPanel.tsx` | UPDATED | Blurred overlay, drag handle, branded chip, gradient header, pill amount, slide-up animation |
+| `src/frontend/src/components/analytics/DrilldownTable.tsx` | UPDATED | Monogram avatars, status pills, program pills, count badges, staggered entrance |
+| `src/frontend/src/components/analytics/ActiveFilterChips.tsx` | UPDATED | Brand-gradient pills, close-icon monogram, Active label |
+| `src/frontend/src/components/analytics/AnalyticsFilterBar.tsx` | UPDATED | Gradient accent strip, Filters title, focus glow, rotating chevron |
+| `src/frontend/src/components/analytics/SavedViewsDropdown.tsx` | UPDATED | Star/sparkles trigger icons, gradient popover header, monogram item icons |
+| `src/frontend/src/styles/analytics.css` | UPDATED | Complete rewrite, ~700 lines covering every component |
+
+---
+
+### Validation performed
+
+- `npx tsc --noEmit` — 0 new errors in touched files ✓
+  - 4 pre-existing errors in `RoleDashboard.tsx`, `Sidebar.tsx`, `mockDashboard.ts:31`, `AnalyticsFilterBar.tsx` are unrelated and untouched
+- `npx eslint src/components/analytics src/components/dashboard` — 0 errors ✓
+  - 1 pre-existing warning (`isSelected` unused in `AnalyticsFilterBar.tsx`) unchanged
+- `git status src/frontend/src/data/` — confirms `mockDashboard.ts → mockDashboard.tsx` rename was clean

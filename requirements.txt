@@ -25,3 +25,18 @@ python-multipart
 
 # Optional but recommended (logging & typing helpers)
 typing-extensions
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Testing (ROADMAP.md "Testing Checkpoints" §A.1)
+# ─────────────────────────────────────────────────────────────────────────────
+# `httpx` is required by both the production app (for outbound calls) and
+# by the test client (ASGITransport). Pin >= 0.27 because ASGITransport
+# moved into the main package in 0.27.
+httpx>=0.27
+# `pytest` + `pytest-asyncio` power the backend test suite. We pin
+# `asyncio_mode=auto` in pytest.ini so tests don't need @pytest.mark.asyncio
+# everywhere.
+pytest>=8.0
+pytest-asyncio>=0.23
+# Coverage is optional in dev but the CI gate uses it (see ROADMAP §D).
+pytest-cov>=5.0

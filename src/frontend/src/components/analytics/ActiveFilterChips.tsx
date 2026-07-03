@@ -1,6 +1,11 @@
 // ActiveFilterChips — visual list of currently-applied filters, each clickable
 // to remove. Keeps the user oriented when many filters are stacked.
+//
+// Visuals: pill-shaped chips with brand-tinted backgrounds, a small × close
+// button, and a "Clear all" pill that flips to inverse on hover. The empty
+// state shows a brand-tinted hint instead of plain text.
 
+import { CloseIcon, FilterIcon } from "@/components/analytics/ChartIcons";
 import type {
   AnalyticsFilter,
   DatePreset,
@@ -75,13 +80,20 @@ export function ActiveFilterChips({ filter, onChange }: ActiveFilterChipsProps) 
   if (chips.length === 0) {
     return (
       <div className="active-chips" aria-label="Active filters">
-        <span className="active-chips-empty">No filters applied — showing all loans</span>
+        <span className="active-chips-empty">
+          <FilterIcon width={12} height={12} />
+          No filters applied — showing all loans
+        </span>
       </div>
     );
   }
 
   return (
     <div className="active-chips" aria-label="Active filters">
+      <span className="active-chips-label">
+        <FilterIcon width={11} height={11} />
+        Active
+      </span>
       {chips.map((chip) => (
         <button
           key={chip.key}
@@ -92,13 +104,17 @@ export function ActiveFilterChips({ filter, onChange }: ActiveFilterChipsProps) 
           title="Click to remove"
         >
           <span className="chip-label">{chip.label}</span>
-          <span className="chip-x" aria-hidden>✕</span>
+          <span className="chip-x" aria-hidden>
+            <CloseIcon width={9} height={9} />
+          </span>
         </button>
       ))}
       <button
         type="button"
         className="chip chip-clear"
-        onClick={() => onChange({ ...filter, filters: [], dateRange: undefined, page: 1 })}
+        onClick={() =>
+          onChange({ ...filter, filters: [], dateRange: undefined, page: 1 })
+        }
         aria-label="Clear all filters"
       >
         Clear all

@@ -1,0 +1,1 @@
+# Test package — see ROADMAP.md "Testing Checkpoints" section A.1.
