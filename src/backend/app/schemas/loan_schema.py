@@ -1,9 +1,23 @@
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Generic, Optional, TypeVar
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
+
+# ── Pagination envelope ───────────────────────────────────────────────
+T = TypeVar("T")
+
+
+class PaginatedResponse(BaseModel, Generic[T]):
+    """Standard envelope for paginated list endpoints.
+
+    Every list endpoint returns {"items": [...], "total": n} so the frontend
+    can compute page counts without a second request.
+    """
+
+    items: list[T]
+    total: int
 
 
 # ── LoanFinancials ─────────────────────────────────────────────────────────────

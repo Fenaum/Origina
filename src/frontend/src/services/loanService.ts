@@ -1,6 +1,6 @@
 import { mockLoans } from "@/data/mockLoans";
 import { apiRequest } from "@/services/apiClient";
-import type { LoanPipelineSummaryOut } from "@/types/api";
+import type { LoanPipelineSummaryOut, PaginatedResponse } from "@/types/api";
 import type { LoanProgram, LoanStatus, LoanSummary } from "@/types/loan";
 
 function toSummary(row: LoanPipelineSummaryOut): LoanSummary {
@@ -22,30 +22,55 @@ function toSummary(row: LoanPipelineSummaryOut): LoanSummary {
   };
 }
 
+/**
+ * A single page of pipeline results plus the server-reported total.
+ * The grid uses `total` to render page controls (Prev / Next) without a
+ * second request.
+ */
+export type PipelinePage = {
+  loans: LoanSummary[];
+  total: number;
+};
+
+/**
+ * Fetch a page of loans from the pipeline endpoint.
+ *
+ * The backend returns a paginated envelope: `{items: [...], total: n}`.
+ * Unauthenticated callers (no JWT) fall back to the in-memory mock list
+ * so the demo UI still renders before login.
+ */
 export async function listLoans(
   token?: string,
   options: { skip?: number; limit?: number } = {},
-): Promise<LoanSummary[]> {
+): Promise<PipelinePage> {
   if (process.env.NEXT_PUBLIC_MOCK_LOAN_API_ERROR === "true") {
     throw new Error("Mock loan API error");
   }
 
-  if (!token) return mockLoans;
+  if (!token) {
+    return { loans: mockLoans, total: mockLoans.length };
+  }
 
   const params = new URLSearchParams();
-  if (options.skip != null) params.set("skip", String(options.skip));
-  if (options.limit != null) params.set("limit", String(options.limit));
-  const query = params.toString();
+  params.set("skip", String(options.skip ?? 0));
+  params.set("limit", String(options.limit ?? 50));
 
-  const rows = await apiRequest<LoanPipelineSummaryOut[]>(
-    `/loans/pipeline${query ? `?${query}` : ""}`,
-    {
-      token,
-    },
+  const data = await apiRequest<PaginatedResponse<LoanPipelineSummaryOut>>(
+    `/loans/pipeline?${params.toString()}`,
+    { token },
   );
-  return rows.map(toSummary);
+  return {
+    loans: data.items.map(toSummary),
+    total: data.total,
+  };
 }
 
+/**
+ * Look up a single loan summary by ID.
+ *
+ * Sprint 1 fallback: pipeline scan with limit=1000. A real Sprint 2 endpoint
+ * (`GET /loans/{id}` + dedicated borrower fetch) replaces this.
+ */
 export async function getLoanById(
   loanId: string,
   token?: string,
@@ -54,12 +79,10 @@ export async function getLoanById(
     return mockLoans.find((loan) => loan.id === loanId) ?? null;
   }
 
-  const rows = await apiRequest<LoanPipelineSummaryOut[]>(
-    "/loans/pipeline?limit=1000",
-    {
-      token,
-    },
+  const data = await apiRequest<PaginatedResponse<LoanPipelineSummaryOut>>(
+    "/loans/pipeline?skip=0&limit=1000",
+    { token },
   );
-  const row = rows.find((r) => r.id === loanId);
+  const row = data.items.find((r) => r.id === loanId);
   return row ? toSummary(row) : null;
 }

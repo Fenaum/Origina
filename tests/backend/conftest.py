@@ -152,10 +152,78 @@ async def client(test_engine, test_schema_name):
 @pytest.fixture()
 def seed_minimum(db):
     """
-    Stub. Returns an empty dict for now. Will be filled in alongside the
-    first real integration test (e.g. test_loan_submission_e2e.py).
+    Seeds the minimum data needed for integration tests:
+      - one tenant
+      - one admin user (it_admin role)
+      - returns the user info + a fresh JWT
+
+    Tests that need a second tenant should mark themselves `skip` until
+    multi-tenant seed is implemented.
     """
-    return {}
+    import bcrypt
+    from app.security.jwt import create_access_token
+
+    tenant_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    role_id = uuid.uuid4()
+    pw_hash = bcrypt.hashpw(b"TestPass123!", bcrypt.gensalt()).decode()
+    # `tenants.name` has a UNIQUE constraint, so the seed must use a fresh name
+    # per test. We suffix with the tenant id suffix so test logs are traceable.
+    tenant_name = f"Test Lender {tenant_id.hex[:8]}"
+
+    # Tenant model (see app/models/user.py) only carries `name` + the UUID/timestamp
+    # mixins. The `slug` column is added later by a migration. Insert only the
+    # columns that the ORM maps, otherwise the metadata.create_all schema in the
+    # test fixture will reject the insert.
+    db.execute(
+        text("INSERT INTO tenants (id, name) VALUES (:id, :name)"),
+        {"id": tenant_id, "name": tenant_name},
+    )
+
+    db.execute(
+        text(
+            "INSERT INTO roles (id, tenant_id, name, description) "
+            "VALUES (:id, :tid, :name, :desc)"
+        ),
+        {
+            "id": role_id,
+            "tid": tenant_id,
+            "name": "it_admin",
+            "desc": "Test admin",
+        },
+    )
+
+    db.execute(
+        text(
+            "INSERT INTO users (id, tenant_id, email, password_hash, full_name, is_active) "
+            "VALUES (:id, :tid, :email, :pw, :name, true)"
+        ),
+        {
+            "id": user_id,
+            "tid": tenant_id,
+            "email": "test@origina.dev",
+            "pw": pw_hash,
+            "name": "Test Admin",
+        },
+    )
+
+    db.execute(
+        text(
+            "INSERT INTO user_roles (user_id, role_id, tenant_id) "
+            "VALUES (:uid, :rid, :tid)"
+        ),
+        {"uid": user_id, "rid": role_id, "tid": tenant_id},
+    )
+
+    db.commit()
+
+    token = create_access_token(user_id, tenant_id)
+    return {
+        "tenant_id": str(tenant_id),
+        "user_id": str(user_id),
+        "role_id": str(role_id),
+        "token": token,
+    }
 
 
 # ─────────────────────────────────────────────────────────────────────────────

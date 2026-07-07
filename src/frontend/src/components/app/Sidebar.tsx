@@ -1,3 +1,4 @@
+import type { ReactElement } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { OriginaLogo } from "@/components/brand/OriginaLogo";
@@ -16,7 +17,7 @@ type SettingsSubItem = {
   label: string;
   href: string;
   adminOnly?: boolean;
-  icon: JSX.Element;
+  icon: ReactElement;
 };
 
 function IconUser() {

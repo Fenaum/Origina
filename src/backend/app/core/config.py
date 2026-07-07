@@ -21,6 +21,26 @@ JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "change-me-in-production")
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "480"))
 
+# Guard: reject the hardcoded default in any non-local environment.
+# In local dev, the default is allowed so the server starts without a .env file.
+# In staging/production (APP_ENV != "local"), the server must not start with
+# the insecure default — this prevents accidental deploys with the dev secret.
+_INSECURE_DEFAULT = "change-me-in-production"
+if APP_ENV != "local" and JWT_SECRET_KEY == _INSECURE_DEFAULT:
+    raise RuntimeError(
+        "JWT_SECRET_KEY must be set to a secure value in non-local environments. "
+        "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\""
+    )
+
+# CORS — comma-separated list of allowed frontend origins.
+# Default: localhost:3000 for local dev.
+# Override with ALLOWED_ORIGINS env var in staging/prod.
+ALLOWED_ORIGINS: list[str] = [
+    o.strip()
+    for o in os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
+    if o.strip()
+]
+
 # ── Document / file storage ────────────────────────────────────────────────────
 # STORAGE_BACKEND: "local" for dev; "s3" when Phase 3 is implemented.
 STORAGE_BACKEND: str = os.getenv("STORAGE_BACKEND", "local")
