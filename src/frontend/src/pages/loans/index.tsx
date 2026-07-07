@@ -13,11 +13,15 @@ import { EMPTY_FILTERS, usePipelineStore } from "@/state/pipelineStore";
 import { useAuth } from "@/state/auth";
 import type { LoanStatus, LoanSummary } from "@/types/loan";
 
+const PAGE_SIZE = 50;
+
 export default function LoanPipelinePage() {
   const { token, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const store = usePipelineStore();
   const [loans, setLoans] = useState<LoanSummary[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
@@ -37,6 +41,18 @@ export default function LoanPipelinePage() {
     store.setFilters(patch);
   }, [router.isReady, router.query, store]);
 
+  // Reset to page 1 whenever the active filters change so users don't land
+  // on a page that no longer reflects what they searched for.
+  useEffect(() => {
+    setPage(1);
+  }, [
+    store.filters.search,
+    store.filters.statuses,
+    store.filters.programs,
+    store.filters.actionNeeded,
+    store.filters.conditionsOutstanding,
+  ]);
+
   const loadLoans = useCallback(
     async (isRetry = false) => {
       setError(null);
@@ -46,6 +62,7 @@ export default function LoanPipelinePage() {
 
       if (!token) {
         setLoans([]);
+        setTotal(0);
         setLoading(false);
         setRetrying(false);
         return;
@@ -54,8 +71,10 @@ export default function LoanPipelinePage() {
       if (!isRetry) setLoading(true);
 
       try {
-        const data = await listLoans(token, { limit: 1000 });
-        setLoans(data);
+        const skip = (page - 1) * PAGE_SIZE;
+        const data = await listLoans(token, { skip, limit: PAGE_SIZE });
+        setLoans(data.loans);
+        setTotal(data.total);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Unable to load pipeline data.");
       } finally {
@@ -63,7 +82,7 @@ export default function LoanPipelinePage() {
         setRetrying(false);
       }
     },
-    [authLoading, token],
+    [authLoading, token, page],
   );
 
   useEffect(() => {
@@ -109,7 +128,14 @@ export default function LoanPipelinePage() {
         ) : (
           <>
             <PipelineKpis loans={loans} />
-            <PipelineGrid loans={sorted} onLoanMutated={() => void loadLoans(true)} />
+            <PipelineGrid
+              loans={sorted}
+              total={total}
+              page={page}
+              pageSize={PAGE_SIZE}
+              onPageChange={setPage}
+              onLoanMutated={() => void loadLoans(true)}
+            />
           </>
         )}
 

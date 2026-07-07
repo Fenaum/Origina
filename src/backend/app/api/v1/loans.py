@@ -30,6 +30,7 @@ from app.schemas.loan_schema import (
     LoanTermsUpdate,
     LoanUpdate,
     MoveTenantRequest,
+    PaginatedResponse,
     SandboxOut,
 )
 from app.schemas.workflow_schema import StatusEventCreate, StatusEventOut
@@ -75,12 +76,12 @@ def create_loan(
     return loan
 
 
-@router.get("/", response_model=list[LoanOut])
+@router.get("/", response_model=PaginatedResponse[LoanOut])
 def list_loans(
     status: str | None = None,
     assigned_to: UUID | None = None,
     skip: int = 0,
-    limit: int = 100,
+    limit: int = 50,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -89,7 +90,9 @@ def list_loans(
         query = query.filter(Loan.status == status)
     if assigned_to:
         query = query.filter(Loan.assigned_to == assigned_to)
-    return query.order_by(Loan.created_at.desc()).offset(skip).limit(limit).all()
+    total = query.count()
+    items = query.order_by(Loan.created_at.desc()).offset(skip).limit(limit).all()
+    return PaginatedResponse(items=items, total=total)
 
 
 _PIPELINE_SQL = text("""
@@ -140,10 +143,18 @@ _PIPELINE_SQL = text("""
 """)
 
 
-@router.get("/pipeline", response_model=list[LoanPipelineSummaryOut])
+_PIPELINE_COUNT_SQL = text("""
+    SELECT COUNT(*) AS total
+    FROM loans l
+    WHERE l.tenant_id = :tenant_id
+      AND l.status NOT IN ('archived', 'cancelled')
+""")
+
+
+@router.get("/pipeline", response_model=PaginatedResponse[LoanPipelineSummaryOut])
 def get_pipeline(
     skip: int = 0,
-    limit: int = 200,
+    limit: int = 50,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -151,7 +162,14 @@ def get_pipeline(
         _PIPELINE_SQL,
         {"tenant_id": current_user.tenant_id, "limit": limit, "skip": skip},
     ).mappings().all()
-    return [LoanPipelineSummaryOut(**dict(row)) for row in rows]
+    total = db.execute(
+        _PIPELINE_COUNT_SQL,
+        {"tenant_id": current_user.tenant_id},
+    ).scalar_one()
+    return PaginatedResponse(
+        items=[LoanPipelineSummaryOut(**dict(row)) for row in rows],
+        total=total,
+    )
 
 
 @router.get("/{loan_id}", response_model=LoanOut)

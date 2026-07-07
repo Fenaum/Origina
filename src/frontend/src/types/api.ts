@@ -204,6 +204,14 @@ export type PaginatedList<T> = {
   size: number;
 };
 
+// ── Pagination envelope (Sprint 1) ─────────────────────────────────────────────
+// Standard envelope returned by all paginated list endpoints (matches the
+// backend Pydantic PaginatedResponse[T] schema).
+export type PaginatedResponse<T> = {
+  items: T[];
+  total: number;
+};
+
 // ── Context menu / Quick Actions ─────────────────────────────────────────────
 export type LoanQuickInfoOut = {
   id: string;

@@ -61,6 +61,17 @@ export default defineConfig({
       "react/jsx-runtime": path.join(NODE_MODULES, "react/jsx-runtime.js"),
       "react-dom": path.join(NODE_MODULES, "react-dom"),
       "react-dom/client": path.join(NODE_MODULES, "react-dom/client.js"),
+      // WorkspaceHome uses `useRouter()` from next/router — alias to the
+      // installed package so vite can resolve it from tests/frontend/*.
+      next: path.join(NODE_MODULES, "next"),
+      "next/router": path.join(NODE_MODULES, "next/router.js"),
+      // RouterContext is the React context useRouter reads from. Tests that
+      // wrap WorkspaceHome in <RouterContext.Provider value={...}> need this
+      // exact specifier to resolve.
+      "next/dist/shared/lib/router-context.shared-runtime.js": path.join(
+        NODE_MODULES,
+        "next/dist/shared/lib/router-context.shared-runtime.js"
+      ),
     },
   },
   // Match Next.js / production: JSX uses the automatic runtime so test

@@ -46,8 +46,18 @@ scripts/db_reset.sh           # Wipe and reinitialize (dev only — runs docker-
 docker-compose down -v   # destroys volume
 docker-compose up -d
 scripts/db_init.sh
-python3 scripts/seed_nonqm_loans.py   # 200 wholesale Non-QM loans
+python3 scripts/seed_nonqm_loans.py   # 202 wholesale Non-QM loans
 ```
+
+### Tests
+
+```bash
+./scripts/run_tests.sh           # run backend + frontend
+./scripts/run_tests.sh backend   # backend only (pytest)
+./scripts/run_tests.sh frontend  # frontend only (vitest)
+```
+
+See [docs/TESTING.md](docs/TESTING.md) for setup, fixtures, writing new tests, and CI integration.
 
 ### Python environment
 
@@ -59,11 +69,11 @@ pip install -r ../../requirements.txt
 ### Seed data
 
 ```bash
-python3 scripts/seed_nonqm_loans.py   # inserts 200 wholesale Non-QM loans into origina-dev tenant
+python3 scripts/seed_nonqm_loans.py   # inserts 202 wholesale Non-QM loans into origina-dev tenant
 python3 scripts/bootstrap_user.py     # creates admin@origina.dev / TestPass123! for login testing
 ```
 
-No backend linter is configured. No test suite exists yet.
+No backend linter is configured.
 
 ---
 
@@ -82,7 +92,7 @@ Clean layered architecture:
 | Security | `security/` | JWT auth, RBAC, role definitions |
 | Core | `core/` | Config, DB session factory, logging, app factory |
 
-**Entry point**: `core/main.py` creates the FastAPI app and registers all 14 routers (82 routes total).
+**Entry point**: `core/main.py` creates the FastAPI app and registers all 27 routers (~167 routes total) under `/api/v1/`.
 
 **DB session**: All endpoints get a `Session` via `Depends(get_db)` from `core/db.py`. Never instantiate sessions directly.
 
@@ -95,18 +105,31 @@ Clean layered architecture:
 
 **Schemas**: Pydantic schemas use `ConfigDict(from_attributes=True)` for ORM compatibility. Pattern: `<Domain>Base` → `<Domain>Create` / `<Domain>Update` → `<Domain>Out`.
 
+**Status/type constants**: All domain constants use plain classes with string values and frozensets — no Python Enums, no `.value` access:
+```python
+class LoanStatus:
+    NEW_DRAFT = "new_draft"
+    SUBMITTED = "submitted"
+    TERMINAL: frozenset[str] = frozenset({"denied", "withdrawn", "cancelled", "archived"})
+    ALL: frozenset[str] = frozenset({...})
+```
+This pattern applies to `LoanStatus`, `LoanPurpose`, `ConditionStatus`, `TaskStatus`, `TaskPriority`, `ExceptionStatus`, `ExceptionSeverity`, and all other status types.
+
 **Auth flow**:
 - `POST /api/v1/auth/login` (OAuth2PasswordRequestForm) → returns `{access_token, token_type}`
+- JWT stored in localStorage under `origina.token`
+- `apiClient.ts` reads this and injects `Authorization: Bearer <token>` on every request
+- `GET /api/v1/auth/me` → hydrates user context on app mount
 - `get_current_user` decodes JWT, fetches User ORM object, checks `is_active`
 - `require_roles(*allowed)` is a dependency factory for per-route RBAC
 
 **Role constants** (must match `roles` table values):
 ```python
-LOAN_OFFICER = "loan_officer"
-PROCESSOR    = "loan_processor"
-UNDERWRITER  = "underwriter"
+LOAN_OFFICER    = "loan_officer"
+PROCESSOR       = "loan_processor"
+UNDERWRITER     = "underwriter"
 ACCOUNT_MANAGER = "account_manager"
-IT_ADMIN     = "it_admin"
+IT_ADMIN        = "it_admin"
 ```
 
 ---
@@ -115,34 +138,42 @@ IT_ADMIN     = "it_admin"
 
 Raw SQL migrations in `db/migrations/` are the schema source of truth. The migration runner (`scripts/init_db.py`) tracks applied files in `schema_migrations` and runs each file in its own transaction.
 
-**Do not use `Base.metadata.create_all()`** — it cannot safely manage PostgreSQL enum types, triggers, partial indexes, or historical changes. Alembic is scaffolded but not used.
+**Do not use `Base.metadata.create_all()`** — it cannot safely manage PostgreSQL triggers, partial indexes, or TEXT+CHECK constraints.
 
-**Migration numbering:**
-- 010 tenants → 020 users/RBAC → 030 types/enums → 040 parties → 050 loans → 055 conditions → 060 properties
+**Migration numbering (125 migrations applied):**
+- 010 tenants → 020 users/RBAC → 030 types (obsolete ENUMs — all replaced) → 040 parties
+- 050 loans → 055 conditions → 060 properties
 - 070–073 workflow (exceptions, tasks, notes, loan_status_events)
 - 080 documents → 090 decisions → 100 audit snapshots → 101 borrowers
 - 102–109 optimization/hardening (audit columns, check constraints, indexes, loan split, audit trigger fix)
+- 110 borrower intake → 111 condition enhancements → 112 documents v2 → 113 property details
+- 114 appraisal → 115 credit reports → 116 escrow → 117 title orders
+- 118–121 exceptions v2 (nullable loan_id, structured fields, events/comments, decisions)
+- 122–125 TEXT+CHECK migration (all ENUM columns converted — zero ENUMs remain)
+
+**Next planned:** 126–131 for Settings module.
+
+**No PostgreSQL ENUM columns remain.** Every domain-status column is `TEXT NOT NULL` with a `CHECK` constraint. This is intentional — see [docs/DECISIONS.md](docs/DECISIONS.md).
 
 **Loan split pattern**: `loans` holds header fields only. Financial amounts live in `loan_financials`; rate/term structure in `loan_terms`. Both use `loan_id` as PK. Always insert all three when creating a loan.
 
-**Audit triggers** fire AFTER INSERT/UPDATE/DELETE on: `loans`, `borrowers`, `conditions`, `documents`, `loan_financials`, `loan_terms`. The trigger function (`log_audit_event()`) reads the actor from `app.current_user_id` and writes a diff to `audit_log`. Tables with `loan_id` as PK (not `id`) are handled via the `_LOAN_ID_PK` array in the trigger function.
+**Controlled values architecture**:
+- `controlled_value_sets` + `controlled_values` tables (18 sets, 144+ seed values)
+- `tenant_id IS NULL` = system default; `tenant_id = X` = tenant override that shadows the system row
+- API: `GET /api/v1/metadata/values/{set_code}` merges system + tenant rows
+- Adding a new value requires only an `INSERT` — no migration, no deploy
 
-**Enum types** (must be cast explicitly in raw SQL):
-`loan_status`, `loan_purpose`, `loan_party_role`, `borrower_type`, `borrower_income_type`, `borrower_relationship`, `condition_status`, `exception_status`, `exception_severity`, `task_status`, `task_priority`, `party_type`, `party`
-
-**Known schema debt:**
-- `loans.status` column is `text` in the live DB (should be `loan_status` enum) — not yet migrated
-- `loans.purpose` column is `text` with a legacy check constraint — should align with `loan_purpose` enum
+**Audit triggers** fire AFTER INSERT/UPDATE/DELETE on 8 tables: `loans`, `borrowers`, `conditions`, `documents`, `loan_financials`, `loan_terms`, `exceptions`, `loan_status_events`. The trigger function (`log_audit_event()`) reads the actor from `app.current_user_id` and writes a diff to `audit_log`. Tables with `loan_id` as PK (not `id`) are handled via the `_LOAN_ID_PK` array in the trigger function.
 
 ---
 
 ### Loan workflow
 
-Full `loan_status` enum: `new_draft → submitted → conditions_review → approved_pending → approved → funded → closed → post_closing → archived` (terminal: `denied`, `withdrawn`, `cancelled`)
+Full `loan_status` values: `new_draft → submitted → conditions_review → approved_pending → approved → funded → closed → post_closing → archived` (terminal: `denied`, `withdrawn`, `cancelled`)
 
 Status transitions are recorded in `loan_status_events` (append-only). The `loans.status` column holds the current state for querying. Both must be updated together atomically.
 
-Condition lifecycle: `open → submitted → cleared / waived / rejected`
+Condition lifecycle: `outstanding → submitted → cleared / waived / rejected`
 
 ---
 
@@ -154,47 +185,62 @@ Condition lifecycle: `open → submitted → cleared / waived / rejected`
 
 ### Frontend (`src/frontend/`)
 
-Next.js with TypeScript, Tailwind CSS v4, Recharts. Uses the **page router** (not App Router).
+Next.js 16 with TypeScript strict mode, Tailwind CSS v4, Recharts. Uses the **page router** (not App Router).
+
+**Core libraries:**
+- `@tanstack/react-query` — all data fetching; `QueryClientProvider` wraps the entire app in `_app.tsx`
+- Zustand 5 with `persist` + `immer` middleware — 6 stores (auth, pipeline, recentLoans, intake, submission, document)
+- CSS design system via variables in `globals.css` — no CSS-in-JS
 
 **Directory structure:**
 ```
 src/
   pages/          # Routes — one file per page
-    _app.tsx      # App wrapper with AuthProvider
+    _app.tsx      # QueryClientProvider + AuthProvider wrapper
     _legacy/      # Archived placeholder pages (not routed, do not delete)
+    analytics/    # Analytics dashboard
+    borrower/     # Intake + application flow
     dashboard/    # Role dashboards
-    loans/        # Pipeline table + loan detail
-    borrower/     # Borrower application flow
+    exceptions/   # Pre-file exceptions
+    loans/        # Pipeline table + loan workspace
+    settings/     # Personal settings (profile, security, notifications, preferences)
+    admin/        # Org admin (people, products, workflow, audit log, etc.)
+    login.tsx
   components/
-    app/          # Shell: AppLayout, Sidebar, TopHeader, ProtectedRoute
-    dashboard/    # Dashboard cards, grids, status lists
-    loans/        # Pipeline table, loan detail, charts, KPIs
-    charts/       # Recharts wrappers (StatusCount, StatusAmount, Channel, Trend)
+    app/          # Shell: AppLayout, LoanWorkspaceLayout, SettingsLayout, Sidebar, TopHeader
+    analytics/    # MetricCard, ChartCard, DrilldownPanel, DrilldownTable, filter components
+    borrower/     # Intake UI
+    charts/       # Recharts wrappers
+    dashboard/    # DashboardCard, StatusList, PageHeader, RoleDashboard
     feedback/     # LoadingSpinner, EmptyState, ErrorState, skeletons
-    Notifications/ # Reserved
-    ui/           # shadcn/ui primitives (not yet set up — see below)
-  hooks/          # Data-fetching hooks — useAuth, useLoans, useLoan
-  services/       # apiClient.ts (real fetch wrapper), loanService.ts (mock → real swap point)
-  state/          # auth.tsx — React Context + useSyncExternalStore for cross-tab auth
-  types/          # auth.ts, loan.ts, dashboard.ts, api.ts (backend response shapes)
+    loans/        # Pipeline + workspace components
+      pipeline/   # Toolbar, KPIs, Grid, FilterPanel, action modals
+      workspace/  # WorkspaceHome + all 20+ section components, workspaceSections.ts
+    settings/     # SettingsLayout, SectionCard, SaveBar, SearchableSectionNav
+    submission/   # Multi-step loan submission wizard
+  hooks/          # Data-fetching hooks — useAuth, useLoans, useLoan, useCurrentUser, …
+  services/       # apiClient.ts (fetch wrapper), loanService.ts, submissionService.ts
+  state/          # auth.tsx, pipelineStore.ts, recentLoansStore.ts, submissionStore.ts, …
+  types/          # auth.ts, loan.ts, dashboard.ts, api.ts, analytics.ts, submission.ts
   lib/            # utils.ts — cn(), formatCurrency(), formatDate(), formatPercent()
-  data/           # mockLoans.ts, mockDashboard.ts, pipelineAnalytics.ts
-  styles/         # globals.css — design system, CSS variables, layout
+  data/           # mockLoans.ts, mockDashboard.tsx, pipelineAnalytics.ts, templates.ts
+  styles/         # globals.css — design system, CSS variables, layout; analytics.css
 ```
 
-**Auth (current)**: Mock auth stored in localStorage. Role → hardcoded user via `authService.ts`. **Not yet wired to real JWT.**
+**Auth**: JWT stored in localStorage under `origina.token`. `apiClient.ts` reads this and injects `Authorization: Bearer <token>` on every request. On mount, `_app.tsx` calls `GET /auth/me` to hydrate user context. Role-based sidebar and page guards (`<AppLayout allowedRoles={[...]}>`) enforce access client-side; backend RBAC is the real gate.
 
-**Data fetching (current)**: All services return mock data. `loanService.ts` is the swap point — replace its internals with `apiClient.ts` calls when ready to go live.
+**Data fetching**: All hooks use `useQuery`/`useMutation` from React Query. Do not write `useEffect + fetch` loops for data fetching.
 
-**Target data flow** (once JWT is wired):
+**Target data flow:**
 ```
-Login form → POST /auth/login → JWT stored in memory/cookie
-→ apiClient.ts injects Bearer header
-→ useLoans / useLoan hooks call loanService.ts
-→ loanService.ts calls apiClient.ts
-→ FastAPI returns typed responses
-→ types/api.ts shapes the data
+Login → POST /auth/login → JWT in localStorage
+  → apiClient.ts injects Bearer header
+  → service layer (loanService, submissionService, etc.)
+  → React Query hooks (useLoans, useLoan, useCurrentUser, …)
+  → components render with cached data
 ```
+
+**SSN security invariant**: `submissionStore.ts` uses `partialize` to strip `borrowers[].ssn` before every localStorage write. SSN lives in Zustand memory only during the session. This is an inviolable security invariant — do not remove or weaken the `partialize` guard.
 
 ---
 
@@ -208,16 +254,18 @@ Login form → POST /auth/login → JWT stored in memory/cookie
 5. Mirror the response shape in `src/frontend/src/types/api.ts`
 
 **New database table:**
-1. Create `db/migrations/<next_number>_<name>.sql`
+1. Create `db/migrations/<next_number>_<name>.sql` (next is 126+)
 2. Add SQLAlchemy model in `models/`
 3. Run `scripts/db_migrate.sh`
-4. If the table needs auditing, attach `log_audit_event()` trigger (add table name to `_LOAN_ID_PK` array in trigger function if PK is `loan_id` not `id`)
+4. New status/type columns must be `TEXT NOT NULL CHECK (col IN (...))` — never `ENUM()`
+5. If the table needs auditing, attach `log_audit_event()` trigger (add table name to `_LOAN_ID_PK` array in trigger function if PK is `loan_id` not `id`)
+6. Update migration sequence in `docs/architecture/database.md`
 
 **New frontend page:**
 1. Add file to `src/pages/<domain>/index.tsx` (or `[id].tsx` for detail)
-2. Wrap with `<AppLayout allowedRoles={[...]}>` for auth guard
-3. Add hook in `src/hooks/` if it fetches data
-4. Add route to sidebar nav in `components/app/Sidebar.tsx`
+2. Wrap with `<AppLayout allowedRoles={[...]}>` for auth guard (or `SettingsLayout` for settings/admin pages)
+3. Add `useQuery`-based hook in `src/hooks/` for any data fetching
+4. Add route to sidebar nav in `components/app/Sidebar.tsx` with `roles` array
 
 ---
 
@@ -229,50 +277,55 @@ Login form → POST /auth/login → JWT stored in memory/cookie
 - API versioned under `/api/v1/` — all new routes go there
 - `tenant_id` is never accepted from request body — always from `current_user.tenant_id`
 - S3 is the document storage backend — out of scope until core loan flow is working
-- `bcrypt==4.0.1` is pinned in requirements.txt — passlib is incompatible with bcrypt 4.1+ (the `__about__` attribute was removed)
+- `bcrypt==4.0.1` is pinned in requirements.txt — passlib is incompatible with bcrypt 4.1+
+- No Python Enum types for status/type constants — use plain class constants with frozensets
 
 **Frontend:**
 - Import with `@/*` alias (maps to `src/frontend/src/`)
 - Hooks live in `src/hooks/` — not co-located in components
 - API response types live in `src/types/api.ts` — keep in sync with backend schemas
 - `src/lib/utils.ts` provides `cn()`, `formatCurrency()`, `formatDate()`, `formatPercent()`
-- Auth is mock until backend JWT is wired — see `state/auth.tsx`
-- Legacy pages are archived under `pages/_legacy/` — not routed, kept for reference
+- All data fetching goes through React Query (`useQuery`/`useMutation`) — not raw `useEffect + fetch`
+- `types/loan.ts` defines `LoanProgram` including conventional/other (pipeline display)
+- `types/submission.ts` defines `LoanProgram` as Non-QM subset only (submission wizard) — keep these separate
+- `pages/_legacy/` contains archived placeholder pages — not routed, kept for reference, do not delete
+- CSS lives in `globals.css` (and `analytics.css` for the analytics dashboard) — no CSS-in-JS
 
-**shadcn/ui setup (not yet done):**
-```bash
-cd src/frontend
-npm install clsx tailwind-merge         # required for cn() in lib/utils.ts
-npx shadcn@latest init                  # scaffolds components/ui/ properly
-```
-The `@shadcn/ui` package currently in package.json (`v0.0.4`) is a dummy — remove it after running the above.
+**Tests:**
+- Backend: `tests/backend/` — pytest with schema-per-test-run isolation, async ASGI client
+- Frontend: `tests/frontend/` — vitest + jsdom + Testing Library
+- Always run from repo root: `./scripts/run_tests.sh`
+- Mark backend tests `@pytest.mark.smoke` (no DB) or `@pytest.mark.integration` (touches DB)
+- See [docs/TESTING.md](docs/TESTING.md) for full setup and writing guide
 
 ---
 
-## What to review before next feature push
+## What to build next (priority order)
 
-1. **`loans.status` column type** — live DB is `text`, should be `loan_status` enum. Fix before building status-transition UI.
-2. **Pagination** — all list endpoints return unbounded results. Add `skip`/`limit` params and `total` to responses before wiring the pipeline table to the real API.
-3. **CORS** — backend uses `allow_origins=["*"]`. Lock to `http://localhost:3000` in dev and real domain in prod before any deployment.
-4. **JWT secret** — `JWT_SECRET_KEY` in `core/config.py` must be rotated from the dev default before staging/prod.
-5. **Bootstrap user** — re-run `scripts/bootstrap_user.py` if login fails; the hash may be stale.
+See [docs/ROADMAP.md](docs/ROADMAP.md) for the full prioritized backlog and testing gates.
 
-## Next features to build (priority order)
+**Priority 1 — Demo-blocking (none of these are done yet):**
+1. **Pagination** — all list endpoints return unbounded results; add `skip`/`limit` + `{"items": [...], "total": n}` envelope
+2. **CORS lockdown** — currently `allow_origins=["*"]`; lock to `http://localhost:3000` in dev
+3. **JWT secret from environment** — `JWT_SECRET_KEY` in `core/config.py` must load from env, reject hardcoded default at startup
+4. **Loan submission wired to API** — `submissionStore.ts` auto-saves to DB via `saveDraft`; verify the full submit flow creates loan + loan_financials + loan_terms atomically
+5. **Real loan_financials + loan_terms in WorkspaceHome** — workspace home currently shows only header fields
 
-1. **Wire auth** — `POST /api/v1/auth/login` → store JWT → inject via `apiClient.ts`. Unblocks everything.
-2. **Wire loan pipeline** — replace mock in `loanService.ts` with real API call; hooks are already in place.
-3. **Loan detail page** — pull `loan_financials`, `loan_terms`, `conditions`, `borrowers`, `properties`.
-4. **Condition management UI** — clear/waive workflow; the backend endpoints exist.
-5. **Loan creation form** — multi-step broker submission form.
-6. **Pagination** — add to list endpoints and update frontend table to use cursor/page params.
+**Priority 2 — Core workflow (after first demo):**
+1. **Real user creation** — only `admin@origina.dev` works today; need `POST /api/v1/users/` + multi-user demo accounts
+2. **Role stored in DB** — currently inferred from email prefix; fix `get_current_user` to read `users.role` column
+3. **Conditions workspace UI** — currently a placeholder; needs list, clear/waive/reject actions, add form
+4. **Pipeline pagination wired in frontend** — wire `skip`/`limit` to `PipelineGrid` with page controls
 
-## Areas to optimize
+## Technical debt (active items)
 
-| Area | What to do |
-|---|---|
-| Backend list endpoints | Add `skip: int = 0, limit: int = 50` query params; return `{"items": [...], "total": n}` |
-| Frontend data fetching | Add `@tanstack/react-query` when wiring real API — caching, background refetch, deduplication |
-| `loans.status` type | `ALTER TABLE loans ALTER COLUMN status TYPE loan_status USING status::loan_status` |
-| Error responses | Standardize to `{"detail": "...", "code": "..."}` via FastAPI exception handler |
-| `components/ui/` | Empty until `npx shadcn@latest init` is run; all shared primitives live here after |
-| React Query / SWR | No server-state caching yet — add before wiring live API to avoid waterfall fetches |
+| Item | Impact | Effort |
+|---|---|---|
+| Pagination on list endpoints | High — breaks at scale | Low |
+| JWT in localStorage → httpOnly cookie | High — security | Medium |
+| `allow_origins=["*"]` | High — security | Low |
+| JWT secret loaded from env | High — security | Low |
+| Zero feature test coverage | High — risk on every refactor | Medium |
+| No React Query / SWR for submission store | Medium — UX | Medium |
+| `@shadcn/ui` package is a dummy v0.0.4 | Low | Low — run `npx shadcn@latest init` when ready |
+| `bcrypt 4.0.1` pinned | Low | Low — passlib incompatible with 4.1+ |

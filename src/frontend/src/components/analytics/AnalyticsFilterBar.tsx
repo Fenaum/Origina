@@ -117,7 +117,7 @@ export function AnalyticsFilterBar({ filter, onChange }: AnalyticsFilterBarProps
   function isSelected(field: "status" | "loan_program" | "purpose", value: string): boolean {
     const existing = filter.filters.find((f) => f.field === field);
     if (!existing) return false;
-    if (Array.isArray(existing.value)) return existing.value.includes(value);
+    if (Array.isArray(existing.value)) return (existing.value as string[]).includes(value);
     return existing.value === value;
   }
 

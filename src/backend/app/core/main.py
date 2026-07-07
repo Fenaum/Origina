@@ -30,7 +30,7 @@ from app.api.v1 import (
     users_me,
     workflow,
 )
-from app.core.config import APP_ENV
+from app.core.config import ALLOWED_ORIGINS, APP_ENV
 from app.core.logging import logger
 
 app = FastAPI(
@@ -41,10 +41,12 @@ app = FastAPI(
 )
 
 # ── CORS ───────────────────────────────────────────────────────────────────────
-# Restrict in production: replace ["*"] with the actual frontend origin.
+# Locked-down allowlist driven by ALLOWED_ORIGINS in app.core.config.
+# Defaults to http://localhost:3000 for local dev; override in staging/prod
+# via the ALLOWED_ORIGINS env var (comma-separated).
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

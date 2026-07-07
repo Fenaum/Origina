@@ -146,10 +146,31 @@ function RowMenu({
 
 type ContextState = { loan: LoanSummary; x: number; y: number } | null;
 
-export function PipelineGrid({ loans, onLoanMutated }: { loans: LoanSummary[]; onLoanMutated?: () => void }) {
+export type PipelineGridProps = {
+  loans: LoanSummary[];
+  total?: number;
+  page?: number;
+  pageSize?: number;
+  onPageChange?: (page: number) => void;
+  onLoanMutated?: () => void;
+};
+
+export function PipelineGrid({
+  loans,
+  total = loans.length,
+  page = 1,
+  pageSize = 50,
+  onPageChange,
+  onLoanMutated,
+}: PipelineGridProps) {
   const { columns, sortField, sortDir, toggleSort } = usePipelineStore();
   const [openMenuId, setOpenMenuId]     = useState<string | null>(null);
   const [ctxState,   setCtxState]       = useState<ContextState>(null);
+
+  const start = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const end = Math.min(page * pageSize, total);
+  const hasPrev = page > 1;
+  const hasNext = page * pageSize < total;
 
   const visibleDefs = ALL_COLUMN_DEFS.filter((d) => columns.includes(d.id)).sort(
     (a, b) => columns.indexOf(a.id) - columns.indexOf(b.id),
@@ -243,7 +264,36 @@ export function PipelineGrid({ loans, onLoanMutated }: { loans: LoanSummary[]; o
         </table>
       </div>
       <div className="pipeline-grid-footer">
-        {loans.length} loan{loans.length !== 1 ? "s" : ""}
+        <span className="pipeline-grid-count">
+          {total === 0
+            ? "No loans"
+            : `Showing ${start}–${end} of ${total} loan${total !== 1 ? "s" : ""}`}
+        </span>
+        {onPageChange && (
+          <div className="pipeline-footer" role="navigation" aria-label="Pagination">
+            <button
+              type="button"
+              className="ghost-button"
+              onClick={() => onPageChange(Math.max(1, page - 1))}
+              disabled={!hasPrev}
+              aria-label="Previous page"
+            >
+              ← Prev
+            </button>
+            <span className="pipeline-page-indicator">
+              Page {page} of {Math.max(1, Math.ceil(total / pageSize))}
+            </span>
+            <button
+              type="button"
+              className="ghost-button"
+              onClick={() => onPageChange(page + 1)}
+              disabled={!hasNext}
+              aria-label="Next page"
+            >
+              Next →
+            </button>
+          </div>
+        )}
       </div>
 
       {ctxState && (

@@ -2,17 +2,20 @@
 
 > **Cross-links:** [ARCHITECTURE.md](ARCHITECTURE.md) | [DECISIONS.md](DECISIONS.md) | [BUILD_HISTORY.md](BUILD_HISTORY.md) | [TESTING.md](TESTING.md)
 
-## Current State (as of June 2026)
+## Current State (as of July 2026 — Session 29)
 
 The platform has a working end-to-end demo path:
 1. Borrower visits `/borrower/welcome` → completes intake → sees program recommendations → submits handoff
 2. AE logs in at `/login` → sees pipeline of 202 real seeded loans → opens any loan file → browses workspace sections
-3. AE views analytics at `/analytics` → KPIs, charts, volume trends
+3. AE views analytics at `/analytics` → KPIs, charts, volume trends with drilldown panels
 4. AE manages exceptions at `/exceptions` → creates pre-file exceptions → attaches approved exceptions to loans
+5. AE/admin accesses `/settings` (profile, security, notifications, preferences) and `/admin` (people, products, workflow)
 
-**What is real:** Auth, pipeline API, 202 seeded Non-QM loans, borrower intake (DB), analytics from live data, full exception module (25 routes), controlled values architecture (18 sets, 144 values), metadata API.
-**What is mock:** Loan submission wizard not wired to API (drafts in localStorage), document upload (simulated), pricing (hardcoded scenarios), MISMO parsing (stub).
-**Testing foundation:** pytest + vitest harnesses bootstrapped (Day 1 of P1) — see **Testing Checkpoints** below. Zero feature tests written yet; smoke tests only.
+**What is real:** Auth (JWT), pipeline API, 202 seeded Non-QM loans, borrower intake (DB), analytics from live data, full exception module (26 routes), controlled values architecture (18 sets, 144+ values), metadata API, task management, condition templates, marketing pages (guideline, product, about).
+**What is mock:** Loan submission wizard (saves to localStorage + partial API sync — not fully atomic), document upload (simulated), pricing (hardcoded scenarios), MISMO parsing (stub), settings pages (UI built, no backend save).
+**Testing foundation:** pytest + vitest harnesses bootstrapped — smoke tests passing. Zero feature tests written; see **Testing Checkpoints** below.
+
+> **Note on P1 divergence:** Sessions 26–29 delivered marketing pages, analytics polish, role dashboard visual refresh, and settings sidebar UX instead of completing Priority 1 items. Priority 1 items (pagination, CORS, JWT secret, loan submission wiring, workspace financials) remain fully open and are the correct next focus.
 
 ---
 
@@ -45,6 +48,21 @@ The platform has a working end-to-end demo path:
 - [x] Accessibility baked in from the start (aria-*, focus-visible, heading hierarchy, role=menu)
 - [x] CSS design system via variables — consistent colors, radii, spacing throughout
 - [x] `:has()` selector for layout overrides — pipeline workspace goes full-bleed without a new layout component
+- [x] Tasks workspace (`WorkspaceTasks`) — full CRUD + status cycle + template picker (Session 19)
+- [x] Condition templates — `TemplatePickerModal` shared across tasks + conditions (Session 19)
+- [x] Non-QM template library — 4 task templates + 4 condition templates in `data/templates.ts` (Session 19)
+- [x] Borrower add/remove with type picker in URLA section (Session 19)
+- [x] Submission data-loss bug fixes — saveDraft now syncs borrower/property/financials to DB (Session 20)
+- [x] MISMO import — concurrent Promise.all race condition + applyImport external setState fixed (Session 21)
+- [x] Settings module frontend — `/settings/*` and `/admin/*` pages with SettingsLayout (Session 25)
+- [x] Marketing pages — `/guideline`, `/product`, `/about` (Session 26)
+- [x] Role dashboards visual refresh — DashboardCard gradients, sparklines, monogram avatars, trend chips (Session 29)
+- [x] Analytics dashboard visual refresh — MetricCard drilldown, DrilldownPanel, DrilldownTable, analytics.css rewrite (Session 29)
+
+### Testing Foundation
+- [x] Backend pytest harness — `tests/backend/conftest.py` (schema-per-test-run isolation, ASGI client), `tests/backend/pytest.ini`, `tests/backend/test_health.py` (5 smoke tests green) — `tests/backend/test_health.py`
+- [x] Frontend vitest harness — `src/frontend/vitest.config.ts`, `tests/frontend/setup.ts`, 2 smoke tests green — `tests/frontend/LoanPipelineTable.test.tsx`
+- [x] Unified runner script — `scripts/run_tests.sh` (backend + frontend, exits non-zero on failure)
 
 ---
 
@@ -85,25 +103,11 @@ The platform has a working end-to-end demo path:
 >
 > 📖 **How-to / setup / troubleshooting → [TESTING.md](TESTING.md).** This section is the plan; TESTING.md is the operator's manual.
 
-### A. Foundation — Day 1 of P1 (blocks all other test work)
+### A. Foundation ✅ COMPLETE
 
-- [ ] **A1. Backend `pytest` harness**
-  - `tests/backend/conftest.py` with async fixtures: `test_engine`, `test_db`, `client`, `seed_minimum`
-  - `pytest.ini` with `asyncio_mode=auto`, `testpaths = tests/backend`
-  - **Test isolation strategy:** schema-per-test-run (`SET search_path TO test_origina_<uuid>`) inside the existing `originadb` Postgres instance — no separate DB container, no testcontainers. Re-uses dev migrations via `scripts/init_db.py`.
-  - **Smoke test:** `tests/backend/test_health.py::test_health_endpoint_returns_ok` — `GET /api/v1/health/` returns 200 + `{"status": "healthy", ...}`
-  - **Smoke test:** `tests/backend/test_health.py::test_root_serves_metadata` — `GET /` returns 200 with `service` / `api_prefix` fields
-
-- [ ] **A2. Frontend `vitest` harness**
-  - `tests/frontend/setup.ts` — registers `@testing-library/jest-dom` matchers
-  - `tests/frontend/vitest.config.ts` — `environment: 'jsdom'`, alias `@/*` → `./src/*` (matches `tsconfig.json` paths)
-  - **Smoke test:** `tests/frontend/LoanPipelineTable.test.tsx::renders_empty_state_when_no_loans` — renders the `EmptyState` panel
-  - **Smoke test:** `tests/frontend/LoanPipelineTable.test.tsx::renders_table_rows_for_loans` — given 2 mock loans, both rows appear with loan numbers and amounts
-
-- [ ] **A3. Unified runner**
-  - `scripts/run_tests.sh` — runs `pytest tests/backend/ -v`, then `cd src/frontend && npm run test`
-  - Exits non-zero on any failure
-  - Print PASS/FAIL summary at the end
+- [x] **A1. Backend `pytest` harness** — `tests/backend/conftest.py` (schema-per-test-run isolation via `SET search_path TO test_origina_<uuid>`, async ASGI client via httpx, seed stub), `tests/backend/pytest.ini` (`asyncio_mode=auto`), 5 smoke tests green → `tests/backend/test_health.py`
+- [x] **A2. Frontend `vitest` harness** — `src/frontend/vitest.config.ts` (jsdom env, `@/*` alias, explicit node_modules aliases for jest-dom + react), `tests/frontend/setup.ts` (jest-dom matchers), 2 smoke tests green → `tests/frontend/LoanPipelineTable.test.tsx`
+- [x] **A3. Unified runner** — `scripts/run_tests.sh` (backend + frontend, sources `.env`, exits non-zero on failure, prints PASS/FAIL summary)
 
 ### B. Priority 1 Gate Tests (must be green to clear P1)
 
@@ -268,7 +272,7 @@ An item can move from a Priority list to **"What We Did Well"** only when **all*
 | `allow_origins=["*"]` | High — security | Low | Config change only |
 | JWT secret in code | High — security | Low | Environment variable |
 | Zero automated test coverage | High — risk for every refactor | Medium | Bootstrap harness Day 1 of P1, see [Testing Checkpoints](#testing-checkpoints) |
-| ~~`loans.status` as `text` vs enum~~ | ~~Medium~~ | ~~Low~~ | ✅ Done — migrations 122–125, zero ENUMs remain |
+| ~~TEXT+CHECK migration~~ | ~~Medium~~ | ~~Low~~ | ✅ Done — migrations 122–125, zero PostgreSQL ENUMs remain |
 | No React Query / SWR | Medium — UX | Medium | Add before live API for caching |
 | `submissionStore.ts` not wired to API | Medium | Medium | Core demo flow |
 | `@shadcn/ui` package is a dummy v0.0.4 | Low | Low | Run `npx shadcn@latest init` when ready for UI primitives |
@@ -280,13 +284,13 @@ An item can move from a Priority list to **"What We Did Well"** only when **all*
 ## Projection
 
 ### To reach demo-ready (first external walkthrough)
-**Estimated:** 2–3 weeks
-- Loan submission wired to API
-- Pagination added
-- CORS + JWT secret secured
-- At least 2 real user accounts (AE, broker)
-- WorkspaceHome shows real loan details
-- **Testing harness built — Day 1 of P1** (`tests/backend/conftest.py`, `tests/frontend/setup.ts`, `scripts/run_tests.sh`)
+**Estimated:** 1–2 sessions
+- ✅ Testing harness built (`tests/backend/conftest.py`, `tests/frontend/setup.ts`, `scripts/run_tests.sh`)
+- Loan submission fully wired to API (atomic 3-table insert)
+- Pagination added to all list endpoints
+- CORS + JWT secret secured (env var, localhost whitelist)
+- At least 2 real user accounts (AE, broker) via `POST /api/v1/users/`
+- WorkspaceHome shows real loan_financials + loan_terms data
 
 ### To reach MVP (internal team use)
 **Estimated:** 6–8 weeks after demo-ready
