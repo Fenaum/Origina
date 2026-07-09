@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.core.db import get_db
 from app.models.decisioning import EligibilityRun, PricingRun
 from app.models.user import User
+from app.schemas.common_schema import PaginatedResponse
 from app.schemas.decisioning_schema import (
     EligibilityRunCreate,
     EligibilityRunOut,
@@ -13,6 +14,7 @@ from app.schemas.decisioning_schema import (
     PricingRunOut,
 )
 from app.security.security import get_audited_db, get_current_user
+
 
 router = APIRouter(tags=["decisioning"])
 
@@ -36,7 +38,7 @@ def create_pricing_run(
     return run
 
 
-@router.get("/pricing-runs/", response_model=list[PricingRunOut])
+@router.get("/pricing-runs/", response_model=PaginatedResponse[PricingRunOut])
 def list_pricing_runs(
     loan_id: UUID | None = None,
     skip: int = 0,
@@ -47,7 +49,10 @@ def list_pricing_runs(
     query = db.query(PricingRun).filter(PricingRun.tenant_id == current_user.tenant_id)
     if loan_id:
         query = query.filter(PricingRun.loan_id == loan_id)
-    return query.order_by(PricingRun.run_at.desc()).offset(skip).limit(limit).all()
+    total = query.count()
+    items = query.order_by(PricingRun.run_at.desc()).offset(skip).limit(limit).all()
+    return PaginatedResponse[PricingRunOut](items=items, total=total)
+
 
 
 @router.get("/pricing-runs/{run_id}", response_model=PricingRunOut)
@@ -81,7 +86,7 @@ def create_eligibility_run(
     return run
 
 
-@router.get("/eligibility-runs/", response_model=list[EligibilityRunOut])
+@router.get("/eligibility-runs/", response_model=PaginatedResponse[EligibilityRunOut])
 def list_eligibility_runs(
     loan_id: UUID | None = None,
     skip: int = 0,
@@ -92,7 +97,10 @@ def list_eligibility_runs(
     query = db.query(EligibilityRun).filter(EligibilityRun.tenant_id == current_user.tenant_id)
     if loan_id:
         query = query.filter(EligibilityRun.loan_id == loan_id)
-    return query.order_by(EligibilityRun.run_at.desc()).offset(skip).limit(limit).all()
+    total = query.count()
+    items = query.order_by(EligibilityRun.run_at.desc()).offset(skip).limit(limit).all()
+    return PaginatedResponse[EligibilityRunOut](items=items, total=total)
+
 
 
 @router.get("/eligibility-runs/{run_id}", response_model=EligibilityRunOut)

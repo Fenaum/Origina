@@ -70,30 +70,54 @@ function IconShield() {
   );
 }
 
-const ADMIN_ALIASES: UserRole[] = ["it_admin", "admin"];
+// Sprint 2: backend role names are canonical. Each entry lists the canonical
+// role + any legacy aliases that should still see the same nav item.
+type RoleList = UserRole[];
+
+const ADMIN_ALIASES: RoleList = ["it_admin", "admin"];
+
+// "Loan team" — pipeline + operations
+const LOAN_TEAM: RoleList = [
+  "loan_officer",     // canonical
+  "broker",           // legacy alias of loan_officer
+  "loan_processor",   // canonical
+  "processor",        // legacy alias of loan_processor
+  "underwriter",      // canonical
+  "account_manager",  // canonical
+  "manager",          // legacy alias of account_manager
+  "funder",           // kept as a separate ops role for now
+];
+
+const READ_ONLY_AE: RoleList = [
+  "account_manager", "manager", "funder",
+];
+
+const FRONT_OFFICE: RoleList = [
+  "loan_officer", "broker", "account_manager", "manager",
+];
 
 const navItems: NavItem[] = [
   { label: "Dashboard", href: "/dashboard" },
   {
     label: "Loan Pipeline",
     href: "/loans",
-    roles: ["account_executive", "broker", "underwriter", "processor", "funder", "manager"],
+    roles: LOAN_TEAM,
   },
   {
     label: "Analytics",
     href: "/analytics",
-    roles: ["account_executive", "broker", "underwriter", "manager"],
+    roles: [...LOAN_TEAM, ...READ_ONLY_AE.filter(r => !LOAN_TEAM.includes(r))],
   },
   {
     label: "Exceptions",
     href: "/exceptions",
-    roles: ["account_executive", "broker", "underwriter", "manager"],
+    roles: FRONT_OFFICE,
   },
   {
     label: "New Submission",
     href: "/loans/new",
     isCreateAction: true,
-    roles: ["account_executive", "broker"],
+    roles: ["loan_officer", "broker", "account_manager", "manager"],
   },
   {
     label: "Application",
@@ -106,11 +130,15 @@ const navItems: NavItem[] = [
     roles: ["underwriter"],
   },
   {
-    label: "Broker Dashboard",
+    // Reuse the existing broker dashboard until a dedicated loan-officer
+    // page file is added (one-liner future work).
+    label: "Loan Officer Dashboard",
     href: "/dashboard/broker",
-    roles: ["broker"],
+    roles: ["loan_officer", "broker"],
   },
+
 ];
+
 
 const SETTINGS_SUB_ITEMS: SettingsSubItem[] = [
   { label: "Account", href: "/settings/account", icon: <IconUser /> },
@@ -135,10 +163,12 @@ export function Sidebar() {
         ? { ...item, href: roleDashboardPaths[effectiveRole] }
         : item,
     )
-    .filter((item) => !item.roles || item.roles.includes(effectiveRole) || (user.role === "admin" && !isPreviewMode));
+    .filter((item) => !item.roles || item.roles.includes(effectiveRole) || (user.role === "admin" && !isPreviewMode) || (user.role === "it_admin" && !isPreviewMode));
 
   const isAdmin = ADMIN_ALIASES.includes(effectiveRole);
-  const showAdminSubnav = isAdmin && user.role === "admin";
+  // IT admin sees the admin sub-nav whenever they're signed in (not just previewing).
+  const showAdminSubnav = isAdmin && (user.role === "admin" || user.role === "it_admin");
+
   const visibleSettingsItems = SETTINGS_SUB_ITEMS.filter(
     (item) => !item.adminOnly || showAdminSubnav,
   );

@@ -45,12 +45,25 @@ const dashboardCopy: Record<UserRole, DashboardCopy> = {
     statusHint: "What your borrowers need from you",
     statusHref: "/loans?actionNeeded=true",
   },
+  loan_officer: {
+    title: "Loan Officer Dashboard",
+    description: "Track borrower files, open conditions, recent submissions, and approvals.",
+    statusHint: "What your borrowers need from you",
+    statusHref: "/loans?actionNeeded=true",
+  },
   processor: {
     title: "Processor Dashboard",
     description: "Manage active files, track outstanding conditions, and package loans for underwriting.",
     statusHint: "Files moving through processing",
     statusHref: "/loans?actionNeeded=true",
   },
+  loan_processor: {
+    title: "Loan Processor Dashboard",
+    description: "Manage active files, track outstanding conditions, and package loans for underwriting.",
+    statusHint: "Files moving through processing",
+    statusHref: "/loans?actionNeeded=true",
+  },
+
   underwriter: {
     title: "Underwriter Dashboard",
     description: "Review queue health, condition submissions, approvals, and exceptions.",

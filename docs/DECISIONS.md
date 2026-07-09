@@ -362,6 +362,68 @@ Single UI with role-based conditional rendering, gated at three levels:
 
 ---
 
+## Decision: AI Scope — Deferred, Not Excluded
+
+**Date:** 2026-07-07 (quarterly architecture review)
+**Status:** Accepted
+
+**Context:**
+Early project docs stated "No AI/ML features — intentionally out of scope," while the long-term product vision includes an AI platform layer (OCR, document classification, data extraction, loan summaries, guideline Q&A, risk scoring). These two statements contradicted each other and gave agents/developers conflicting direction.
+
+**Decision:**
+AI features are **deferred, not excluded**. No AI feature ships until the platform prerequisites exist, in this dependency order:
+1. Real document storage (S3) — OCR needs durable, addressable bytes
+2. Domain events layer — AI workers subscribe to events like "document uploaded"
+3. Async job infrastructure — a `processing_jobs` table + worker loop (no Celery/Redis at current scale)
+4. `ai_annotations` pattern — AI outputs stored alongside human data with `confidence`, `model_version`, `reviewed_by`; never overwriting human-entered values
+5. Guideline corpus as versioned data — prerequisite for guideline Q&A and UW assistant
+
+Planned AI sequence once prerequisites exist: document classification → data extraction with review UI → missing-document detection → loan summaries → guideline Q&A → risk scoring last.
+
+**Reasoning:**
+- The structured, tenant-scoped, audited data model already built is exactly the substrate AI features need — nothing built so far blocks the AI direction
+- Human-in-the-loop review is a compliance requirement in mortgage, not a nice-to-have; the annotations pattern encodes that from day one
+- Risk scoring is last because of fair-lending regulatory sensitivity — AI stays advisory, never auto-decisioning
+
+**Consequences:**
+- (+) One consistent answer for "should I build AI features now?" — no, but don't block them
+- (+) Prerequisites double as platform infrastructure (events, jobs, S3) — no wasted work
+- (-) The AI phase remains far out (est. Q4 2027); competitive pressure could force re-sequencing
+
+---
+
+## Decision: Domain Events via Transactional Outbox
+
+**Date:** 2026-07-07 (quarterly architecture review — decided before Sprint 4 build)
+**Status:** Accepted (implementation lands with Sprint 4 notifications)
+
+**Context:**
+Sprint 4 planned to send notification emails by calling SMTP directly inside the status-transition route handler. That works for one consumer but is the anti-pattern for a platform: every future consumer of "loan submitted" (webhooks, AI triggers, SLA timers, analytics invalidation) would need its own bespoke hook in the route.
+
+**Decision:**
+Introduce a `domain_events` append-only table (transactional outbox pattern):
+- Columns: `event_type`, `entity_type`, `entity_id`, `tenant_id`, `payload` (JSONB), `occurred_at`, `processed_at`
+- Route handlers/services write events **in the same transaction** as the state change — an event exists if and only if the state change committed
+- A dispatcher (in-process at first, dedicated worker later) reads unprocessed events and fans out to consumers — email in Sprint 4; webhooks, AI job triggers, SLA timers later
+
+**Reasoning:**
+- Same-transaction write guarantees no lost or phantom events (vs. fire-and-forget after commit)
+- Consumers are decoupled from producers — adding a webhook subscriber later requires zero changes to loan routes
+- Follows the existing `AppendOnlyModel` pattern and the event-sourcing precedent set by `loan_status_events`
+- Costs almost nothing now; retrofitting events under live consumers costs a rewrite
+
+**Alternatives Considered:**
+- Inline SMTP in route handlers — rejected; couples every event consumer into request handling, notification failure risk in the request path
+- Message broker (Redis/RabbitMQ/Kafka) — rejected for now; operational overhead unjustified at current scale; the outbox table can feed a broker later without producer changes
+
+**Consequences:**
+- (+) Notifications, webhooks, AI triggers, and SLA timers all share one delivery mechanism
+- (+) Events table doubles as a business-level activity feed
+- (-) Dispatcher adds a polling loop (or LISTEN/NOTIFY) to operate and monitor
+- (-) At-least-once delivery — consumers must be idempotent
+
+---
+
 ## Documentation Maintenance Rules
 
 - **Add an ADR for every decision that would surprise a new developer.**

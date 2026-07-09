@@ -5,8 +5,10 @@ from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.models.user import Tenant, User
+from app.schemas.common_schema import PaginatedResponse
 from app.schemas.user_schema import TenantCreate, TenantOut
 from app.security.security import get_current_user
+
 
 router = APIRouter(prefix="/tenants", tags=["tenants"])
 
@@ -23,14 +25,18 @@ def create_tenant(payload: TenantCreate, db: Session = Depends(get_db)):
     return tenant
 
 
-@router.get("/", response_model=list[TenantOut])
+@router.get("/", response_model=PaginatedResponse[TenantOut])
 def list_tenants(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
     _: User = Depends(get_current_user),
 ):
-    return db.query(Tenant).offset(skip).limit(limit).all()
+    query = db.query(Tenant)
+    total = query.count()
+    items = query.offset(skip).limit(limit).all()
+    return PaginatedResponse[TenantOut](items=items, total=total)
+
 
 
 @router.get("/{tenant_id}", response_model=TenantOut)

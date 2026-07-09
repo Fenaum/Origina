@@ -29,7 +29,9 @@ from app.schemas.exception_schema import (
     ExceptionUpdate,
     LinkLoanRequest,
 )
+from app.schemas.common_schema import PaginatedResponse
 from app.security.roles import IT_ADMIN, ACCOUNT_MANAGER, UNDERWRITER, require_roles
+
 from app.security.security import get_audited_db, get_current_user
 from app.services.exception_repo import (
     add_comment,
@@ -193,7 +195,7 @@ def create_exception(
     return exc
 
 
-@router.get("/", response_model=list[ExceptionOut])
+@router.get("/", response_model=PaginatedResponse[ExceptionOut])
 def list_exceptions(
     loan_id: UUID | None = None,
     exception_source: str | None = None,
@@ -216,7 +218,10 @@ def list_exceptions(
         query = query.filter(LoanException.exception_type == exception_type)
     if severity:
         query = query.filter(LoanException.severity == severity)
-    return query.order_by(LoanException.created_at.desc()).offset(skip).limit(limit).all()
+    total = query.count()
+    items = query.order_by(LoanException.created_at.desc()).offset(skip).limit(limit).all()
+    return PaginatedResponse[ExceptionOut](items=items, total=total)
+
 
 
 @router.get("/{exception_id}", response_model=ExceptionOut)

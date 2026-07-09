@@ -70,8 +70,28 @@ async def test_get_terms_returns_correct_shape(client, db, seed_minimum):
 
 
 @pytest.mark.integration
-async def test_financials_scoped_to_tenant(client, db, seed_minimum):
-    """A loan from tenant A cannot have its financials read by a different user
-    in a different tenant. 404 is returned, not 403, to avoid leaking existence."""
-    # This requires a second-tenant token. Skip until multi-tenant seed is available.
-    pytest.skip("Requires multi-tenant seed fixture")
+async def test_financials_scoped_to_tenant(client, db, seed_two_tenants):
+    """A loan from tenant A cannot have its financials read by tenant B.
+
+    404 is returned (not 403) to avoid leaking existence. Verifies that
+    tenant isolation on the `loan_financials` satellite table works even
+    when the loan is created in a different tenant.
+    """
+    tenant_a, tenant_b = seed_two_tenants
+
+
+    r_b = await client.post(
+        "/api/v1/loans/",
+        json={"purpose": "purchase", "loan_program": "dscr"},
+        headers={"Authorization": f"Bearer {tenant_b['token']}"},
+    )
+    assert r_b.status_code == 201, r_b.text
+    loan_id_b = r_b.json()["id"]
+
+    # Tenant A requests tenant B's financials — must 404
+    r = await client.get(
+        f"/api/v1/loans/{loan_id_b}/financials",
+        headers={"Authorization": f"Bearer {tenant_a['token']}"},
+    )
+    assert r.status_code == 404, r.text
+

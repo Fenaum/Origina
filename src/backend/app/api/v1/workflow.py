@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.core.db import get_db
 from app.models.user import User
 from app.models.workflow import LoanException, Note, Task
+from app.schemas.common_schema import PaginatedResponse
 from app.schemas.workflow_schema import (
     ExceptionCreate,
     ExceptionOut,
@@ -17,6 +18,7 @@ from app.schemas.workflow_schema import (
     TaskUpdate,
 )
 from app.security.security import get_audited_db, get_current_user
+
 
 router = APIRouter(tags=["workflow"])
 
@@ -40,7 +42,7 @@ def create_task(
     return task
 
 
-@router.get("/tasks/", response_model=list[TaskOut])
+@router.get("/tasks/", response_model=PaginatedResponse[TaskOut])
 def list_tasks(
     loan_id: UUID | None = None,
     status_filter: str | None = None,
@@ -57,7 +59,10 @@ def list_tasks(
         query = query.filter(Task.status == status_filter)
     if assigned_to:
         query = query.filter(Task.assigned_to == assigned_to)
-    return query.offset(skip).limit(limit).all()
+    total = query.count()
+    items = query.offset(skip).limit(limit).all()
+    return PaginatedResponse[TaskOut](items=items, total=total)
+
 
 
 @router.get("/tasks/{task_id}", response_model=TaskOut)
@@ -123,7 +128,7 @@ def create_note(
     return note
 
 
-@router.get("/notes/", response_model=list[NoteOut])
+@router.get("/notes/", response_model=PaginatedResponse[NoteOut])
 def list_notes(
     loan_id: UUID | None = None,
     skip: int = 0,
@@ -134,7 +139,10 @@ def list_notes(
     query = db.query(Note).filter(Note.tenant_id == current_user.tenant_id)
     if loan_id:
         query = query.filter(Note.loan_id == loan_id)
-    return query.order_by(Note.created_at.desc()).offset(skip).limit(limit).all()
+    total = query.count()
+    items = query.order_by(Note.created_at.desc()).offset(skip).limit(limit).all()
+    return PaginatedResponse[NoteOut](items=items, total=total)
+
 
 
 # ── Exceptions ────────────────────────────────────────────────────────────────
@@ -156,7 +164,7 @@ def create_exception(
     return exc
 
 
-@router.get("/exceptions/", response_model=list[ExceptionOut])
+@router.get("/exceptions/", response_model=PaginatedResponse[ExceptionOut])
 def list_exceptions(
     loan_id: UUID | None = None,
     status_filter: str | None = None,
@@ -170,7 +178,10 @@ def list_exceptions(
         query = query.filter(LoanException.loan_id == loan_id)
     if status_filter:
         query = query.filter(LoanException.status == status_filter)
-    return query.offset(skip).limit(limit).all()
+    total = query.count()
+    items = query.offset(skip).limit(limit).all()
+    return PaginatedResponse[ExceptionOut](items=items, total=total)
+
 
 
 @router.get("/exceptions/{exception_id}", response_model=ExceptionOut)

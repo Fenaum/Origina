@@ -1,5 +1,9 @@
 # tests/backend/test_cors.py
-"""CORS policy tests. See ROADMAP.md §B."""
+"""CORS policy tests. See ROADMAP.md §B.
+
+The JWT-secret-from-env assertions live in `test_auth_secret_from_env.py`
+to keep each B-gate test file focused on a single concern.
+"""
 import pytest
 
 
@@ -20,16 +24,3 @@ async def test_cors_blocks_unknown_origin(client):
         headers={"Origin": "http://evil.example.com", "Access-Control-Request-Method": "GET"},
     )
     assert response.headers.get("access-control-allow-origin") != "http://evil.example.com"
-
-
-@pytest.mark.smoke
-async def test_default_jwt_secret_rejected_in_non_local_env(monkeypatch):
-    """Server startup raises RuntimeError when APP_ENV != local and JWT_SECRET_KEY is the default."""
-    import importlib
-    import app.core.config as cfg_module
-
-    monkeypatch.setenv("APP_ENV", "production")
-    monkeypatch.setenv("JWT_SECRET_KEY", "change-me-in-production")
-
-    with pytest.raises(RuntimeError, match="JWT_SECRET_KEY must be set"):
-        importlib.reload(cfg_module)

@@ -2,7 +2,7 @@
 
 This file has been split into modular documents.
 
-**See [`docs/architecture/`](architecture/README.md) for the full architecture reference.**
+**See [`docs/architecture/`](architecture/README.md) for the full architecture reference.** Portfolio-level initiative tracking lives in [PMO.md](PMO.md).
 
 | File | Contents |
 |---|---|
