@@ -6,10 +6,12 @@ import {
   clearCondition,
   createCondition,
   deleteCondition,
+  rejectCondition,
   submitCondition,
   updateCondition,
   waiveCondition,
 } from "@/services/conditionsService";
+
 import { useAuth } from "@/state/auth";
 import type { ConditionOut, ConditionStage } from "@/types/api";
 import type { LoanSummary } from "@/types/loan";
@@ -272,8 +274,24 @@ function ConditionCard({
                   >
                     Waive
                   </button>
+                  {condition.status === "submitted" && (
+                    <button
+                      className="cond-btn cond-btn--xs cond-btn--danger"
+                      onClick={() =>
+                        act(async () => {
+                          const reason = window.prompt("Rejection reason (optional):") ?? undefined;
+                          await rejectCondition(condition.id, reason, token!);
+                        })
+                      }
+                      disabled={busy}
+                      title="Reject submitted documentation"
+                    >
+                      Reject
+                    </button>
+                  )}
                 </>
               )}
+
               <button
                 className="cond-btn cond-btn--xs cond-btn--ghost"
                 onClick={() => setEditing(true)}

@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Origina is a Non-QM (Non-Qualified Mortgage) Loan Origination System (LOS) and Third Party Origination (TPO) platform. Backend is FastAPI/Python, database is PostgreSQL, frontend is Next.js/TypeScript.
 
 **Target users:** Wholesale channel — loan officers, processors, underwriters, account managers, and brokers.
-**Product focus:** Non-QM products (DSCR, Bank Statement, Asset Depletion, Interest Only, Jumbo Non-QM). No AI/ML features — intentionally out of scope.
+**Product focus:** Non-QM products (DSCR, Bank Statement, Asset Depletion, Interest Only, Jumbo Non-QM). AI/ML features are deferred until the platform prerequisites exist (S3 storage, domain events, async jobs) — do not build AI features now, but do not make choices that block them. See "AI Scope" ADR in [docs/DECISIONS.md](docs/DECISIONS.md).
 
 **Architecture docs:** `docs/architecture/` — see [docs/architecture/README.md](docs/architecture/README.md) for the index. Each domain has its own file (backend, database, frontend, loan-workspace, exceptions, integrations, settings, feature-guides).
 
@@ -302,30 +302,25 @@ Login → POST /auth/login → JWT in localStorage
 
 ## What to build next (priority order)
 
-See [docs/ROADMAP.md](docs/ROADMAP.md) for the full prioritized backlog and testing gates.
+**Work is organized into sprints.** The active sprint lives in [docs/CURRENT_SPRINT.md](docs/CURRENT_SPRINT.md); the full sprint plan and archive is [docs/sprints/README.md](docs/sprints/README.md); each sprint has a detailed build spec in `docs/sprints/sprint-N-build-spec.md`. See [docs/ROADMAP.md](docs/ROADMAP.md) for the full backlog and testing gates.
 
-**Priority 1 — Demo-blocking (none of these are done yet):**
-1. **Pagination** — all list endpoints return unbounded results; add `skip`/`limit` + `{"items": [...], "total": n}` envelope
-2. **CORS lockdown** — currently `allow_origins=["*"]`; lock to `http://localhost:3000` in dev
-3. **JWT secret from environment** — `JWT_SECRET_KEY` in `core/config.py` must load from env, reject hardcoded default at startup
-4. **Loan submission wired to API** — `submissionStore.ts` auto-saves to DB via `saveDraft`; verify the full submit flow creates loan + loan_financials + loan_terms atomically
-5. **Real loan_financials + loan_terms in WorkspaceHome** — workspace home currently shows only header fields
+**Sprint 1 — Demo Unblocked — ✅ closed 2026-07-07.** JWT secret from env, CORS locked, pipeline pagination (`PaginatedResponse[T]` envelope), atomic loan submission, real financials/terms in WorkspaceHome. All B-gate tests green.
 
-**Priority 2 — Core workflow (after first demo):**
-1. **Real user creation** — only `admin@origina.dev` works today; need `POST /api/v1/users/` + multi-user demo accounts
-2. **Role stored in DB** — currently inferred from email prefix; fix `get_current_user` to read `users.role` column
-3. **Conditions workspace UI** — currently a placeholder; needs list, clear/waive/reject actions, add form
-4. **Pipeline pagination wired in frontend** — wire `skip`/`limit` to `PipelineGrid` with page controls
+**Sprint 2 — Core Workflow (active):** real user creation with RBAC (`POST /users/` admin-only), role vocabulary reconciliation (frontend/backend), condition lifecycle state machine (`condition_lifecycle.py`), conditions workspace UI, pagination envelope on remaining list endpoints. Spec: [docs/sprints/sprint-2-build-spec.md](docs/sprints/sprint-2-build-spec.md).
+
+**Sprints 3–5 (planned):** workspace wiring (notes, audit, status UI, documents) → manager layer (assignments, analytics, notifications via domain events) → production hardening (httpOnly cookies, CI, tenant onboarding). Specs exist for all.
+
+**Long-term direction:** Origina's backend is intended to evolve into a platform (APIs consumable by CRMs, mobile apps, external LOS). Key architectural commitments: domain events table (transactional outbox) lands with Sprint 4 notifications; routers stay thin (parse + authorize), business logic lives in services. See ADRs in [docs/DECISIONS.md](docs/DECISIONS.md).
 
 ## Technical debt (active items)
 
 | Item | Impact | Effort |
 |---|---|---|
-| Pagination on list endpoints | High — breaks at scale | Low |
-| JWT in localStorage → httpOnly cookie | High — security | Medium |
-| `allow_origins=["*"]` | High — security | Low |
-| JWT secret loaded from env | High — security | Low |
-| Zero feature test coverage | High — risk on every refactor | Medium |
-| No React Query / SWR for submission store | Medium — UX | Medium |
+| JWT in localStorage → httpOnly cookie | High — security | Medium — Sprint 5 |
+| Role vocabulary split (frontend role names ≠ backend role constants) | High — RBAC correctness | Low — Sprint 2 |
+| Bare `list[X]` on non-loan list endpoints (conditions, tasks, notes, users, audit, documents) | Medium — API consistency | Low — Sprint 2 |
+| Business logic inline in routers (status.py, conditions.py, loans.py) | Medium — platform boundary | Migrate opportunistically when touching each domain |
+| Feature test coverage below 70% gate | Medium — refactor risk | Medium — Sprint 5 CI gate |
+| Mixed data-fetching idioms (React Query + useEffect + Zustand) | Medium — velocity | All NEW fetching uses React Query; migrate old hooks only when touching them |
 | `@shadcn/ui` package is a dummy v0.0.4 | Low | Low — run `npx shadcn@latest init` when ready |
 | `bcrypt 4.0.1` pinned | Low | Low — passlib incompatible with 4.1+ |

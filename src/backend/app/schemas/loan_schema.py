@@ -1,23 +1,15 @@
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Any, Dict, Generic, Optional, TypeVar
+from typing import Any, Dict, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-# ── Pagination envelope ───────────────────────────────────────────────
-T = TypeVar("T")
+# PaginatedResponse was lifted to schemas/common_schema.py in Sprint 2 —
+# re-exported here for backward compatibility with anything that does
+# `from app.schemas.loan_schema import PaginatedResponse`.
+from app.schemas.common_schema import PaginatedResponse
 
-
-class PaginatedResponse(BaseModel, Generic[T]):
-    """Standard envelope for paginated list endpoints.
-
-    Every list endpoint returns {"items": [...], "total": n} so the frontend
-    can compute page counts without a second request.
-    """
-
-    items: list[T]
-    total: int
 
 
 # ── LoanFinancials ─────────────────────────────────────────────────────────────

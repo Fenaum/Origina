@@ -10,12 +10,14 @@ from app.core.db import get_db
 from app.models.audit import AuditLog, Snapshot
 from app.models.user import User
 from app.schemas.audit_schema import AuditLogOut, SnapshotOut
+from app.schemas.common_schema import PaginatedResponse
 from app.security.security import get_current_user
+
 
 router = APIRouter(tags=["audit"])
 
 
-@router.get("/audit-logs/", response_model=list[AuditLogOut])
+@router.get("/audit-logs/", response_model=PaginatedResponse[AuditLogOut])
 def list_audit_logs(
     entity_type: str | None = None,
     entity_id: UUID | None = None,
@@ -29,10 +31,12 @@ def list_audit_logs(
         query = query.filter(AuditLog.entity_type == entity_type)
     if entity_id:
         query = query.filter(AuditLog.entity_id == entity_id)
-    return query.order_by(AuditLog.occurred_at.desc()).offset(skip).limit(limit).all()
+    total = query.count()
+    items = query.order_by(AuditLog.occurred_at.desc()).offset(skip).limit(limit).all()
+    return PaginatedResponse[AuditLogOut](items=items, total=total)
 
 
-@router.get("/snapshots/", response_model=list[SnapshotOut])
+@router.get("/snapshots/", response_model=PaginatedResponse[SnapshotOut])
 def list_snapshots(
     loan_id: UUID | None = None,
     snapshot_type: str | None = None,
@@ -46,7 +50,10 @@ def list_snapshots(
         query = query.filter(Snapshot.loan_id == loan_id)
     if snapshot_type:
         query = query.filter(Snapshot.snapshot_type == snapshot_type)
-    return query.order_by(Snapshot.created_at.desc()).offset(skip).limit(limit).all()
+    total = query.count()
+    items = query.order_by(Snapshot.created_at.desc()).offset(skip).limit(limit).all()
+    return PaginatedResponse[SnapshotOut](items=items, total=total)
+
 
 
 @router.get("/snapshots/{snapshot_id}", response_model=SnapshotOut)

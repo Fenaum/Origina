@@ -153,77 +153,203 @@ async def client(test_engine, test_schema_name):
 def seed_minimum(db):
     """
     Seeds the minimum data needed for integration tests:
-      - one tenant
-      - one admin user (it_admin role)
-      - returns the user info + a fresh JWT
+      - one or two tenants (see `include_second_tenant`)
+      - all five canonical backend roles for each tenant
+      - one admin user (it_admin role) per tenant
+      - returns the user info + a fresh JWT, plus role/tenant maps
 
-    Tests that need a second tenant should mark themselves `skip` until
-    multi-tenant seed is implemented.
+    Tests that need tenant isolation should set `include_second_tenant=True`
+    (used by the previously-skipped multi-tenant tests). Default is False so
+    older tests aren't slowed down.
     """
     import bcrypt
     from app.security.jwt import create_access_token
 
-    tenant_id = uuid.uuid4()
-    user_id = uuid.uuid4()
-    role_id = uuid.uuid4()
     pw_hash = bcrypt.hashpw(b"TestPass123!", bcrypt.gensalt()).decode()
-    # `tenants.name` has a UNIQUE constraint, so the seed must use a fresh name
-    # per test. We suffix with the tenant id suffix so test logs are traceable.
-    tenant_name = f"Test Lender {tenant_id.hex[:8]}"
 
-    # Tenant model (see app/models/user.py) only carries `name` + the UUID/timestamp
-    # mixins. The `slug` column is added later by a migration. Insert only the
-    # columns that the ORM maps, otherwise the metadata.create_all schema in the
-    # test fixture will reject the insert.
-    db.execute(
-        text("INSERT INTO tenants (id, name) VALUES (:id, :name)"),
-        {"id": tenant_id, "name": tenant_name},
-    )
+    def _seed_tenant(label: str):
+        tenant_id = uuid.uuid4()
+        user_id = uuid.uuid4()
+        tenant_name = f"Test {label} {tenant_id.hex[:8]}"
+        db.execute(
+            text("INSERT INTO tenants (id, name) VALUES (:id, :name)"),
+            {"id": tenant_id, "name": tenant_name},
+        )
+        role_ids: dict[str, str] = {}
+        for role_name in ("it_admin", "loan_officer", "loan_processor", "underwriter", "account_manager"):
+            rid = uuid.uuid4()
+            role_ids[role_name] = str(rid)
+            db.execute(
+                text(
+                    "INSERT INTO roles (id, tenant_id, name, description) "
+                    "VALUES (:id, :tid, :name, :desc)"
+                ),
+                {"id": rid, "tid": tenant_id, "name": role_name, "desc": f"Test {role_name}"},
+            )
+        db.execute(
+            text(
+                "INSERT INTO users (id, tenant_id, email, password_hash, full_name, is_active) "
+                "VALUES (:id, :tid, :email, :pw, :name, true)"
+            ),
+            {
+                "id": user_id,
+                "tid": tenant_id,
+                "email": f"test-{label}@origina.dev",
+                "pw": pw_hash,
+                "name": f"Test {label} Admin",
+            },
+        )
+        db.execute(
+            text(
+                "INSERT INTO user_roles (user_id, role_id, tenant_id) "
+                "VALUES (:uid, :rid, :tid)"
+            ),
+            {"uid": user_id, "rid": role_ids["it_admin"], "tid": tenant_id},
+        )
+        token = create_access_token(user_id, tenant_id)
+        return {
+            "tenant_id": str(tenant_id),
+            "user_id": str(user_id),
+            "role_id": role_ids["it_admin"],
+            "role_ids": role_ids,
+            "token": token,
+        }
 
-    db.execute(
-        text(
-            "INSERT INTO roles (id, tenant_id, name, description) "
-            "VALUES (:id, :tid, :name, :desc)"
-        ),
-        {
-            "id": role_id,
-            "tid": tenant_id,
-            "name": "it_admin",
-            "desc": "Test admin",
-        },
-    )
+    primary = _seed_tenant("Lender")
+    # Commit BOTH the seeded rows AND any open transaction so the app-side
+    # session (created when the test makes an HTTP request) sees them.
+    db.commit()
+    out = {
+        "tenant_id": primary["tenant_id"],
+        "user_id": primary["user_id"],
+        "role_id": primary["role_id"],
+        "role_ids": primary["role_ids"],
+        "token": primary["token"],
+        # Convenience mirror for legacy `seed_minimum["user_id"]` callers
+        # that previously assumed a single tenant.
+        "tenants": [primary],
+    }
+    return out
 
-    db.execute(
-        text(
-            "INSERT INTO users (id, tenant_id, email, password_hash, full_name, is_active) "
-            "VALUES (:id, :tid, :email, :pw, :name, true)"
-        ),
-        {
-            "id": user_id,
-            "tid": tenant_id,
-            "email": "test@origina.dev",
-            "pw": pw_hash,
-            "name": "Test Admin",
-        },
-    )
 
-    db.execute(
-        text(
-            "INSERT INTO user_roles (user_id, role_id, tenant_id) "
-            "VALUES (:uid, :rid, :tid)"
-        ),
-        {"uid": user_id, "rid": role_id, "tid": tenant_id},
-    )
+
+@pytest.fixture()
+def seed_two_tenants(db):
+    """
+    Creates two tenants, each with its own admin user + roles. Returns
+    a dict shaped for the multi-tenant isolation tests.
+    """
+    import bcrypt
+    from app.security.jwt import create_access_token
+
+    pw_hash = bcrypt.hashpw(b"TestPass123!", bcrypt.gensalt()).decode()
+
+    def _build(label: str):
+        tenant_id = uuid.uuid4()
+        user_id = uuid.uuid4()
+        role_id = uuid.uuid4()
+        tenant_name = f"Test {label} {tenant_id.hex[:8]}"
+        db.execute(
+            text("INSERT INTO tenants (id, name) VALUES (:id, :name)"),
+            {"id": tenant_id, "name": tenant_name},
+        )
+        db.execute(
+            text(
+                "INSERT INTO roles (id, tenant_id, name, description) "
+                "VALUES (:id, :tid, :name, :desc)"
+            ),
+            {"id": role_id, "tid": tenant_id, "name": "it_admin", "desc": "Test admin"},
+        )
+        db.execute(
+            text(
+                "INSERT INTO users (id, tenant_id, email, password_hash, full_name, is_active) "
+                "VALUES (:id, :tid, :email, :pw, :name, true)"
+            ),
+            {
+                "id": user_id,
+                "tid": tenant_id,
+                "email": f"test-{label}@origina.dev",
+                "pw": pw_hash,
+                "name": f"Test {label} Admin",
+            },
+        )
+        db.execute(
+            text(
+                "INSERT INTO user_roles (user_id, role_id, tenant_id) "
+                "VALUES (:uid, :rid, :tid)"
+            ),
+            {"uid": user_id, "rid": role_id, "tid": tenant_id},
+        )
+        token = create_access_token(user_id, tenant_id)
+        return {
+            "tenant_id": str(tenant_id),
+            "user_id": str(user_id),
+            "role_id": str(role_id),
+            "token": token,
+        }
+
+    a = _build("Alpha")
+    b = _build("Beta")
+    db.commit()
+    return a, b
+
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Multi-role users — for tests that need a token other than it_admin.
+# ─────────────────────────────────────────────────────────────────────────────
+
+@pytest.fixture()
+def seed_role_users(db, seed_minimum):
+    """
+    Creates one extra user per (non-admin) role and returns a mapping of
+    role_name → {user_id, token}. Used by tests that need to act as a
+    loan_officer, underwriter, etc. without re-running the full seed logic.
+    """
+    import bcrypt
+    from app.security.jwt import create_access_token
+
+    tenant_id = seed_minimum["tenant_id"]
+    role_ids = seed_minimum["role_ids"]
+    pw_hash = bcrypt.hashpw(b"TestPass123!", bcrypt.gensalt()).decode()
+
+    users: dict[str, dict[str, str]] = {}
+    for role_name, rid in role_ids.items():
+        if role_name == "it_admin":
+            # Already seeded by seed_minimum
+            users[role_name] = {
+                "user_id": seed_minimum["user_id"],
+                "token": seed_minimum["token"],
+            }
+            continue
+        uid = uuid.uuid4()
+        email = f"{role_name.replace('_', '-')}@test.dev"
+        db.execute(
+            text(
+                "INSERT INTO users (id, tenant_id, email, password_hash, full_name, is_active) "
+                "VALUES (:id, :tid, :email, :pw, :name, true)"
+            ),
+            {
+                "id": uid,
+                "tid": tenant_id,
+                "email": email,
+                "pw": pw_hash,
+                "name": f"Test {role_name}",
+            },
+        )
+        db.execute(
+            text(
+                "INSERT INTO user_roles (user_id, role_id, tenant_id) "
+                "VALUES (:uid, :rid, :tid)"
+            ),
+            {"uid": uid, "rid": rid, "tid": tenant_id},
+        )
+        token = create_access_token(uid, tenant_id)
+        users[role_name] = {"user_id": str(uid), "token": token}
 
     db.commit()
+    return users
 
-    token = create_access_token(user_id, tenant_id)
-    return {
-        "tenant_id": str(tenant_id),
-        "user_id": str(user_id),
-        "role_id": str(role_id),
-        "token": token,
-    }
 
 
 # ─────────────────────────────────────────────────────────────────────────────

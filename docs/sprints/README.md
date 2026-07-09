@@ -19,7 +19,9 @@ All sprints for Origina LOS. Each sprint has a goal, a set of phases, and a defi
 2. Copy `CURRENT_SPRINT.md` → `docs/sprints/sprint-N-name.md`
 3. Update the index table below with completion date and archive link
 4. Move completed ROADMAP items to "What We Did Well" in `ROADMAP.md`
-5. Write a fresh `CURRENT_SPRINT.md` for the next sprint
+5. **Update `CLAUDE.md`** — sprint status in "What to build next", technical debt table, and any conventions the sprint changed (a stale CLAUDE.md misleads every future agent session)
+6. Update `docs/architecture/` files the sprint touched (migration sequence in `database.md`, new ADRs in `DECISIONS.md`, etc.)
+7. Write a fresh `CURRENT_SPRINT.md` for the next sprint
 
 ---
 
@@ -27,8 +29,8 @@ All sprints for Origina LOS. Each sprint has a goal, a set of phases, and a defi
 
 | # | Sprint | Goal | Status | Sessions | Completed |
 |---|---|---|---|---|---|
-| 1 | [Demo Unblocked](#sprint-1--demo-unblocked) | First external demo is possible | **In Progress** | 1–4 | — |
-| 2 | [Core Workflow](#sprint-2--core-workflow) | Multiple real users, conditions managed | Planned | 5–7 | — |
+| 1 | [Demo Unblocked](sprint-1-demo-unblocked.md) | First external demo is possible | ✅ **Complete** | 1–4 | 2026-07-07 |
+| 2 | [Core Workflow](#sprint-2--core-workflow) | Multiple real users, conditions managed | **Active** | 5–7 | — |
 | 3 | [Full Workspace](#sprint-3--full-workspace) | Every workspace section functional | Planned | 8–12 | — |
 | 4 | [Manager Layer](#sprint-4--manager-layer) | Team visibility, notifications, assignments | Planned | 13–16 | — |
 | 5 | [Production Hardening](#sprint-5--production-hardening) | Real lender can pilot it | Planned | 17–19 | — |
@@ -43,12 +45,12 @@ All sprints for Origina LOS. Each sprint has a goal, a set of phases, and a defi
 
 | Phase | Name | Deliverable | Status |
 |---|---|---|---|
-| 1.1 | Security Config | JWT secret from env, CORS locked to localhost | Not started |
-| 1.2 | Pagination | All list endpoints paginated, pipeline page controls | Not started |
-| 1.3 | Loan Submission Integrity | Atomic 3-table insert verified, borrower + property created on submit | Not started |
-| 1.4 | WorkspaceHome Real Data + Tests | Financials/terms in workspace home, all 5 B-gate test files green | Not started |
+| 1.1 | Security Config | JWT secret from env, CORS locked to localhost | ✅ Complete |
+| 1.2 | Pagination | Pipeline paginated, page controls, envelope type | ✅ Complete |
+| 1.3 | Loan Submission Integrity | Atomic 3-table insert, JOIN for borrower + amount | ✅ Complete |
+| 1.4 | WorkspaceHome Real Data + Tests | `useLoanDetail` wires financials/terms, all 6 B-gate tests green | ✅ Complete |
 
-**Archive:** *(link added when sprint completes)*
+**Archive:** [sprint-1-demo-unblocked.md](sprint-1-demo-unblocked.md) — closed 2026-07-07.
 
 ---
 
@@ -60,10 +62,12 @@ All sprints for Origina LOS. Each sprint has a goal, a set of phases, and a defi
 
 | Phase | Name | Deliverable | Status |
 |---|---|---|---|
-| 2.1 | Real Users + RBAC from DB | `POST /api/v1/users/`, role from DB column, one seed user per role | Planned |
+| 2.1 | Real Users + RBAC from DB | `POST /api/v1/users/`, role vocabulary reconciled (backend names canonical), one seed user per role | Planned |
 | 2.2 | Condition Lifecycle Service | `condition_lifecycle.py` extracted, state machine tests at ≥90% coverage | Planned |
 | 2.3 | Conditions Workspace UI | `WorkspaceConditions.tsx` — list, clear/waive/reject, add form, template picker | Planned |
+| 2.4 | Pagination Envelope Pass | All remaining list endpoints return `PaginatedResponse[T]` — no bare lists | Planned |
 
+**Build spec:** [sprint-2-build-spec.md](sprint-2-build-spec.md)
 **Archive:** *(link added when sprint completes)*
 
 ---
@@ -81,6 +85,7 @@ All sprints for Origina LOS. Each sprint has a goal, a set of phases, and a defi
 | 3.3 | Underwriting + Decision Panel | Decision panel, exceptions surfaced in UW section | Planned |
 | 3.4 | Documents Section | Real upload with DB tracking, categorization, link to conditions | Planned |
 
+**Build spec:** [sprint-3-build-spec.md](sprint-3-build-spec.md)
 **Archive:** *(link added when sprint completes)*
 
 ---
@@ -96,8 +101,9 @@ All sprints for Origina LOS. Each sprint has a goal, a set of phases, and a defi
 | 4.1 | Pipeline Assignments | `LoanSummary` includes AE/processor/underwriter; pipeline filter by person | Planned |
 | 4.2 | Date Range Filters | Analytics charts respect date range; `AnalyticsFilterBar` wired to backend | Planned |
 | 4.3 | Manager Dashboard | Team KPIs: loans by AE, processing time, approval rate by program | Planned |
-| 4.4 | Notifications | Email on handoff, status change, condition cleared | Planned |
+| 4.4 | Domain Events + Notifications | `domain_events` outbox table + dispatcher (see ADR); email is the first consumer — webhooks/AI/SLA subscribe later | Planned |
 
+**Build spec:** [sprint-4-build-spec.md](sprint-4-build-spec.md)
 **Archive:** *(link added when sprint completes)*
 
 ---
@@ -114,4 +120,5 @@ All sprints for Origina LOS. Each sprint has a goal, a set of phases, and a defi
 | 5.2 | Test Coverage + CI | Backend ≥70%, condition lifecycle ≥90%, every workspace section has smoke test, GitHub Actions on every PR | Planned |
 | 5.3 | Multi-Tenant Onboarding | Admin creates tenant, bootstraps org config, onboards first user | Planned |
 
+**Build spec:** [sprint-5-build-spec.md](sprint-5-build-spec.md)
 **Archive:** *(link added when sprint completes)*

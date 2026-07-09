@@ -1,5 +1,5 @@
 # tests/backend/test_pagination_envelope.py
-"""Pagination envelope tests. See ROADMAP.md §B."""
+"""Pagination envelope tests. See ROADMAP.md §B and Sprint 2 §2.4."""
 import pytest
 from uuid import uuid4
 
@@ -45,3 +45,36 @@ async def test_pipeline_total_is_consistent(client, db, seed_minimum):
         headers=_auth(seed_minimum["token"]),
     )
     assert r1.json()["total"] == r2.json()["total"]
+
+
+# ── Sprint 2 §2.4: every list endpoint returns the envelope ─────────────────
+
+@pytest.mark.integration
+async def test_all_list_endpoints_return_envelope(client, db, seed_minimum):
+    """Every list endpoint returns {"items": [...], "total": n} — no bare
+    lists remain after Sprint 2.4's consistency pass.
+    """
+    token = seed_minimum["token"]
+    headers = _auth(token)
+    endpoints = [
+        "/api/v1/conditions/",
+        "/api/v1/tasks/",
+        "/api/v1/notes/",
+        "/api/v1/users/",
+        "/api/v1/audit-logs/",
+        "/api/v1/snapshots/",
+        "/api/v1/tenants/",
+        "/api/v1/pricing-runs/",
+        "/api/v1/eligibility-runs/",
+        "/api/v1/exceptions/",
+    ]
+    for ep in endpoints:
+        r = await client.get(ep, headers=headers)
+        assert r.status_code == 200, f"{ep} returned {r.status_code}: {r.text}"
+        body = r.json()
+        assert isinstance(body, dict) and "items" in body and "total" in body, (
+            f"{ep} does not return the pagination envelope: {type(body).__name__}: {body!r}"
+        )
+        assert isinstance(body["items"], list), f"{ep}['items'] is not a list"
+        assert isinstance(body["total"], int), f"{ep}['total'] is not an int"
+

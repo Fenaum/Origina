@@ -2,28 +2,37 @@ import { apiRequest } from "@/services/apiClient";
 import type { TokenResponse, UserOut } from "@/types/api";
 import type { SessionUser, UserRole } from "@/types/auth";
 
-// Maps backend role names (from the roles table) to frontend UserRole values.
-const BACKEND_ROLE_MAP: Record<string, UserRole> = {
-  admin: "admin",
-  it_admin: "admin",
-  account_manager: "account_executive",
-  account_executive: "account_executive",
-  loan_officer: "broker",
-  broker: "broker",
-  loan_processor: "processor",
-  processor: "processor",
-  underwriter: "underwriter",
-  funder: "funder",
-  manager: "manager",
-  borrower: "borrower",
+/**
+ * Maps backend role names (from the roles table) onto the canonical frontend
+ * UserRole vocabulary. Backend is the source of truth — these maps translate
+ * at the API boundary so backend role renames don't cascade through the
+ * front-end.
+ */
+const BACKEND_TO_FRONTEND_ROLE: Record<string, UserRole> = {
+  // Backend-canonical → frontend-canonical
+  loan_officer:    "loan_officer",
+  loan_processor:  "loan_processor",
+  underwriter:     "underwriter",
+  account_manager: "account_manager",
+  it_admin:        "it_admin",
+  // Legacy aliases (kept for back-compat with anything still using the old names)
+  admin:              "it_admin",
+  account_executive:  "account_manager",  // legacy "AE" → modern "account_manager"
+  broker:             "loan_officer",     // legacy "broker" → modern "loan_officer"
+  processor:          "loan_processor",
+  manager:            "account_manager",
+  funder:             "account_manager",
+  // borrower is never issued by the backend — kept only for shape safety
+  borrower:        "borrower",
 };
 
 function resolveRole(roles: string[]): UserRole {
   for (const r of roles) {
-    const mapped = BACKEND_ROLE_MAP[r];
+    const mapped = BACKEND_TO_FRONTEND_ROLE[r];
     if (mapped) return mapped;
   }
-  return "account_executive";
+  // No recognized role — fall back to a safe default rather than crash.
+  return "loan_officer";
 }
 
 function toSessionUser(out: UserOut): SessionUser {
@@ -52,6 +61,9 @@ export async function loginWithCredentials(
 }
 
 export async function fetchCurrentUser(token: string): Promise<SessionUser> {
+  // `/auth/me` is the canonical hydration endpoint.
+  // `/users/me` (handled by users_me router) and `/users/me` (handled by
+  // users router) both work too — they all return UserOut-shaped data.
   const out = await apiRequest<UserOut>("/auth/me", { token });
   return toSessionUser(out);
 }

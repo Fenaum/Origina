@@ -94,8 +94,32 @@ async def test_submit_rejects_non_draft_status(client, db, seed_minimum):
 
 
 @pytest.mark.integration
-async def test_tenant_isolation_on_loan(client, db, seed_minimum):
+async def test_tenant_isolation_on_loan(client, db, seed_two_tenants):
     """A loan created by tenant A is not visible in tenant B's pipeline."""
-    # This test requires the seed_minimum fixture to provide a second tenant token.
-    # If seed_minimum only provides one tenant, mark this as skip with a TODO note.
-    pytest.skip("Requires multi-tenant seed — implement when seed_minimum supports two tenants")
+    tenant_a, tenant_b = seed_two_tenants
+
+    # 1. Tenant A submits a loan
+    r_a = await client.post(
+        "/api/v1/loans/",
+        json={"purpose": "purchase", "loan_program": "dscr"},
+        headers=_auth_headers(tenant_a["token"]),
+    )
+    assert r_a.status_code == 201, r_a.text
+    loan_id_a = r_a.json()["id"]
+
+    # 2. Tenant A's pipeline sees the loan
+    r_a_pipeline = await client.get(
+        "/api/v1/loans/pipeline?skip=0&limit=10",
+        headers=_auth_headers(tenant_a["token"]),
+    )
+    assert r_a_pipeline.status_code == 200
+    assert any(item["id"] == loan_id_a for item in r_a_pipeline.json()["items"])
+
+    # 3. Tenant B's pipeline does NOT see tenant A's loan
+    r_b_pipeline = await client.get(
+        "/api/v1/loans/pipeline?skip=0&limit=10",
+        headers=_auth_headers(tenant_b["token"]),
+    )
+    assert r_b_pipeline.status_code == 200
+    assert all(item["id"] != loan_id_a for item in r_b_pipeline.json()["items"])
+
