@@ -45,7 +45,8 @@ class TaskOut(TaskBase):
 
 class NoteCreate(BaseModel):
     loan_id: UUID
-    tenant_id: UUID
+    # tenant_id is intentionally absent — the endpoint injects it from the
+    # authenticated user's JWT. Clients must not send it. (Sprint 3 fix.)
     body: str
 
 

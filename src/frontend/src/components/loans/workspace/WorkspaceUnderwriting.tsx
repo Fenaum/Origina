@@ -1,7 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { WorkspaceSaveBar } from "@/components/loans/workspace/WorkspaceSaveBar";
 import { WorkspaceFieldContextMenu } from "@/components/loans/workspace/WorkspaceFieldContextMenu";
+import { listPricingRuns, listEligibilityRuns } from "@/services/decisioningService";
+import { listExceptions } from "@/services/exceptionsService";
+import { useAuth } from "@/state/auth";
+import { EmptyState } from "@/components/feedback/EmptyState";
 import type { LoanSummary } from "@/types/loan";
+import type { EligibilityRunOut, ExceptionOut, PricingRunOut } from "@/types/api";
 
 type Props = { loan: LoanSummary };
 
@@ -41,6 +46,29 @@ export function WorkspaceUnderwriting({ loan }: Props) {
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveCount, setSaveCount] = useState(0);
+  const { token } = useAuth();
+  const [pricingRuns, setPricingRuns] = useState<PricingRunOut[]>([]);
+  const [eligibilityRuns, setEligibilityRuns] = useState<EligibilityRunOut[]>([]);
+  const [exceptions, setExceptions] = useState<ExceptionOut[]>([]);
+  const [runsLoading, setRunsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!token) return;
+    setRunsLoading(true);
+    Promise.all([
+      listPricingRuns(loan.id, token).catch(() => []),
+      listEligibilityRuns(loan.id, token).catch(() => []),
+      listExceptions(loan.id, token).catch(() => []),
+    ])
+      .then(([pricing, eligibility, excs]) => {
+        setPricingRuns(pricing);
+        setEligibilityRuns(eligibility);
+        setExceptions(excs);
+      })
+      .finally(() => setRunsLoading(false));
+  }, [loan.id, token]);
+
+  const latestEligibility = eligibilityRuns[0] ?? null;
 
   const isDirty = JSON.stringify(form) !== JSON.stringify(saved);
 
@@ -203,12 +231,85 @@ export function WorkspaceUnderwriting({ loan }: Props) {
           </WorkspaceFieldContextMenu>
         </section>
 
-        {/* Exceptions placeholder */}
+        {/* Eligibility — latest run summary */}
+        <section className="uw-section">
+          <h3 className="uw-section-title">Eligibility</h3>
+          {runsLoading && <div className="uw-placeholder-notice">Loading eligibility history…</div>}
+          {!runsLoading && !latestEligibility && (
+            <EmptyState
+              title="No eligibility runs yet"
+              description="Run an eligibility check against the active program rules to see whether this file meets guideline."
+            />
+          )}
+          {!runsLoading && latestEligibility && (
+            <div className="uw-eligibility-card">
+              <div className={`uw-eligibility-pill uw-eligibility-pill--${latestEligibility.output_payload?.is_eligible ? "eligible" : "not"}`}>
+                {latestEligibility.output_payload?.is_eligible ? "Eligible" : "Not Eligible"}
+              </div>
+              <div className="uw-eligibility-meta">
+                <div>
+                  <span>Last run</span>
+                  <strong>{new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" }).format(new Date(latestEligibility.run_at))}</strong>
+                </div>
+                {latestEligibility.output_payload?.reason ? (
+                  <div>
+                    <span>Reason</span>
+                    <strong>{String(latestEligibility.output_payload.reason)}</strong>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          )}
+        </section>
+
+        {/* Pricing runs */}
+        <section className="uw-section">
+          <h3 className="uw-section-title">Pricing Runs</h3>
+          {runsLoading && <div className="uw-placeholder-notice">Loading pricing history…</div>}
+          {!runsLoading && pricingRuns.length === 0 && (
+            <EmptyState
+              title="No pricing runs yet"
+              description="Pricing runs capture the input and output of every pricing scenario attempted on this loan."
+            />
+          )}
+          {!runsLoading && pricingRuns.length > 0 && (
+            <ul className="uw-pricing-list">
+              {pricingRuns.map((run) => (
+                <li key={run.id} className="uw-pricing-row">
+                  <div>
+                    <strong>{new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" }).format(new Date(run.run_at))}</strong>
+                    <small>input hash {run.input_hash.slice(0, 12)}…</small>
+                  </div>
+                  <pre className="uw-pricing-output">{JSON.stringify(run.output_payload, null, 2)}</pre>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        {/* Exceptions on this loan */}
         <section className="uw-section">
           <h3 className="uw-section-title">Exceptions</h3>
-          <div className="uw-placeholder-notice">
-            Exception tracking will be built in the next milestone. Exceptions are stored in the <code>loan_exceptions</code> table.
-          </div>
+          {runsLoading && <div className="uw-placeholder-notice">Loading exceptions…</div>}
+          {!runsLoading && exceptions.length === 0 && (
+            <EmptyState
+              title="No exceptions on this file"
+              description="When a guideline is exceeded, the requesting party can submit an exception request here for underwriter review."
+            />
+          )}
+          {!runsLoading && exceptions.length > 0 && (
+            <ul className="uw-exceptions-list">
+              {exceptions.map((exc) => (
+                <li key={exc.id} className="uw-exception-row">
+                  <div>
+                    <strong>{exc.title}</strong>
+                    <small>{exc.exception_type} · severity {exc.severity}</small>
+                  </div>
+                  <span className={`uw-exception-status uw-exception-status--${exc.status}`}>{exc.status.replace(/_/g, " ")}</span>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       </div>
     </div>

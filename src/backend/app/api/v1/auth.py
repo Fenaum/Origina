@@ -1,7 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
 
+from app.core.config import (
+    ACCESS_TOKEN_EXPIRE_MINUTES,
+    COOKIE_NAME,
+    COOKIE_PATH,
+    COOKIE_SAMESITE,
+    COOKIE_SECURE,
+    LOGIN_RATE_LIMIT,
+)
 from app.core.db import get_db
 from app.models.user import User
 from app.schemas.user_schema import UserOut
@@ -11,16 +21,27 @@ from app.security.security import get_current_user
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
+# Per-IP rate limiter for /auth/login. Tracked in-process; for a multi-worker
+# deployment swap storage_uri to Redis. See slowapi docs.
+limiter = Limiter(key_func=get_remote_address)
+
 
 @router.post("/login")
+@limiter.limit(LOGIN_RATE_LIMIT)
 def login(
+    request: Request,  # required by slowapi for key_func
+    response: Response,
     form: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
 ):
-    """Exchange email + password for a JWT bearer token.
+    """Exchange email + password for a JWT.
 
-    Uses OAuth2PasswordRequestForm so /docs renders a login form.
-    The 'username' field is the OAuth2 spec name — we treat it as email.
+    The token is set as an httpOnly cookie (browser-safe — XSS can't read it)
+    AND returned in the response body (for API clients and the localStorage
+    fallback path during the cookie cutover).
+
+    The slowapi limiter decorates this endpoint with a per-IP rate limit
+    (configurable via LOGIN_RATE_LIMIT). Excess attempts get a 429.
     """
     user = (
         db.query(User)
@@ -34,7 +55,24 @@ def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
     token = create_access_token(user.id, user.tenant_id)
+    response.set_cookie(
+        key=COOKIE_NAME,
+        value=token,
+        httponly=True,
+        secure=COOKIE_SECURE,
+        samesite=COOKIE_SAMESITE,
+        max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        path=COOKIE_PATH,
+    )
     return {"access_token": token, "token_type": "bearer"}
+
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+def logout(response: Response):
+    """Clear the httpOnly auth cookie. Safe to call even when no cookie is set."""
+    response.delete_cookie(key=COOKIE_NAME, path=COOKIE_PATH)
+    response.status_code = status.HTTP_204_NO_CONTENT
+    return response
 
 
 @router.get("/me", response_model=UserOut)

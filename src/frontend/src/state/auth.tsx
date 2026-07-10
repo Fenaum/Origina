@@ -114,6 +114,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
+    // Best-effort: tell the backend to clear the httpOnly cookie. If the
+    // request fails (offline, expired session) we still wipe local state.
+    void fetch(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1"}/auth/logout`,
+      { method: "POST", credentials: "include" },
+    ).catch(() => undefined);
     window.localStorage.removeItem(TOKEN_KEY);
     window.localStorage.removeItem(PREVIEW_ROLE_KEY);
     setToken(null);

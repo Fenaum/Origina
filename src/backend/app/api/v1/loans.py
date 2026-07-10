@@ -104,6 +104,8 @@ _PIPELINE_SQL = text("""
         l.submitted_at,
         l.updated_at,
         lf.loan_amount,
+        l.assigned_to,
+        assigned_user.full_name AS assigned_to_name,
         COALESCE(
             NULLIF(TRIM(COALESCE(b.first_name, '') || ' ' || COALESCE(b.last_name, '')), ''),
             'Unnamed Borrower'
@@ -114,6 +116,9 @@ _PIPELINE_SQL = text("""
         COALESCE(open_ct.cnt, 0) + COALESCE(sub_ct.cnt, 0) AS actions_needed
     FROM loans l
     LEFT JOIN loan_financials lf ON lf.loan_id = l.id
+    LEFT JOIN users assigned_user
+        ON assigned_user.id = l.assigned_to
+        AND assigned_user.tenant_id = l.tenant_id
     LEFT JOIN LATERAL (
         SELECT first_name, last_name
         FROM borrowers
@@ -138,6 +143,8 @@ _PIPELINE_SQL = text("""
     ) sub_ct ON true
     WHERE l.tenant_id = :tenant_id
       AND l.status NOT IN ('archived', 'cancelled')
+      AND (:assigned_to IS NULL OR l.assigned_to = :assigned_to)
+      AND (:status IS NULL OR l.status = :status)
     ORDER BY l.updated_at DESC
     LIMIT :limit OFFSET :skip
 """)
@@ -148,6 +155,8 @@ _PIPELINE_COUNT_SQL = text("""
     FROM loans l
     WHERE l.tenant_id = :tenant_id
       AND l.status NOT IN ('archived', 'cancelled')
+      AND (:assigned_to IS NULL OR l.assigned_to = :assigned_to)
+      AND (:status IS NULL OR l.status = :status)
 """)
 
 
@@ -155,17 +164,30 @@ _PIPELINE_COUNT_SQL = text("""
 def get_pipeline(
     skip: int = 0,
     limit: int = 50,
+    assigned_to: UUID | None = None,
+    status_filter: str | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    rows = db.execute(
-        _PIPELINE_SQL,
-        {"tenant_id": current_user.tenant_id, "limit": limit, "skip": skip},
-    ).mappings().all()
-    total = db.execute(
-        _PIPELINE_COUNT_SQL,
-        {"tenant_id": current_user.tenant_id},
-    ).scalar_one()
+    """
+    Sprint 4 §4.1 — the pipeline grid's data source. Adds two optional
+    filters:
+
+      ?assigned_to=<uuid> — limit to one person's pipeline
+      ?status_filter=<status> — limit to one loan status (the public
+        `status` param name collides with the SQL alias, hence the rename)
+
+    Both filters compose freely with the existing skip/limit pagination.
+    """
+    params = {
+        "tenant_id": current_user.tenant_id,
+        "limit": limit,
+        "skip": skip,
+        "assigned_to": str(assigned_to) if assigned_to else None,
+        "status": status_filter,
+    }
+    rows = db.execute(_PIPELINE_SQL, params).mappings().all()
+    total = db.execute(_PIPELINE_COUNT_SQL, params).scalar_one()
     return PaginatedResponse(
         items=[LoanPipelineSummaryOut(**dict(row)) for row in rows],
         total=total,
@@ -460,6 +482,25 @@ def submit_loan(
         actor_user_id=current_user.id,
     )
     db.add(event)
+
+    # Sprint 4 §4.4 — domain event in the same transaction as the state
+    # change. The notification consumer will email the assigned user.
+    from app.models.events import EventType
+    from app.services.event_service import emit_event
+    emit_event(
+        db,
+        tenant_id=current_user.tenant_id,
+        event_type=EventType.LOAN_SUBMITTED,
+        entity_type="loan",
+        entity_id=loan.id,
+        payload={
+            "from_status": "new_draft",
+            "to_status": "submitted",
+            "actor_user_id": str(current_user.id),
+            "assigned_to": str(loan.assigned_to) if loan.assigned_to else None,
+        },
+    )
+
     db.commit()
     db.refresh(loan)
 

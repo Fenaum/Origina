@@ -1,51 +1,70 @@
+import { useEffect, useState } from "react";
+import { listAuditLogs } from "@/services/auditService";
+import { useAuth } from "@/state/auth";
+import { EmptyState } from "@/components/feedback/EmptyState";
 import type { LoanSummary } from "@/types/loan";
+import type { AuditLogEntry } from "@/types/api";
 
 type Props = { loan: LoanSummary };
 
-const AUDIT_EVENTS = [
-  {
-    id: "audit-1",
-    event: "Submission completed",
-    actor: "Broker Portal",
-    source: "submission",
-    field: "loan.status",
-    before: "New Draft",
-    after: "Submitted",
-    time: "2026-06-04 09:42 AM",
-  },
-  {
-    id: "audit-2",
-    event: "Document uploaded",
-    actor: "Morgan Lee",
-    source: "documents",
-    field: "documents.file_name",
-    before: "-",
-    after: "bank-statements-jan-mar.pdf",
-    time: "2026-06-05 01:18 PM",
-  },
-  {
-    id: "audit-3",
-    event: "Condition created",
-    actor: "Avery Brooks",
-    source: "conditions",
-    field: "conditions.status",
-    before: "-",
-    after: "Open",
-    time: "2026-06-05 02:03 PM",
-  },
-  {
-    id: "audit-4",
-    event: "Financial calculation updated",
-    actor: "Avery Brooks",
-    source: "financial_analysis",
-    field: "asset_allocations.amount_used",
-    before: "$120,000",
-    after: "$150,000",
-    time: "2026-06-06 10:16 AM",
-  },
-];
+const ACTION_LABEL: Record<string, string> = {
+  INSERT: "Created",
+  UPDATE: "Updated",
+  DELETE: "Deleted",
+};
+
+const ENTITY_LABEL: Record<string, string> = {
+  loans: "Loan",
+  loan_financials: "Financials",
+  loan_terms: "Loan Terms",
+  conditions: "Condition",
+  documents: "Document",
+  borrowers: "Borrower",
+  notes: "Note",
+  exceptions: "Exception",
+  pricing_runs: "Pricing Run",
+  eligibility_runs: "Eligibility Run",
+  loan_status_events: "Status Change",
+};
+
+function fmtDateTime(iso: string) {
+  return new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" }).format(new Date(iso));
+}
+
+function summarize(entry: AuditLogEntry): { field: string; before: string; after: string }[] {
+  const diff = entry.diff ?? {};
+  // Each diff key has shape {old, new}. Render the top-level keys as field names.
+  return Object.entries(diff).slice(0, 6).map(([key, change]) => {
+    if (change && typeof change === "object" && ("old" in change || "new" in change)) {
+      const c = change as { old?: unknown; new?: unknown };
+      return {
+        field: key,
+        before: c.old === null || c.old === undefined ? "—" : String(c.old),
+        after: c.new === null || c.new === undefined ? "—" : String(c.new),
+      };
+    }
+    return { field: key, before: "—", after: String(change) };
+  });
+}
 
 export function WorkspaceAuditLog({ loan }: Props) {
+  const { token } = useAuth();
+  const [events, setEvents] = useState<AuditLogEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+    listAuditLogs(loan.id, token)
+      .then((data) => { if (!cancelled) setEvents(data); })
+      .catch(() => { if (!cancelled) setEvents([]); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [loan.id, token]);
+
+  const materialCount = events.filter((e) => e.action === "UPDATE" || e.action === "DELETE").length;
+  const sourceCount = new Set(events.map((e) => e.entity_type)).size;
+
   return (
     <div className="workspace-module workspace-module--wide">
       <div className="workspace-section-header">
@@ -55,9 +74,9 @@ export function WorkspaceAuditLog({ loan }: Props) {
       </div>
 
       <div className="workspace-summary-strip">
-        <SummaryCard label="Events" value={String(AUDIT_EVENTS.length)} />
-        <SummaryCard label="Material Changes" value="3" />
-        <SummaryCard label="Sources" value="4" />
+        <SummaryCard label="Events" value={String(events.length)} />
+        <SummaryCard label="Material Changes" value={String(materialCount)} />
+        <SummaryCard label="Sources" value={String(sourceCount)} />
         <SummaryCard label="Export" value="Ready" />
       </div>
 
@@ -65,34 +84,54 @@ export function WorkspaceAuditLog({ loan }: Props) {
         <div className="documents-grid-header">
           <h3>Event History</h3>
           <div>
-            <button type="button">Filter</button>
-            <button type="button">Export</button>
+            <button type="button" disabled>Filter</button>
+            <button type="button" disabled>Export</button>
           </div>
         </div>
 
-        <div className="audit-table">
-          <div className="audit-table-row audit-table-row--head">
-            <span>Event</span>
-            <span>Actor</span>
-            <span>Field</span>
-            <span>Before</span>
-            <span>After</span>
-            <span>Time</span>
+        {loading && (
+          <div className="workspace-skeleton audit-skeleton" aria-hidden>
+            <div className="audit-skeleton-row" />
+            <div className="audit-skeleton-row" />
+            <div className="audit-skeleton-row" />
           </div>
-          {AUDIT_EVENTS.map((event) => (
-            <div key={event.id} className="audit-table-row">
-              <span>
-                <strong>{event.event}</strong>
-                <small>{event.source}</small>
-              </span>
-              <span>{event.actor}</span>
-              <span>{event.field}</span>
-              <span>{event.before}</span>
-              <span>{event.after}</span>
-              <span>{event.time}</span>
+        )}
+
+        {!loading && events.length === 0 && (
+          <EmptyState
+            title="No audit events yet"
+            description="Material changes to this loan file — status transitions, financial edits, document uploads — will appear here as they happen."
+          />
+        )}
+
+        {!loading && events.length > 0 && (
+          <div className="audit-table">
+            <div className="audit-table-row audit-table-row--head">
+              <span>Event</span>
+              <span>Actor</span>
+              <span>Field</span>
+              <span>Before</span>
+              <span>After</span>
+              <span>Time</span>
             </div>
-          ))}
-        </div>
+            {events.map((event) => {
+              const change = summarize(event)[0];
+              return (
+                <div key={event.id} className="audit-table-row">
+                  <span>
+                    <strong>{ACTION_LABEL[event.action] ?? event.action}</strong>
+                    <small>{ENTITY_LABEL[event.entity_type] ?? event.entity_type}</small>
+                  </span>
+                  <span>{event.actor_user_id ? "Team Member" : "System"}</span>
+                  <span>{change?.field ?? "—"}</span>
+                  <span>{change?.before ?? "—"}</span>
+                  <span>{change?.after ?? "—"}</span>
+                  <span>{fmtDateTime(event.occurred_at)}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </section>
     </div>
   );

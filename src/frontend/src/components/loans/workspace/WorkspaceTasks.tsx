@@ -3,7 +3,7 @@ import { apiRequest } from "@/services/apiClient";
 import { useAuth } from "@/state/auth";
 import { TemplatePickerModal } from "@/components/loans/workspace/TemplatePickerModal";
 import type { LoanSummary } from "@/types/loan";
-import type { TaskOut, TaskStatus, TaskPriority } from "@/types/api";
+import type { TaskOut, TaskStatus, TaskPriority, PaginatedResponse } from "@/types/api";
 import type { TaskTemplate } from "@/data/templates";
 
 type Props = { loan: LoanSummary };
@@ -249,8 +249,8 @@ export function WorkspaceTasks({ loan }: Props) {
   useEffect(() => {
     if (!token) return;
     let cancelled = false;
-    apiRequest<TaskOut[]>(`/tasks/?loan_id=${loan.id}`, { token })
-      .then((data) => { if (!cancelled) setTasks(data); })
+    apiRequest<PaginatedResponse<TaskOut>>(`/tasks/?loan_id=${loan.id}`, { token })
+      .then((data) => { if (!cancelled) setTasks(data.items ?? []); })
       .catch((e: Error) => { if (!cancelled) setError(e.message); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };

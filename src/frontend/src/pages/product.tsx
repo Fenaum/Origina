@@ -169,7 +169,7 @@ export default function ProductPage() {
               <h1>Non-QM Loan Products</h1>
               <p style={{ fontSize: "1.125rem", maxWidth: "700px", margin: "0 auto" }}>
                 Origina offers a comprehensive suite of Non-Qualified Mortgage products designed
-                for borrowers who don't fit traditional lending boxes. From self-employed
+                for borrowers who don&apos;t fit traditional lending boxes. From self-employed
                 professionals to real estate investors, we have solutions for complex income
                 situations.
               </p>
@@ -297,7 +297,7 @@ export default function ProductPage() {
             <div className="mkt-section-header">
               <h2>Not Sure Which Product Fits?</h2>
               <p>
-                Our product specialists can help you match the right loan to your borrower's
+                Our product specialists can help you match the right loan to your borrower&apos;s
                 unique situation. Get personalized recommendations based on income, assets, and
                 property type.
               </p>

@@ -306,21 +306,28 @@ Login → POST /auth/login → JWT in localStorage
 
 **Sprint 1 — Demo Unblocked — ✅ closed 2026-07-07.** JWT secret from env, CORS locked, pipeline pagination (`PaginatedResponse[T]` envelope), atomic loan submission, real financials/terms in WorkspaceHome. All B-gate tests green.
 
-**Sprint 2 — Core Workflow (active):** real user creation with RBAC (`POST /users/` admin-only), role vocabulary reconciliation (frontend/backend), condition lifecycle state machine (`condition_lifecycle.py`), conditions workspace UI, pagination envelope on remaining list endpoints. Spec: [docs/sprints/sprint-2-build-spec.md](docs/sprints/sprint-2-build-spec.md).
+**Sprint 2 — Core Workflow — ✅ closed 2026-07-09.** Real user creation with RBAC, role vocabulary reconciliation, condition lifecycle state machine, conditions workspace UI, pagination envelope on remaining list endpoints. Spec: [docs/sprints/sprint-2-build-spec.md](sprint-2-build-spec.md). Archive: [docs/sprints/sprint-2-core-workflow.md](docs/sprints/sprint-2-core-workflow.md).
 
-**Sprints 3–5 (planned):** workspace wiring (notes, audit, status UI, documents) → manager layer (assignments, analytics, notifications via domain events) → production hardening (httpOnly cookies, CI, tenant onboarding). Specs exist for all.
+**Sprint 3 — Full Workspace — ✅ closed 2026-07-09.** Notes + audit log + status transition UI wired end-to-end in the workspace. Underwriting tab now surfaces pricing/eligibility runs + exceptions. Documents section uploads/lists/downloads/archives real files. 10 new backend tests, 4 new frontend services, 4 rewritten workspace components. Spec: [docs/sprints/sprint-3-build-spec.md](sprint-3-build-spec.md). Archive: [docs/sprints/sprint-3-full-workspace.md](docs/sprints/sprint-3-full-workspace.md).
 
-**Long-term direction:** Origina's backend is intended to evolve into a platform (APIs consumable by CRMs, mobile apps, external LOS). Key architectural commitments: domain events table (transactional outbox) lands with Sprint 4 notifications; routers stay thin (parse + authorize), business logic lives in services. See ADRs in [docs/DECISIONS.md](docs/DECISIONS.md).
+**Sprint 4 — Manager Layer — ✅ closed 2026-07-09.** Pipeline `LoanSummary.owner` from `users.full_name` JOIN; `?assigned_to=<uuid>` + `?status_filter=<status>` filter the pipeline. Analytics filter bug fixes (date columns qualified with `l.<col>`, `IN(:list)` → `= ANY(:param)`, validator accepts `list[str]`) — `?date_preset=...` no longer crashes. `/dashboard/manager` page renders `TeamKPICard` grid driven by `useAnalyticsSummary`; date-preset selector re-fires the request. `domain_events` outbox (migration 131) + `event_service` + `notification_consumer` routes `loan.submitted` → assignee and `loan.status_changed → conditions_review` → all underwriters via SMTP (disabled by default). 13 new backend tests + 4 new frontend tests. Spec: [docs/sprints/sprint-4-build-spec.md](sprint-4-build-spec.md). Archive: [docs/sprints/sprint-4-manager-layer.md](docs/sprints/sprint-4-manager-layer.md).
+
+**Sprint 5 — Production Hardening — ✅ closed 2026-07-10.** httpOnly cookie auth (`origina_token` HttpOnly + SameSite=Lax, `/auth/logout` clears it, dual-mode cookie OR Bearer accepted by `get_current_user`); rate limiting on `/auth/login` via slowapi (10/min/IP, configurable via `LOGIN_RATE_LIMIT`); GitHub Actions CI on every PR (`.github/workflows/ci.yml`) with backend coverage gate (`--cov-fail-under=70`) + condition-lifecycle gate (`--cov-fail-under=90`); `POST /api/v1/tenants/bootstrap` guarded by `ADMIN_SECRET` creates tenant + first IT_ADMIN user in one atomic call; Settings → Admin → Tenant Onboarding UI for non-CLI onboarding; 68 new backend tests + 3 new frontend smoke tests; `npm run lint` reports 0 problems (was 22). Spec: [docs/sprints/sprint-5-build-spec.md](docs/sprints/sprint-5-build-spec.md). Archive: [docs/sprints/sprint-5-production-hardening.md](docs/sprints/sprint-5-production-hardening.md).
+
+**Sprint 6 — TBD (next):** Awaiting owner-authored sprint spec.
+
+**Long-term direction:** Origina's backend is intended to evolve into a platform (APIs consumable by CRMs, mobile apps, external LOS). Key architectural commitments: domain events table (transactional outbox) shipped in Sprint 4 — webhooks, SLA timers, and AI triggers will subscribe as additional consumer files (one consumer, one file that knows its transport); routers stay thin (parse + authorize), business logic lives in services. See ADRs in [docs/DECISIONS.md](docs/DECISIONS.md).
 
 ## Technical debt (active items)
 
 | Item | Impact | Effort |
 |---|---|---|
-| JWT in localStorage → httpOnly cookie | High — security | Medium — Sprint 5 |
+| ~~JWT in localStorage → httpOnly cookie~~ | ~~High — security~~ | ✅ Done in Sprint 5 |
 | Role vocabulary split (frontend role names ≠ backend role constants) | High — RBAC correctness | Low — Sprint 2 |
-| Bare `list[X]` on non-loan list endpoints (conditions, tasks, notes, users, audit, documents) | Medium — API consistency | Low — Sprint 2 |
+| Bare `list[X]` on non-loan list endpoints (conditions, tasks, notes, users, audit, documents) | Medium — API consistency | ✅ Done in Sprint 2 |
+| Test schema doesn't install triggers (`create_all()` skips PL/pgSQL) | Low — test infra friction | Low — Sprint 3 inline-install stopgap in place; migration-based runner still pending |
 | Business logic inline in routers (status.py, conditions.py, loans.py) | Medium — platform boundary | Migrate opportunistically when touching each domain |
-| Feature test coverage below 70% gate | Medium — refactor risk | Medium — Sprint 5 CI gate |
+| ~~Feature test coverage below 70% gate~~ | ~~Medium — refactor risk~~ | ✅ Done in Sprint 5 — CI enforces `--cov-fail-under=70`; current 70.30% |
 | Mixed data-fetching idioms (React Query + useEffect + Zustand) | Medium — velocity | All NEW fetching uses React Query; migrate old hooks only when touching them |
 | `@shadcn/ui` package is a dummy v0.0.4 | Low | Low — run `npx shadcn@latest init` when ready |
 | `bcrypt 4.0.1` pinned | Low | Low — passlib incompatible with 4.1+ |

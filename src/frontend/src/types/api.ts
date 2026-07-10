@@ -194,6 +194,9 @@ export type LoanPipelineSummaryOut = {
   conditions_open: number;
   conditions_submitted: number;
   actions_needed: number;
+  // Sprint 4 §4.1 — pipeline owner column
+  assigned_to: string | null;
+  assigned_to_name: string | null;
 };
 
 // ── Paginated list wrapper ────────────────────────────────────────────────────
@@ -443,6 +446,39 @@ export type FieldHistoryEntry = {
   changed_at: string;
 };
 
+// ── Notes (Sprint 3 §3.1) ─────────────────────────────────────────────────────
+export type NoteOut = {
+  id: string;
+  loan_id: string;
+  tenant_id: string;
+  body: string;
+  created_by: string | null;
+  created_at: string;
+};
+
+// ── Decisioning runs (Sprint 3 §3.3) ──────────────────────────────────────────
+export type PricingRunOut = {
+  id: string;
+  loan_id: string;
+  tenant_id: string;
+  run_at: string;
+  run_by: string | null;
+  input_hash: string;
+  input_payload: Record<string, unknown>;
+  output_payload: Record<string, unknown>;
+};
+
+export type EligibilityRunOut = {
+  id: string;
+  loan_id: string;
+  tenant_id: string;
+  run_at: string;
+  run_by: string | null;
+  input_hash: string;
+  input_payload: Record<string, unknown>;
+  output_payload: Record<string, unknown>;
+};
+
 // ── Tasks ─────────────────────────────────────────────────────────────────────
 export type TaskStatus = "todo" | "in_progress" | "blocked" | "done" | "cancelled";
 export type TaskPriority = "low" | "normal" | "high" | "urgent";
@@ -649,13 +685,13 @@ export type TenantSettingsOut = {
 export type AuditLogEntry = {
   id: string;
   tenant_id: string;
-  table_name: string;
-  record_id: string;
-  action: string;
   actor_user_id: string | null;
-  actor_name: string | null;
-  changes: Record<string, unknown> | null;
-  created_at: string;
+  entity_type: string;
+  entity_id: string;
+  action: string;
+  occurred_at: string;
+  reason: string | null;
+  diff: Record<string, unknown>;
 };
 
 export type AuditLogResponse = {

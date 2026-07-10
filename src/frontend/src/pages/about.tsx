@@ -135,8 +135,8 @@ export default function AboutPage() {
               <span className="mkt-eyebrow-pill">Our Story</span>
               <h1>About Origina</h1>
               <p style={{ fontSize: "1.125rem", maxWidth: "700px", margin: "0 auto" }}>
-                We're on a mission to democratize access to mortgage financing. Origina
-                was built for the millions of creditworthy borrowers who don't fit traditional
+                We&apos;re on a mission to democratize access to mortgage financing. Origina
+                was built for the millions of creditworthy borrowers who don&apos;t fit traditional
                 lending boxes—and the brokers who serve them.
               </p>
             </div>
@@ -166,7 +166,7 @@ export default function AboutPage() {
                   borrowers with complex income situations.
                 </p>
                 <p style={{ fontSize: "1.0625rem", lineHeight: 1.8, marginBottom: "1.25rem" }}>
-                  Traditional banks turned away qualified borrowers because their income didn't fit
+                  Traditional banks turned away qualified borrowers because their income didn&apos;t fit
                   standard W-2 templates. We saw an opportunity to build something better—a platform
                   that understands how people actually earn, build wealth, and manage their
                   finances.

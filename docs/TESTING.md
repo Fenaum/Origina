@@ -1,10 +1,10 @@
 # Origina — Testing Guide
 
-> **Cross-links:** [ROADMAP.md — Testing Checkpoints](ROADMAP.md#testing-checkpoints) | [ARCHITECTURE.md](ARCHITECTURE.md) | [DECISIONS.md](DECISIONS.md) | [tests/README.md](../tests/README.md)
+> **Cross-links:** [ROADMAP.md - Testing Checkpoints](ROADMAP.md#testing-checkpoints) | [END_USER_TEST_SCRIPTS.md](END_USER_TEST_SCRIPTS.md) | [ARCHITECTURE.md](ARCHITECTURE.md) | [DECISIONS.md](DECISIONS.md) | [tests/README.md](../tests/README.md)
 
 This document is the **how-to** companion to the [Testing Checkpoints section of ROADMAP.md](ROADMAP.md#testing-checkpoints). It covers setup, running, writing, and debugging tests for both the FastAPI backend and the Next.js frontend.
 
-For the **what** (which tests must pass to clear each milestone) and the **why** (Definition of Done, coverage gates), see ROADMAP.
+For the **what** (which automated tests must pass to clear each milestone) and the **why** (Definition of Done, coverage gates), see ROADMAP. For manual business validation by end users, see [END_USER_TEST_SCRIPTS.md](END_USER_TEST_SCRIPTS.md).
 
 ---
 

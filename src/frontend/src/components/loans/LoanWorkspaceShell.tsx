@@ -79,7 +79,6 @@ export function LoanWorkspaceShell({ loan }: Props) {
           </nav>
 
           <div className="loan-file-identity">
-            <span className="loan-file-borrower">{loan.borrowerName}</span>
             <span className="loan-file-number">{loan.loanNumber}</span>
             <span className="status-pill">{loanStatusLabels[loan.status]}</span>
             <span className="loan-file-sep" aria-hidden>·</span>

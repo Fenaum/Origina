@@ -15,7 +15,8 @@ function toSummary(row: LoanPipelineSummaryOut): LoanSummary {
     propertyState: row.property_state ?? "—",
     submittedAt: row.submitted_at ?? null,
     updatedAt: row.updated_at.split("T")[0],
-    owner: "—",
+    // Sprint 4 §4.1 — pipeline owner column pulls from the API now.
+    owner: row.assigned_to_name ?? "—",
     conditionsOpen: row.conditions_open,
     conditionsSubmitted: row.conditions_submitted,
     actionsNeeded: row.actions_needed,
@@ -41,19 +42,24 @@ export type PipelinePage = {
  */
 export async function listLoans(
   token?: string,
-  options: { skip?: number; limit?: number } = {},
+  options: { skip?: number; limit?: number; assignedTo?: string; status?: string } = {},
 ): Promise<PipelinePage> {
   if (process.env.NEXT_PUBLIC_MOCK_LOAN_API_ERROR === "true") {
     throw new Error("Mock loan API error");
   }
 
   if (!token) {
-    return { loans: mockLoans, total: mockLoans.length };
+    let loans = mockLoans;
+    if (options.assignedTo) loans = loans.filter((l) => (l as unknown as { assignedTo?: string }).assignedTo === options.assignedTo);
+    if (options.status) loans = loans.filter((l) => l.status === options.status);
+    return { loans, total: loans.length };
   }
 
   const params = new URLSearchParams();
   params.set("skip", String(options.skip ?? 0));
   params.set("limit", String(options.limit ?? 50));
+  if (options.assignedTo) params.set("assigned_to", options.assignedTo);
+  if (options.status) params.set("status_filter", options.status);
 
   const data = await apiRequest<PaginatedResponse<LoanPipelineSummaryOut>>(
     `/loans/pipeline?${params.toString()}`,

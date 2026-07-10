@@ -114,13 +114,6 @@ export function AnalyticsFilterBar({ filter, onChange }: AnalyticsFilterBarProps
     onChange({ ...filter, filters: next, page: 1 });
   }
 
-  function isSelected(field: "status" | "loan_program" | "purpose", value: string): boolean {
-    const existing = filter.filters.find((f) => f.field === field);
-    if (!existing) return false;
-    if (Array.isArray(existing.value)) return (existing.value as string[]).includes(value);
-    return existing.value === value;
-  }
-
   return (
     <section className="analytics-filter-bar panel" aria-label="Dashboard filters">
       <div className="analytics-filter-accent" aria-hidden />

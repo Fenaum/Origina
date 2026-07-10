@@ -212,6 +212,15 @@ def coerce_value(spec: FieldSpec, raw: Any) -> Any:
         return raw
 
     if spec.type == "text":
+        # The `in` operator delivers a list; `eq` delivers a scalar string.
+        if isinstance(raw, list):
+            for v in raw:
+                if not isinstance(v, str):
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Expected string for {spec.column}, got {type(v).__name__}",
+                    )
+            return raw
         if not isinstance(raw, str):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -355,8 +364,11 @@ def build_filter(
         date_field = dr.field
         date_from, date_to = resolve_date_preset(dr.preset, dr.from_date, dr.to_date)
         # Bind the resolved dates; SQL fragment is constant text (safe).
-        clauses.append(f"{dr.field} >= :date_from")
-        clauses.append(f"{dr.field} <= :date_to")
+        # Qualify with the loans table alias — a date filter applied to a
+        # query that LEFT JOINs `exceptions` or other tables sharing column
+        # names (submitted_at) would otherwise become ambiguous.
+        clauses.append(f"l.{dr.field} >= :date_from")
+        clauses.append(f"l.{dr.field} <= :date_to")
         params["date_from"] = date_from
         params["date_to"] = date_to
 
@@ -375,8 +387,13 @@ def build_filter(
 
         # in / not_in bind the list directly.
         if op in {"IN", "NOT IN"}:
+            # Use ANY/NOT ANY syntax instead of IN (:list) so the parameter
+            # is bound as a text[] and PostgreSQL picks the right operator.
+            # Bare "l.status IN (:list)" raises "operator does not exist:
+            # character varying = text[]" against a varchar column.
             param_key = f"f_{idx}_list"
-            clauses.append(f"{spec.column} {op} (:{param_key})")
+            sql_op = "IN" if op == "IN" else "NOT IN"
+            clauses.append(f"{spec.column} = ANY(:{param_key})" if op == "IN" else f"{spec.column} <> ALL(:{param_key})")
             params[param_key] = list(value)
             continue
 

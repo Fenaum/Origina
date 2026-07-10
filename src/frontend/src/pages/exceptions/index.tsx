@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AppLayout } from "@/components/app/AppLayout";
 import { useAuth } from "@/state/auth";
 import type {
@@ -534,7 +534,7 @@ export default function PreFileExceptionsPage() {
   const [saving, setSaving] = useState(false);
   const [filterStatus, setFilterStatus] = useState<ExceptionStatus | "all">("all");
 
-  async function load() {
+  const load = useCallback(async () => {
     if (!token) return;
     setLoading(true);
     setError(null);
@@ -553,9 +553,11 @@ export default function PreFileExceptionsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [token]);
 
-  useEffect(() => { void load(); }, [token]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   async function handleCreate(form: FormState) {
     if (!token) return;

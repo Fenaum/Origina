@@ -1,5 +1,14 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  archiveDocument,
+  buildDocumentDownloadUrl,
+  listDocuments,
+  uploadDocument,
+} from "@/services/documentsService";
+import { useAuth } from "@/state/auth";
+import { EmptyState } from "@/components/feedback/EmptyState";
 import type { LoanSummary } from "@/types/loan";
+import type { DocumentOut } from "@/types/api";
 
 type Props = { loan: LoanSummary };
 
@@ -13,80 +22,6 @@ type DocumentCategory =
   | "Closing"
   | "Miscellaneous";
 
-type WorkspaceDocument = {
-  id: string;
-  fileName: string;
-  category: DocumentCategory;
-  documentType: string;
-  version: string;
-  status: "Uploaded" | "Reviewed" | "Needs Review" | "Archived";
-  uploadedBy: string;
-  uploadedAt: string;
-  linkedCondition: string | null;
-  size: string;
-  mimeType: string;
-  sha256: string;
-};
-
-const DOCUMENTS: WorkspaceDocument[] = [
-  {
-    id: "doc-1",
-    fileName: "bank-statements-jan-mar.pdf",
-    category: "Income",
-    documentType: "Bank Statements",
-    version: "v2",
-    status: "Needs Review",
-    uploadedBy: "Broker Portal",
-    uploadedAt: "2026-06-02",
-    linkedCondition: "INC-004",
-    size: "2.8 MB",
-    mimeType: "application/pdf",
-    sha256: "a90c...129f",
-  },
-  {
-    id: "doc-2",
-    fileName: "purchase-contract.pdf",
-    category: "Property",
-    documentType: "Purchase Contract",
-    version: "v1",
-    status: "Reviewed",
-    uploadedBy: "Account Manager",
-    uploadedAt: "2026-06-03",
-    linkedCondition: null,
-    size: "1.1 MB",
-    mimeType: "application/pdf",
-    sha256: "d44b...84ad",
-  },
-  {
-    id: "doc-3",
-    fileName: "asset-statement-vanguard.pdf",
-    category: "Assets",
-    documentType: "Asset Statement",
-    version: "v1",
-    status: "Uploaded",
-    uploadedBy: "Borrower",
-    uploadedAt: "2026-06-04",
-    linkedCondition: null,
-    size: "940 KB",
-    mimeType: "application/pdf",
-    sha256: "c118...aa02",
-  },
-  {
-    id: "doc-4",
-    fileName: "initial-disclosures-signed.pdf",
-    category: "Disclosures",
-    documentType: "Signed Disclosure Package",
-    version: "v1",
-    status: "Reviewed",
-    uploadedBy: "Disclosure Desk",
-    uploadedAt: "2026-06-05",
-    linkedCondition: null,
-    size: "4.2 MB",
-    mimeType: "application/pdf",
-    sha256: "00ab...72e1",
-  },
-];
-
 const CATEGORIES: DocumentCategory[] = [
   "Income",
   "Assets",
@@ -98,14 +33,119 @@ const CATEGORIES: DocumentCategory[] = [
   "Miscellaneous",
 ];
 
+function categoryFor(docType: string | null): DocumentCategory {
+  const t = (docType ?? "").toLowerCase();
+  if (t.includes("bank") || t.includes("income") || t.includes("w2") || t.includes("paystub")) return "Income";
+  if (t.includes("asset") || t.includes("vanguard") || t.includes("statement")) return "Assets";
+  if (t.includes("credit") || t.includes("tri") || t.includes("fico")) return "Credit";
+  if (t.includes("appraisal") || t.includes("purchase") || t.includes("contract")) return "Property";
+  if (t.includes("disclosure")) return "Disclosures";
+  if (t.includes("condition")) return "Conditions";
+  if (t.includes("closing") || t.includes("title") || t.includes("hud")) return "Closing";
+  return "Miscellaneous";
+}
+
+function formatBytes(n: number | null): string {
+  if (!n || n <= 0) return "—";
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function formatDateTime(iso: string | null): string {
+  if (!iso) return "—";
+  return new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" }).format(new Date(iso));
+}
+
 export function WorkspaceDocuments({ loan }: Props) {
+  const { token } = useAuth();
+  const [documents, setDocuments] = useState<DocumentOut[]>([]);
+  const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState<DocumentCategory>("Income");
-  const [selectedId, setSelectedId] = useState<string | null>(DOCUMENTS[0]?.id ?? null);
-  const selected = DOCUMENTS.find((document) => document.id === selectedId) ?? null;
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [uploadType, setUploadType] = useState<string>("");
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [archiveError, setArchiveError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  async function fetchDocuments() {
+    if (!token) return;
+    setLoading(true);
+    try {
+      const data = await listDocuments(loan.id, token);
+      setDocuments(data);
+      if (data.length > 0 && !data.find((d) => d.id === selectedId)) {
+        setSelectedId(data[0].id);
+      }
+    } catch {
+      setDocuments([]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void fetchDocuments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loan.id, token]);
+
   const filtered = useMemo(
-    () => DOCUMENTS.filter((document) => document.category === category),
-    [category],
+    () => documents.filter((doc) => categoryFor(doc.doc_type) === category),
+    [documents, category],
   );
+
+  const selected = documents.find((d) => d.id === selectedId) ?? null;
+
+  const counts: Record<DocumentCategory, number> = useMemo(() => {
+    const result = {} as Record<DocumentCategory, number>;
+    for (const cat of CATEGORIES) result[cat] = 0;
+    for (const doc of documents) {
+      const cat = categoryFor(doc.doc_type);
+      result[cat] = (result[cat] ?? 0) + 1;
+    }
+    return result;
+  }, [documents]);
+
+  async function handleUploadClick() {
+    setUploadError(null);
+    fileInputRef.current?.click();
+  }
+
+  async function handleFileChosen(file: File | null | undefined) {
+    if (!file || !token) return;
+    setUploading(true);
+    setUploadError(null);
+    try {
+      await uploadDocument(
+        loan.id,
+        file,
+        { docType: uploadType || undefined },
+        token,
+      );
+      setUploadType("");
+      setUploadOpen(false);
+      await fetchDocuments();
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  async function handleArchive(docId: string) {
+    if (!token) return;
+    setArchiveError(null);
+    try {
+      await archiveDocument(docId, token);
+      if (selectedId === docId) setSelectedId(null);
+      await fetchDocuments();
+    } catch (err) {
+      setArchiveError(err instanceof Error ? err.message : "Archive failed");
+    }
+  }
 
   return (
     <div className="workspace-module workspace-module--full">
@@ -117,41 +157,69 @@ export function WorkspaceDocuments({ loan }: Props) {
 
       <div className="documents-workspace">
         <aside className="documents-categories">
-          <button type="button" className="documents-upload-button">Upload Document</button>
-          {CATEGORIES.map((item) => {
-            const count = DOCUMENTS.filter((document) => document.category === item).length;
-            return (
-              <button
-                key={item}
-                type="button"
-                className={`documents-category${category === item ? " documents-category--active" : ""}`}
-                onClick={() => {
-                  setCategory(item);
-                  setSelectedId(DOCUMENTS.find((document) => document.category === item)?.id ?? null);
-                }}
-              >
-                <span>{item}</span>
-                <strong>{count}</strong>
-              </button>
-            );
-          })}
+          <button type="button" className="documents-upload-button" onClick={() => setUploadOpen((v) => !v)}>
+            Upload Document
+          </button>
+          {uploadOpen && (
+            <div className="documents-upload-form">
+              <input
+                className="documents-upload-input"
+                placeholder="Document type (e.g. bank_statement)"
+                value={uploadType}
+                onChange={(e) => setUploadType(e.target.value)}
+              />
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="documents-upload-input"
+                onChange={(e) => void handleFileChosen(e.target.files?.[0])}
+                disabled={uploading}
+              />
+              {uploadError && <div className="documents-upload-error">{uploadError}</div>}
+            </div>
+          )}
+          {CATEGORIES.map((item) => (
+            <button
+              key={item}
+              type="button"
+              className={`documents-category${category === item ? " documents-category--active" : ""}`}
+              onClick={() => {
+                setCategory(item);
+                const first = documents.find((doc) => categoryFor(doc.doc_type) === item);
+                setSelectedId(first?.id ?? null);
+              }}
+            >
+              <span>{item}</span>
+              <strong>{counts[item] ?? 0}</strong>
+            </button>
+          ))}
         </aside>
 
         <section className="documents-grid-panel">
           <div className="documents-grid-header">
             <h3>{category}</h3>
             <div>
-              <button type="button">Download</button>
-              <button type="button">Link Condition</button>
+              <button type="button" onClick={handleUploadClick} disabled={uploading}>
+                {uploading ? "Uploading…" : "Upload"}
+              </button>
             </div>
           </div>
 
-          {filtered.length === 0 ? (
-            <div className="workspace-empty-state">
-              <h3>No documents in this category</h3>
-              <p>Upload documents here once the backend document queue is connected.</p>
+          {loading && (
+            <div className="workspace-skeleton documents-skeleton" aria-hidden>
+              <div className="documents-skeleton-row" />
+              <div className="documents-skeleton-row" />
             </div>
-          ) : (
+          )}
+
+          {!loading && filtered.length === 0 && (
+            <EmptyState
+              title={`No documents in ${category}`}
+              description="Use the upload form in the left rail to attach a file to this loan."
+            />
+          )}
+
+          {!loading && filtered.length > 0 && (
             <div className="documents-table">
               <div className="documents-table-row documents-table-row--head">
                 <span>File</span>
@@ -167,16 +235,18 @@ export function WorkspaceDocuments({ loan }: Props) {
                   onClick={() => setSelectedId(document.id)}
                 >
                   <span>
-                    <strong>{document.fileName}</strong>
-                    <small>{document.version}</small>
+                    <strong>{document.file_name}</strong>
+                    <small>{formatBytes(document.file_size_bytes)}</small>
                   </span>
-                  <span>{document.documentType}</span>
-                  <span><StatusPill label={document.status} /></span>
-                  <span>{document.uploadedAt}</span>
+                  <span>{document.doc_type ?? "—"}</span>
+                  <span><StatusPill status="Uploaded" /></span>
+                  <span>{formatDateTime(document.uploaded_at)}</span>
                 </button>
               ))}
             </div>
           )}
+
+          {archiveError && <div className="documents-upload-error">{archiveError}</div>}
         </section>
 
         <aside className="documents-preview-panel">
@@ -184,16 +254,31 @@ export function WorkspaceDocuments({ loan }: Props) {
             <>
               <div className="documents-preview-box">
                 <span>Preview</span>
-                <strong>{selected.mimeType === "application/pdf" ? "PDF viewer placeholder" : "Image preview placeholder"}</strong>
-                <p>{selected.fileName}</p>
+                <strong>{selected.mime_type === "application/pdf" ? "PDF viewer placeholder" : "File preview placeholder"}</strong>
+                <p>{selected.file_name}</p>
+                <a
+                  href={buildDocumentDownloadUrl(selected.id)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="workspace-primary-button documents-download-link"
+                >
+                  Download
+                </a>
               </div>
               <div className="documents-metadata">
                 <h3>Metadata</h3>
-                <MetaLine label="Size" value={selected.size} />
-                <MetaLine label="SHA256" value={selected.sha256} />
-                <MetaLine label="Uploader" value={selected.uploadedBy} />
-                <MetaLine label="Condition" value={selected.linkedCondition ?? "Not linked"} />
-                <MetaLine label="OCR Status" value="Pending future processing" />
+                <MetaLine label="Size" value={formatBytes(selected.file_size_bytes)} />
+                <MetaLine label="SHA256" value={selected.sha256 ? `${selected.sha256.slice(0, 12)}…` : "—"} />
+                <MetaLine label="MIME" value={selected.mime_type ?? "—"} />
+                <MetaLine label="Uploader" value={selected.uploaded_by ?? "—"} />
+                <MetaLine label="Condition" value={selected.condition_id ?? "Not linked"} />
+                <button
+                  type="button"
+                  className="documents-archive-button"
+                  onClick={() => void handleArchive(selected.id)}
+                >
+                  Archive
+                </button>
               </div>
             </>
           ) : (
@@ -208,9 +293,9 @@ export function WorkspaceDocuments({ loan }: Props) {
   );
 }
 
-function StatusPill({ label }: { label: WorkspaceDocument["status"] }) {
-  const tone = label === "Reviewed" ? "success" : label === "Needs Review" ? "warning" : "neutral";
-  return <span className={`workspace-pill workspace-pill--${tone}`}>{label}</span>;
+function StatusPill({ status }: { status: string }) {
+  const tone = status === "Reviewed" ? "success" : status === "Needs Review" ? "warning" : "neutral";
+  return <span className={`workspace-pill workspace-pill--${tone}`}>{status}</span>;
 }
 
 function MetaLine({ label, value }: { label: string; value: string }) {

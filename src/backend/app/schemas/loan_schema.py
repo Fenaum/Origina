@@ -182,6 +182,9 @@ class LoanPipelineSummaryOut(BaseModel):
     conditions_open: int
     conditions_submitted: int
     actions_needed: int
+    # Sprint 4 §4.1 — assignment surface for the pipeline grid.
+    assigned_to: Optional[UUID] = None
+    assigned_to_name: Optional[str] = None
 
 
 # ── Context Menu / Quick Actions ───────────────────────────────────────────────
