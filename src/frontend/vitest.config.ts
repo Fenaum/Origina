@@ -61,6 +61,13 @@ export default defineConfig({
       "react/jsx-runtime": path.join(NODE_MODULES, "react/jsx-runtime.js"),
       "react-dom": path.join(NODE_MODULES, "react-dom"),
       "react-dom/client": path.join(NODE_MODULES, "react-dom/client.js"),
+      // React Query — used by useAnalyticsSummary and the new Manager
+      // dashboard. Vite's resolver from tests/frontend/ cannot reach
+      // src/frontend/node_modules without this explicit alias.
+      "@tanstack/react-query": path.join(
+        NODE_MODULES,
+        "@tanstack/react-query"
+      ),
       // WorkspaceHome uses `useRouter()` from next/router — alias to the
       // installed package so vite can resolve it from tests/frontend/*.
       next: path.join(NODE_MODULES, "next"),

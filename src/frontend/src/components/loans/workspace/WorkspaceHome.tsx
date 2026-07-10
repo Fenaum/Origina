@@ -66,15 +66,6 @@ function fmtDate(value: string | null | undefined): string {
   return new Intl.DateTimeFormat("en-US", { dateStyle: "medium" }).format(date);
 }
 
-function timeAgo(value: string): string {
-  const ms = Date.now() - new Date(value).getTime();
-  const hours = Math.floor(ms / 3_600_000);
-  if (hours < 1) return "just now";
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return days < 30 ? `${days}d ago` : `${Math.floor(days / 30)}mo ago`;
-}
-
 function borrowerName(borrower: BorrowerOut | null): string {
   if (!borrower) return "-";
   return [borrower.first_name, borrower.last_name].filter(Boolean).join(" ") || "-";
@@ -144,17 +135,9 @@ export function WorkspaceHome({ loan }: Props) {
     { label: "Closing", status: "Not scheduled", count: 0, tone: "neutral", section: "closing" },
     { label: "Conversation", status: "No new messages", count: 0, tone: "neutral", section: "conversation" },
   ] as const;
-
-  const activity = [
-    { label: `Loan ${loan.loanNumber} created`, detail: "Loan record opened", time: loan.updatedAt },
-    ...(loan.submittedAt
-      ? [{ label: "Loan submitted", detail: "Workflow entered submission queue", time: loan.submittedAt }]
-      : []),
-    { label: `Status changed to ${loanStatusLabels[loan.status]}`, detail: "System status event", time: loan.updatedAt },
-    ...(loan.conditionsOpen > 0
-      ? [{ label: `${loan.conditionsOpen} conditions open`, detail: "Processor review required", time: loan.updatedAt }]
-      : []),
-  ];
+  // Activity timeline moved out of the home hero — it's now the dedicated
+  // WorkspaceActivityRail mounted at the right edge of the workspace shell,
+  // fed by the real /notes + /audit API (no duplicate hardcoded list).
 
   return (
     <div className="home-command">
@@ -245,19 +228,6 @@ export function WorkspaceHome({ loan }: Props) {
             ))}
           </div>
 
-          <div className="home-activity">
-            <h4>Recent Activity</h4>
-            {activity.map((item, index) => (
-              <article key={`${item.label}-${index}`} className="home-activity-item">
-                <span className="home-activity-dot" aria-hidden />
-                <div>
-                  <strong>{item.label}</strong>
-                  <small>{item.detail}</small>
-                </div>
-                <time>{timeAgo(item.time)}</time>
-              </article>
-            ))}
-          </div>
         </section>
       </div>
     </div>

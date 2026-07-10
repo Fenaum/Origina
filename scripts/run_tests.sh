@@ -25,6 +25,11 @@ if [[ -x "$REPO_ROOT/.venv/bin/python3" ]]; then
   PYTHON_BIN="$REPO_ROOT/.venv/bin/python3"
 fi
 
+# Tests live at repo root; backend modules live at src/backend/app/*.
+# Set PYTHONPATH so coverage can resolve "app.api" / "app.services" against
+# the backend package even when pytest runs from the repo root.
+export PYTHONPATH="$REPO_ROOT/src/backend${PYTHONPATH:+:$PYTHONPATH}"
+
 TARGET="${1:-all}"
 BACKEND_RC=0
 FRONTEND_RC=0
@@ -55,7 +60,22 @@ run_backend() {
     fi
   fi
 
-  "$PYTHON_BIN" -m pytest tests/backend/ -v --tb=short
+  # Sprint 5 §5.2 — coverage gates.
+  #   - Overall app coverage: ≥ 70%
+  #   - Condition-lifecycle service: ≥ 90% (regression on the heavily-tested path)
+  # Failures in either gate surface as a non-zero pytest exit and a red CI build.
+  "$PYTHON_BIN" -m pytest tests/backend/ \
+    --cov=app.api \
+    --cov=app.services \
+    --cov-report=term-missing \
+    --cov-fail-under=70 \
+    -v --tb=short || return $?
+
+  "$PYTHON_BIN" -m pytest tests/backend/test_condition_lifecycle.py \
+    --cov=app.services.condition_lifecycle \
+    --cov-report=term-missing \
+    --cov-fail-under=90 \
+    -v --tb=short
   return $?
 }
 

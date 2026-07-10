@@ -1,4 +1,4 @@
-import { useReducer, useCallback } from "react";
+import { useReducer, useCallback, useEffect, useRef } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { CheckIcon, RefreshIcon } from "./icons";
@@ -70,12 +70,17 @@ export function DirtySectionCard<T>({
 }: DirtyCardProps<T>) {
   const [state, dispatch] = useReducer(reducer, "clean");
 
+  const onSavedRef = useRef(onSaved);
+  useEffect(() => {
+    onSavedRef.current = onSaved;
+  }, [onSaved]);
+
   const handleSave = useCallback(async () => {
     dispatch("markSaving");
     try {
       const data = await mutation.mutateAsync(mutation.variables);
       dispatch("markSaved");
-      onSaved?.(data);
+      onSavedRef.current?.(data);
       // Reset to clean after a brief visual confirmation
       setTimeout(() => dispatch("reset"), 2000);
     } catch {

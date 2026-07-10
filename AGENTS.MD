@@ -249,20 +249,28 @@ The `@shadcn/ui` package currently in package.json (`v0.0.4`) is a dummy — rem
 
 ## What to review before next feature push
 
-1. **`loans.status` column type** — live DB is `text`, should be `loan_status` enum. Fix before building status-transition UI.
-2. **Pagination** — all list endpoints return unbounded results. Add `skip`/`limit` params and `total` to responses before wiring the pipeline table to the real API.
-3. **CORS** — backend uses `allow_origins=["*"]`. Lock to `http://localhost:3000` in dev and real domain in prod before any deployment.
-4. **JWT secret** — `JWT_SECRET_KEY` in `core/config.py` must be rotated from the dev default before staging/prod.
-5. **Bootstrap user** — re-run `scripts/bootstrap_user.py` if login fails; the hash may be stale.
+1. **`loans.status` column type** — live DB is `text`, should be `loan_status` enum. Status transitions (Sprint 3) work today; enum migration is housekeeping.
+2. **CORS** — backend uses `allow_origins=["*"]`. Lock to `http://localhost:3000` in dev and real domain in prod before any deployment.
+3. **JWT secret** — `JWT_SECRET_KEY` in `core/config.py` must be rotated from the dev default before staging/prod.
+4. **Bootstrap user** — re-run `scripts/bootstrap_user.py` if login fails; the hash may be stale.
+5. **Test-schema trigger install** — Sprint 3 added inline `log_audit_event()` install in `tests/backend/conftest.py`. A migration-based test runner would be cleaner; tracked for Sprint 5.
+
+## Sprint status
+
+- **Sprint 3 (Full Workspace) — ✅ Complete (2026-07-09)**: notes, audit log, status transitions, underwriting panels, documents all wired end-to-end. See `docs/sprints/sprint-3-full-workspace.md`.
+- **Sprint 4 (Manager Layer) — ✅ Complete (2026-07-09)**: pipeline assignee JOIN + filters, analytics date-filter bug fixes (qualified columns, `= ANY(:param)`, list validator), `/dashboard/manager` with `TeamKPICard` grid, `domain_events` outbox + dispatcher + SMTP email notifications. See `docs/sprints/sprint-4-manager-layer.md`.
+- **Sprint 5 (Production Hardening) — next**: httpOnly cookie auth + rate limiting on `/auth/login`, GitHub Actions CI on every PR, IT-admin tenant onboarding flow.
 
 ## Next features to build (priority order)
 
-1. **Wire auth** — `POST /api/v1/auth/login` → store JWT → inject via `apiClient.ts`. Unblocks everything.
-2. **Wire loan pipeline** — replace mock in `loanService.ts` with real API call; hooks are already in place.
-3. **Loan detail page** — pull `loan_financials`, `loan_terms`, `conditions`, `borrowers`, `properties`.
-4. **Condition management UI** — clear/waive workflow; the backend endpoints exist.
-5. **Loan creation form** — multi-step broker submission form.
-6. **Pagination** — add to list endpoints and update frontend table to use cursor/page params.
+Per Sprint 5 spec (`docs/sprints/sprint-5-build-spec.md`):
+
+0. **Lint cleanup** — `npm run lint` reports 22 problems (9 errors, 13 warnings) carried across Sprints 3-4 in 11 files. Full inventory in `docs/CURRENT_SPRINT.md` Phase 5.0. Sprint 5.0 owns these so CI can gate the build cleanly.
+1. **httpOnly cookie auth** — `POST /auth/login` sets `origina_token` cookie (HttpOnly, SameSite=Lax, Secure off in local); `apiClient.ts` stops injecting `Authorization`; `POST /auth/logout` clears the cookie. XSS can no longer read the session.
+2. **Rate limiting on `/auth/login`** — e.g., 5 failures / IP / minute → 429; protects against brute force.
+3. **GitHub Actions CI** — `.github/workflows/ci.yml` runs `./scripts/run_tests.sh` on every PR; backend coverage gate (`--cov-fail-under=70` on `app/api`) and condition-lifecycle gate (`--cov-fail-under=90`) enforced.
+4. **Migration-based test runner** — replaces inline trigger install in `tests/backend/conftest.py`; runs numbered migrations from `db/migrations/` so test schema is always in sync with prod.
+5. **Multi-tenant onboarding** — IT admin can create tenant + bootstrap settings + onboard first user from `pages/admin/tenants.tsx` (or `scripts/bootstrap_tenant.py` CLI).
 
 ## Areas to optimize
 

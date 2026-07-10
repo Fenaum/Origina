@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
+import { apiRequest } from "@/services/apiClient";
 import { AppLayout } from "@/components/app/AppLayout";
 import { SettingsLayout } from "@/components/settings/SettingsLayout";
 import { SectionCard } from "@/components/settings/SectionCard";
@@ -217,7 +218,156 @@ export default function AdminSettingsPage() {
             </div>
           </div>
         </SectionCard>
+
+        <TenantOnboardingCard />
       </SettingsLayout>
     </AppLayout>
   );
 }
+function TenantOnboardingCard() {
+  const [tenantName, setTenantName] = useState("");
+  const [adminEmail, setAdminEmail] = useState("");
+  const [adminFullName, setAdminFullName] = useState("");
+  const [adminPassword, setAdminPassword] = useState("");
+  const [adminSecret, setAdminSecret] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [result, setResult] = useState<
+    | { ok: true; tenantId: string; userId: string; email: string; message: string }
+    | { ok: false; detail: string }
+    | null
+  >(null);
+
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      setSubmitting(true);
+      setResult(null);
+      try {
+        const body = await apiRequest<{
+          tenant_id: string;
+          user_id: string;
+          email: string;
+          message: string;
+        }>("/tenants/bootstrap", {
+          method: "POST",
+          body: JSON.stringify({
+            tenant_name: tenantName,
+            admin_email: adminEmail,
+            admin_full_name: adminFullName,
+            admin_password: adminPassword,
+            admin_secret: adminSecret,
+          }),
+        });
+        setResult({
+          ok: true,
+          tenantId: body.tenant_id,
+          userId: body.user_id,
+          email: body.email,
+          message: body.message,
+        });
+        setTenantName("");
+        setAdminEmail("");
+        setAdminFullName("");
+        setAdminPassword("");
+        setAdminSecret("");
+      } catch (err) {
+        setResult({
+          ok: false,
+          detail: err instanceof Error ? err.message : "Request failed",
+        });
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    [tenantName, adminEmail, adminFullName, adminPassword, adminSecret],
+  );
+
+  return (
+    <SectionCard
+      title="Tenant Onboarding"
+      description="Spin up a new lender workspace with its first IT admin. Requires the operator-supplied ADMIN_SECRET."
+    >
+      <form onSubmit={handleSubmit} className="form-stack">
+        <div className="form-field">
+          <label htmlFor="tenant-name" className="form-label">Tenant name</label>
+          <input
+            id="tenant-name"
+            type="text"
+            className="form-input"
+            value={tenantName}
+            onChange={(e) => setTenantName(e.target.value)}
+            required
+          />
+        </div>
+        <div className="form-field">
+          <label htmlFor="admin-email" className="form-label">Admin email</label>
+          <input
+            id="admin-email"
+            type="email"
+            className="form-input"
+            value={adminEmail}
+            onChange={(e) => setAdminEmail(e.target.value)}
+            required
+          />
+        </div>
+        <div className="form-field">
+          <label htmlFor="admin-full-name" className="form-label">Admin full name</label>
+          <input
+            id="admin-full-name"
+            type="text"
+            className="form-input"
+            value={adminFullName}
+            onChange={(e) => setAdminFullName(e.target.value)}
+            required
+          />
+        </div>
+        <div className="form-field">
+          <label htmlFor="admin-password" className="form-label">Admin password</label>
+          <input
+            id="admin-password"
+            type="password"
+            className="form-input"
+            value={adminPassword}
+            onChange={(e) => setAdminPassword(e.target.value)}
+            required
+          />
+        </div>
+        <div className="form-field">
+          <label htmlFor="admin-secret" className="form-label">Admin secret</label>
+          <input
+            id="admin-secret"
+            type="password"
+            className="form-input"
+            value={adminSecret}
+            onChange={(e) => setAdminSecret(e.target.value)}
+            required
+          />
+          <p className="form-hint">Provided by the platform operator. Never share this value.</p>
+        </div>
+        <button
+          type="submit"
+          className="form-button"
+          disabled={submitting}
+        >
+          {submitting ? "Creating..." : "Create Tenant"}
+        </button>
+        {result?.ok && (
+          <div className="form-success" role="status">
+            <strong>{result.message}</strong>
+            <p style={{ margin: "0.5rem 0 0" }}>
+              Tenant ID: <code>{result.tenantId}</code>
+              <br />
+              Admin User ID: <code>{result.userId}</code>
+            </p>
+          </div>
+        )}
+        {result && !result.ok && (
+          <div className="form-error" role="alert">
+            {result.detail}
+          </div>
+        )}
+      </form>
+    </SectionCard>
+  );
+}
+

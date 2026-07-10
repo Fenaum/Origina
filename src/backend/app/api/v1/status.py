@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
@@ -96,6 +96,7 @@ def get_status_history(
 def transition_status(
     loan_id: UUID,
     payload: StatusEventCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_audited_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -146,6 +147,35 @@ def transition_status(
     )
     loan.status = target  # type: ignore[assignment]
     db.add(event)
+
+    # Sprint 4 §4.4 — emit a domain event in the SAME transaction as the
+    # state change. Email notifications, webhooks, AI triggers, SLA timers
+    # subscribe through event_service.dispatch_pending_events; this route
+    # knows nothing about them.
+    from app.models.events import EventType
+    from app.services.event_service import emit_event
+    emit_event(
+        db,
+        tenant_id=current_user.tenant_id,
+        event_type=(
+            EventType.LOAN_SUBMITTED if target == "submitted"
+            else EventType.LOAN_STATUS_CHANGED
+        ),
+        entity_type="loan",
+        entity_id=loan_id,
+        payload={
+            "from_status": current,
+            "to_status": target,
+            "actor_user_id": str(current_user.id),
+            "assigned_to": str(loan.assigned_to) if loan.assigned_to else None,
+        },
+    )
+
     db.commit()
     db.refresh(event)
+
+    # Fire-and-forget dispatch — do not block the response.
+    from app.services.event_service import run_dispatch_in_background
+    background_tasks.add_task(run_dispatch_in_background)
+
     return event

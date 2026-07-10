@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/state/auth";
-import type { ExceptionDecisionConditionOut, ExceptionFactor, ExceptionOut, ExceptionSeverity, ExceptionStatus } from "@/types/api";
+import type { ExceptionDecisionConditionOut, ExceptionFactor, ExceptionOut, ExceptionSeverity, ExceptionStatus, PaginatedResponse } from "@/types/api";
 import type { LoanSummary } from "@/types/loan";
 import {
   PRIMARY_CATEGORIES,
@@ -593,7 +593,7 @@ function ConditionList({ excId, token }: { excId: string; token: string }) {
   const [actioning, setActioning] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  async function load() {
+  const load = useCallback(async () => {
     try {
       const res = await fetch(`${API_BASE}/exceptions/${excId}/conditions`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -602,9 +602,11 @@ function ConditionList({ excId, token }: { excId: string; token: string }) {
     } finally {
       setLoading(false);
     }
-  }
+  }, [excId, token]);
 
-  useEffect(() => { void load(); }, [excId, token]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   async function act(condId: string, type: "satisfy" | "waive") {
     setActioning(condId);
@@ -873,7 +875,7 @@ export function WorkspaceExceptions({ loan }: Props) {
   const [saving, setSaving] = useState(false);
   const [filterStatus, setFilterStatus] = useState<ExceptionStatus | "all">("all");
 
-  async function load() {
+  const load = useCallback(async () => {
     if (!token) return;
     setLoading(true);
     setError(null);
@@ -882,15 +884,17 @@ export function WorkspaceExceptions({ loan }: Props) {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error(`${res.status}`);
-      setExceptions(await res.json() as ExceptionOut[]);
+      setExceptions((await res.json() as PaginatedResponse<ExceptionOut>).items ?? []);
     } catch {
       setError("Could not load exceptions.");
     } finally {
       setLoading(false);
     }
-  }
+  }, [loan.id, token]);
 
-  useEffect(() => { void load(); }, [loan.id, token]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   async function handleCreate(form: FormState) {
     if (!token) return;

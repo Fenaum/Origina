@@ -1,13 +1,16 @@
-from fastapi import Depends, HTTPException, status
+from typing import Optional
+
+from fastapi import Cookie, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.core.config import COOKIE_NAME
 from app.core.db import get_db
 from app.models.user import User
 from app.security.jwt import decode_access_token
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
 
 _401 = HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED,
@@ -16,8 +19,25 @@ _401 = HTTPException(
 )
 
 
+def _extract_token(
+    bearer_token: Optional[str] = Depends(oauth2_scheme),
+    cookie_token: Optional[str] = Cookie(default=None, alias=COOKIE_NAME),
+) -> str:
+    """Pull the JWT from either the Authorization header (API clients) or the
+    httpOnly cookie (browsers). Header wins when both are present.
+
+    Raises 401 when neither is set — keeps the security contract identical to
+    the original Bearer-only path.
+    """
+    if bearer_token:
+        return bearer_token
+    if cookie_token:
+        return cookie_token
+    raise _401
+
+
 def get_current_user(
-    token: str = Depends(oauth2_scheme),
+    token: str = Depends(_extract_token),
     db: Session = Depends(get_db),
 ) -> User:
     payload = decode_access_token(token)

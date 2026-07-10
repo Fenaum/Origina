@@ -70,6 +70,12 @@ export async function apiRequest<T>(
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
     cache: "no-store",
+    // Send httpOnly cookies on cross-origin requests (Spring 5 §5.1). The
+    // backend sets `origina_token` on /auth/login; this lets the browser
+    // include it on every subsequent same-origin call. We also keep the
+    // Authorization header (above) for now as a belt-and-suspenders fallback
+    // so tests and Postman clients don't need to manage cookies.
+    credentials: "include",
     ...rest,
     headers,
   });

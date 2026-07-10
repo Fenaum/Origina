@@ -2,7 +2,7 @@
 
 > **Cross-links:** [PMO.md](PMO.md) | [ARCHITECTURE.md](ARCHITECTURE.md) | [DECISIONS.md](DECISIONS.md) | [BUILD_HISTORY.md](BUILD_HISTORY.md) | [TESTING.md](TESTING.md)
 
-## Current State (as of July 2026 — Session 30)
+## Current State (as of July 2026 — Session 34)
 
 The platform has a working end-to-end demo path:
 1. Borrower visits `/borrower/welcome` → completes intake → sees program recommendations → submits handoff
@@ -12,11 +12,16 @@ The platform has a working end-to-end demo path:
 5. AE/admin accesses `/settings` (profile, security, notifications, preferences) and `/admin` (people, products, workflow)
 6. AE submits a new loan from the wizard → it appears in the pipeline with the correct borrower name and amount
 
-**Sprint 1 — Demo Unblocked — closed 2026-07-07** ([archive](sprints/sprint-1-demo-unblocked.md)). All 4 phases complete, all 6 B-gate test files green. Next: [Sprint 2 — Core Workflow](CURRENT_SPRINT.md).
+**Sprint 1 — Demo Unblocked — closed 2026-07-07** ([archive](sprints/sprint-1-demo-unblocked.md)). All 4 phases complete, all 6 B-gate test files green.
+**Sprint 2 — Core Workflow — closed 2026-07-09** ([archive](sprints/sprint-2-core-workflow.md)). Real users + RBAC, condition lifecycle, conditions workspace, pagination envelope on remaining list endpoints.
+**Sprint 3 — Full Workspace — closed 2026-07-09** ([archive](sprints/sprint-3-full-workspace.md)). Notes, audit log, status transitions, underwriting panels, documents all wired end-to-end.
+**Sprint 4 — Manager Layer — closed 2026-07-09** ([archive](sprints/sprint-4-manager-layer.md)). Pipeline assignments + filters, analytics date-filter bug fixes, manager dashboard tiles, domain-events outbox + email notifications.
+**Sprint 5 — Production Hardening — closed 2026-07-10** ([archive](sprints/sprint-5-production-hardening.md)). httpOnly cookie auth + rate limiting, GitHub Actions CI with coverage gates, multi-tenant onboarding via `POST /tenants/bootstrap` + admin UI.
+**Next:** [Sprint 6 — TBD](CURRENT_SPRINT.md). Awaiting owner-authored sprint spec.
 
-**What is real:** Auth (JWT with env-var secret), CORS locked to localhost, pipeline pagination (50/page with controls), atomic 3-table loan submission with JOINed response, workspace financials via real API, full exception module (26 routes), controlled values architecture (18 sets, 144+ values), metadata API, task management, condition templates, marketing pages (guideline, product, about).
-**What is mock:** Document upload (simulated), pricing (hardcoded scenarios), MISMO parsing (stub), settings pages (UI built, no backend save).
-**Testing foundation:** 19 backend + 4 frontend tests passing, 2 skipped (multi-tenant seed pending). See **Testing Checkpoints** below.
+**What is real:** Auth (JWT with env-var secret), CORS locked to localhost, pipeline pagination (50/page with controls) + assignee filter + status filter, atomic 3-table loan submission with JOINed response, workspace financials via real API, full exception module (26 routes), controlled values architecture (18 sets, 144+ values), metadata API, task management, condition templates, marketing pages (guideline, product, about), notes/audit log/status-transition UI in workspace, documents upload + download + archive, account-manager team KPI dashboard, transactional outbox + SMTP email notifications (disabled when SMTP_HOST is empty), httpOnly cookie auth (`origina_token`, dual-mode cookie OR Bearer accepted) + slowapi rate limit on `/auth/login`, GitHub Actions CI on every PR with backend coverage gate (≥70%) + condition-lifecycle gate (≥90%), `POST /api/v1/tenants/bootstrap` (ADMIN_SECRET-guarded) for tenant + first admin creation in one atomic call, Settings → Admin → Tenant Onboarding UI.
+**What is mock:** Document upload (file bytes are stored to local disk, not S3), pricing (hardcoded scenarios), MISMO parsing (stub), settings pages (UI built, no backend save), SMTP transport (sender is wired but no production mail relay yet — `localhost` smoke tests rely on `notification_service` no-op when `SMTP_HOST` is empty).
+**Testing foundation:** 134 backend + 13 frontend tests passing, 2 backend skipped (exception + intake smoke checks pending seed). Backend coverage 70.30%; `app/services/condition_lifecycle.py` 90.00%. See **Testing Checkpoints** below.
 
 ---
 
@@ -37,6 +42,9 @@ The platform has a working end-to-end demo path:
 - [x] Controlled values architecture — zero PostgreSQL ENUMs, TEXT+CHECK, 18 value sets, tenant override model
 - [x] Metadata API (`GET /api/v1/metadata/values`) — frontend bootstrap endpoint for all controlled values
 - [x] Pre-file exceptions — `loan_id` nullable, global `/exceptions` page, `link-loan` endpoint
+- [x] httpOnly cookie auth — `origina_token` set by `/auth/login` (HttpOnly + SameSite=Lax + Path=/); `POST /auth/logout` clears it; `get_current_user` accepts cookie OR Bearer header for API clients (Sprint 5.1) — `tests/backend/test_auth_cookie.py`
+- [x] Login rate limiting — slowapi per-IP limiter on `/auth/login` (default 10/min, configurable via `LOGIN_RATE_LIMIT`); in-process storage with autouse test fixture clearing state between tests (Sprint 5.1)
+- [x] `POST /api/v1/tenants/bootstrap` — ADMIN_SECRET-guarded atomic create of tenant + first IT_ADMIN user + 5 canonical roles; returns `{tenant_id, user_id, email, role}` (Sprint 5.3) — `tests/backend/test_tenant_bootstrap.py`
 
 ### Frontend
 - [x] Modular component architecture — each workspace section is independent
@@ -59,6 +67,13 @@ The platform has a working end-to-end demo path:
 - [x] Marketing pages — `/guideline`, `/product`, `/about` (Session 26)
 - [x] Role dashboards visual refresh — DashboardCard gradients, sparklines, monogram avatars, trend chips (Session 29)
 - [x] Analytics dashboard visual refresh — MetricCard drilldown, DrilldownPanel, DrilldownTable, analytics.css rewrite (Session 29)
+- [x] Pipeline assignments + filters — `LoanSummary.owner` from `users.full_name` JOIN; `?assigned_to=<uuid>` + `?status_filter=<status>` filter the pipeline (Sprint 4.1) — `tests/backend/test_pipeline_filters.py`
+- [x] Analytics date-filter bug fixes — date columns qualified with `l.`, `IN(:list)` → `= ANY(:param)`, `text` filter validator accepts `list[str]` (Sprint 4.2) — `tests/backend/test_analytics_summary.py`
+- [x] Manager dashboard tiles — `/dashboard/manager` page renders `TeamKPICard` grid driven by `useAnalyticsSummary`; date-preset selector re-fires the request (Sprint 4.3) — `tests/frontend/ManagerDashboard.test.tsx`
+- [x] Domain events + notifications — `domain_events` outbox table (migration 131), `emit_event`/`dispatch_pending_events` services, `notification_consumer` routes to email when SMTP is configured (Sprint 4.4) — `tests/backend/test_domain_events.py`
+- [x] `npm run lint` clean — 22 problems (9 errors, 13 warnings) inherited from Sprints 3-4 across 11 files reduced to 0; ESLint config now exempts `_`-prefixed unused vars (Sprint 5.0)
+- [x] Tenant onboarding UI — Settings → Admin → TenantOnboardingCard sub-component; calls `POST /tenants/bootstrap` from the browser so a new lender can be spun up without the CLI (Sprint 5.3)
+- [x] Cookie-aware apiClient — `credentials: "include"` on every fetch so the httpOnly cookie is sent cross-origin; auth state no longer stores the JWT in localStorage on the read path (Sprint 5.1)
 
 ### Testing Foundation
 - [x] Backend pytest harness — `tests/backend/conftest.py` (schema-per-test-run isolation, ASGI client), `tests/backend/pytest.ini`, `tests/backend/test_health.py` (5 smoke tests green) — `tests/backend/test_health.py`
@@ -71,6 +86,13 @@ The platform has a working end-to-end demo path:
   - `tests/backend/test_loan_submission_e2e.py` (2 pass / 1 skip) — 3-row atomic insert, double-submit rejection, tenant isolation (skipped: multi-tenant seed pending)
   - `tests/backend/test_loan_financials_endpoint.py` (3 pass / 1 skip) — happy shape, 404, terms shape, tenant scoping (skipped: multi-tenant seed pending)
   - `tests/frontend/WorkspaceHome.test.tsx` (2 tests) — renders financial summary block
+- [x] **Sprint 5 B-gate tests (all green, 2026-07-10):**
+  - `tests/backend/test_auth_cookie.py` (7 tests) — cookie set on login, cleared on logout, dual-mode cookie OR Bearer, csrf-style cross-origin guard
+  - `tests/backend/test_coverage_gaps.py` (52 tests / 2 skip) — borrowers, roles, metadata, loans, exceptions, tasks, audit, intake
+  - `tests/backend/test_tenant_bootstrap.py` (6 tests) — happy path, wrong-secret 403, no-secret 503, duplicate name 409, role assignment
+  - `tests/backend/test_intake_ranking.py` (4 tests) + `tests/backend/test_notification_service.py` (3 tests) — gap-fills
+  - `tests/frontend/WorkspaceStatus.test.tsx` + `WorkspaceConversation.test.tsx` + `WorkspaceDocuments.test.tsx` — every workspace section now has smoke coverage
+  - `npm run lint` reports **0 problems** (was 22) — Sprint 5.0 baseline
 
 ---
 
@@ -217,26 +239,26 @@ An item can move from a Priority list to **"What We Did Well"** only when **all*
 ### Backend
 - [ ] Borrower-facing condition view endpoint
 - [ ] Document storage (S3 integration — currently simulated)
-- [ ] Notification system (email on handoff, status change)
-- [ ] Loan status transition validation (enforce state machine)
+- [x] Notification system (email on handoff, status change) — Sprint 4 (transactional outbox + SMTP, disabled when SMTP_HOST empty) — `tests/backend/test_domain_events.py`
+- [x] Loan status transition validation (enforce state machine) — shipped in Sprint 2 (`status.py` ALLOWED_TRANSITIONS)
 - [x] Exception module — 25 routes, full lifecycle, decisions, conditions, pre-file
 - [x] Task management endpoints — full CRUD + status transitions
-- [ ] Notes/internal conversation endpoint
+- [x] Notes/internal conversation endpoint — wired in Sprint 3 (`WorkspaceConversation.tsx` reads/writes `/notes/`)
 - [ ] Full URLA (1003) data model and API
 
 ### Frontend
 - [ ] Processing section — milestone checklist
-- [ ] Underwriting section — decision panel, exception tracking
-- [ ] Documents section — upload, categorize, link to conditions
-- [ ] Notes section — threaded internal conversation
-- [ ] Audit Log section — real `audit_log` table data
+- [x] Underwriting section — decision panel + exceptions + pricing/eligibility runs surfaced (Sprint 3)
+- [x] Documents section — upload, categorize, link to conditions (Sprint 3)
+- [x] Notes section — threaded internal conversation (Sprint 3)
+- [x] Audit Log section — real `audit_log` table data (Sprint 3)
 - [ ] Loan creation form (`/loans/new/manual`) — multi-step, currently placeholder
-- [ ] Status transition UI in workspace topbar
+- [x] Status transition UI in workspace topbar (Sprint 3, in `WorkspaceStatus.tsx`)
 - [ ] Borrower panel in workspace home (co-borrowers, contact info)
 - [ ] Property panel (address, type, appraised value)
-- [ ] Analytics: date range filter
+- [x] Analytics: date range filter — Sprint 4 (`AnalyticsFilterBar` wired to backend; date-column + `IN(:list)` + validator fixes) — `tests/backend/test_analytics_summary.py`
 - [ ] Analytics: export to PDF/image
-- [ ] Pipeline: assignment columns (requires backend `LoanSummary` to include AE/processor/underwriter names)
+- [x] Pipeline: assignment columns — Sprint 4 (`LoanSummary.owner` from `users.full_name` JOIN) — `tests/backend/test_pipeline_filters.py`
 - [ ] Pipeline: priority field (requires DB column + API field)
 - [ ] Pipeline: bulk actions (select multiple rows)
 - [ ] Right-side activity panel in pipeline (recent loan updates, status changes)
@@ -246,7 +268,7 @@ An item can move from a Priority list to **"What We Did Well"** only when **all*
 
 ## Priority 4 — Manager & Reporting Layer (post-MVP)
 
-- [ ] Manager analytics dashboard (team KPIs, workload distribution charts)
+- [x] Manager analytics dashboard (team KPIs, workload distribution charts) — Sprint 4 (KPI tile grid at `/dashboard/manager`; deeper per-AE breakdown deferred) — `tests/frontend/ManagerDashboard.test.tsx`
 - [ ] Performance reporting (processing time, approval rates by product)
 - [ ] Team KPI pivot tables
 - [ ] Pipeline forecasting
@@ -280,6 +302,9 @@ An item can move from a Priority list to **"What We Did Well"** only when **all*
 
 | Item | Impact | Effort | Notes |
 |---|---|---|---|
+| ~~Analytics date columns ambiguous when JOINs added~~ | ~~High — `?date_preset=...` crashed in `_chart_action_needed`~~ | ~~Low~~ | ✅ Done — Sprint 4.2 qualified all date columns with `l.<col>` |
+| ~~Analytics `IN (:list)` failed on `varchar` columns~~ | ~~High — multi-value `IN`/`NOT IN` raised 500~~ | ~~Low~~ | ✅ Done — Sprint 4.2 switched to `= ANY(:param)` / `<> ALL(:param)` |
+| ~~Analytics `text` filter validator rejected `list[str]`~~ | ~~Medium — masked SQL bug with 422~~ | ~~Low~~ | ✅ Done — Sprint 4.2 validator now accepts scalar or list |
 | ~~Pagination on list endpoints~~ | ~~High — breaks at scale~~ | ~~Low~~ | ✅ Done — `skip`/`limit` + `PaginatedResponse[T]` on `/loans` + `/loans/pipeline`. Other endpoints still bare lists — Sprint 2 hardening item. |
 | JWT in localStorage → httpOnly cookie | High — security | Medium | Requires server-side session handling |
 | ~~`allow_origins=["*"]`~~ | ~~High — security~~ | ~~Low~~ | ✅ Done — locked to `ALLOWED_ORIGINS` env, default `http://localhost:3000` |

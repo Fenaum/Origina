@@ -1,6 +1,9 @@
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 import app.models  # noqa: F401 — registers all SQLAlchemy models so relationships resolve
 from app.api.v1 import (
@@ -51,6 +54,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ── Rate limiting (Sprint 5 §5.1) ──────────────────────────────────────────────
+# The Limiter is created in app.api.v1.auth so the login endpoint can decorate
+# itself. We attach the same instance to app.state here so /docs can render it
+# and the exception handler can return a clean 429 body.
+from app.api.v1.auth import limiter as auth_limiter  # noqa: E402
+app.state.limiter = auth_limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 
 # ── Global error handlers ──────────────────────────────────────────────────────
@@ -112,6 +124,14 @@ def root():
 @app.on_event("startup")
 def on_startup():
     logger.info(f"Starting Origina backend in {APP_ENV} environment")
+    # Sprint 4 §4.4 — pick up any domain events left unprocessed by a
+    # crash on the previous run. Wrapped in try/except so startup never
+    # fails when the DB is briefly unavailable.
+    try:
+        from app.services.event_service import run_dispatch_in_background
+        run_dispatch_in_background()
+    except Exception as exc:
+        logger.warning(f"Startup event dispatch skipped: {exc}")
 
 
 @app.on_event("shutdown")

@@ -80,6 +80,115 @@ def test_engine(test_schema_name: str):
         conn.execute(text(f"SET search_path TO {schema}"))
         metadata.create_all(bind=conn)
 
+    # create_all() doesn't include the raw-SQL tables defined outside
+    # SQLAlchemy models — notably controlled_value_sets/controlled_values
+    # (migration 124). Apply those tables here so /metadata/* endpoints
+    # work against the test schema.
+    with engine.begin() as conn:
+        conn.execute(text(f"SET search_path TO {schema}"))
+        conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS controlled_value_sets (
+              code        TEXT PRIMARY KEY,
+              scope       TEXT NOT NULL DEFAULT 'global'
+                            CHECK (scope IN ('global', 'tenant', 'product')),
+              description TEXT,
+              created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+            );
+            CREATE TABLE IF NOT EXISTS controlled_values (
+              id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+              set_code    TEXT        NOT NULL REFERENCES controlled_value_sets(code) ON DELETE CASCADE,
+              tenant_id   UUID        REFERENCES tenants(id) ON DELETE CASCADE,
+              code        TEXT        NOT NULL,
+              label       TEXT        NOT NULL,
+              description TEXT,
+              sort_order  INTEGER     NOT NULL DEFAULT 0,
+              is_active   BOOLEAN     NOT NULL DEFAULT true,
+              metadata    JSONB,
+              created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+              UNIQUE(set_code, tenant_id, code)
+            );
+            INSERT INTO controlled_value_sets (code, scope, description) VALUES
+              ('loan_status', 'global', 'Canonical loan status enum'),
+              ('loan_program', 'global', 'Non-QM loan programs'),
+              ('loan_purpose', 'global', 'Loan purpose values'),
+              ('condition_status', 'global', 'Condition lifecycle states'),
+              ('exception_status', 'global', 'Exception states'),
+              ('task_status', 'global', 'Task lifecycle states')
+            ON CONFLICT (code) DO NOTHING;
+        """))
+
+    # Apply the audit trigger SQL. create_all() only builds tables — it
+    # doesn't install PL/pgSQL trigger functions or attach them. Without
+    # log_audit_event() the audit_log table stays empty and audit tests
+    # cannot see material changes. We run a minimal subset of the
+    # migrations: the function definition (105) and the satellite-table
+    # fix (109), then attach the triggers we care about for tests
+    # (loans, conditions, documents, borrowers, loan_financials,
+    # loan_terms). 108 is skipped wholesale because its DROP COLUMN
+    # statements assume pre-split schema and would error on a fresh
+    # test schema.
+    with engine.begin() as conn:
+        conn.execute(text(f"SET search_path TO {schema}"))
+        conn.execute(text("""
+            create or replace function log_audit_event()
+            returns trigger
+            language plpgsql
+            as $$
+            declare
+              v_tenant_id uuid;
+              v_entity_id uuid;
+              v_actor_id  uuid;
+              v_diff      jsonb;
+              _REDACTED   constant text[] := array['ssn_encrypted', 'password_hash'];
+              _LOAN_ID_PK constant text[] := array['loan_financials', 'loan_terms'];
+            begin
+              if tg_op = 'DELETE' then
+                v_tenant_id := old.tenant_id;
+                if tg_table_name = any(_LOAN_ID_PK) then
+                  v_entity_id := old.loan_id;
+                else
+                  v_entity_id := old.id;
+                end if;
+              else
+                v_tenant_id := new.tenant_id;
+                if tg_table_name = any(_LOAN_ID_PK) then
+                  v_entity_id := new.loan_id;
+                else
+                  v_entity_id := new.id;
+                end if;
+              end if;
+
+              begin
+                v_actor_id := nullif(current_setting('app.current_user_id', true), '')::uuid;
+              exception when invalid_text_representation then
+                v_actor_id := null;
+              end;
+
+              case tg_op
+                when 'INSERT' then
+                  v_diff := to_jsonb(new) - _REDACTED;
+                when 'UPDATE' then
+                  v_diff := jsonb_build_object(
+                    'before', to_jsonb(old) - _REDACTED,
+                    'after',  to_jsonb(new) - _REDACTED
+                  );
+                else
+                  v_diff := to_jsonb(old) - _REDACTED;
+              end case;
+
+              insert into audit_log (tenant_id, actor_user_id, entity_type, entity_id, action, diff)
+              values (v_tenant_id, v_actor_id, tg_table_name, v_entity_id, lower(tg_op), v_diff);
+
+              return null;
+            end;
+            $$;
+        """))
+        for _tbl in ('loans', 'borrowers', 'conditions', 'documents', 'loan_financials', 'loan_terms', 'notes'):
+            conn.execute(text(f"drop trigger if exists audit_{_tbl} on {_tbl}"))
+            conn.execute(text(
+                f"create trigger audit_{_tbl} after insert or update or delete on {_tbl} "                f"for each row execute function log_audit_event()"
+            ))
+
     yield engine
 
     with engine.begin() as conn:
@@ -103,6 +212,25 @@ def db(test_engine, test_schema_name):
         yield session
     finally:
         session.close()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Rate limiter reset — slowapi's limiter is in-process and the test client
+# uses the same remote address for every request, so a burst-test will leave
+# later tests throttled. This fixture clears the limiter state at the start of
+# every test that needs /auth/login to behave normally.
+# ─────────────────────────────────────────────────────────────────────────────
+
+@pytest.fixture(autouse=True)
+def _reset_auth_limiter():
+    from app.api.v1.auth import limiter as auth_limiter
+    # slowapi 0.1.x exposes `.reset()` on the underlying Limiter; clear it.
+    storage = getattr(auth_limiter, "_storage", None)
+    if storage is not None and hasattr(storage, "reset"):
+        storage.reset()
+    yield
+    if storage is not None and hasattr(storage, "reset"):
+        storage.reset()
 
 
 # ─────────────────────────────────────────────────────────────────────────────

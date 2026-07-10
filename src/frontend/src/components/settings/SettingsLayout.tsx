@@ -52,8 +52,6 @@ export function SettingsLayout({
     );
   }, [sections, search]);
 
-  const activeItem = sections.find((s) => s.id === activeSection) ?? sections[0];
-
   function handleSectionClick(id: string) {
     const url = new URL(window.location.href);
     url.searchParams.set("section", id);

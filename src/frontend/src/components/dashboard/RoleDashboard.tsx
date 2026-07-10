@@ -98,7 +98,7 @@ function formatToday(date: Date): string {
   });
 }
 
-export function RoleDashboard({ role }: { role: UserRole }) {
+export function RoleDashboard({ role, children }: { role: UserRole; children?: React.ReactNode }) {
   const copy = dashboardCopy[role];
   const [isLoading, setIsLoading] = useState(process.env.NODE_ENV !== "production");
   const { user } = useAuth();
@@ -152,6 +152,7 @@ export function RoleDashboard({ role }: { role: UserRole }) {
             viewAllHref={copy.statusHref}
             items={dashboardStatusItems[role]}
           />
+          {children}
         </>
       )}
     </>

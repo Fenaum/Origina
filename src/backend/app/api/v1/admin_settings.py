@@ -63,7 +63,7 @@ def list_audit_log(
         db.query(AuditLog)
         .filter(
             AuditLog.tenant_id == current_user.tenant_id,
-            AuditLog.created_at >= cutoff,
+            AuditLog.occurred_at >= cutoff,
         )
     )
 
@@ -77,7 +77,7 @@ def list_audit_log(
         )
 
     total = query.count()
-    rows = query.order_by(AuditLog.created_at.desc()).offset(skip).limit(limit).all()
+    rows = query.order_by(AuditLog.occurred_at.desc()).offset(skip).limit(limit).all()
 
     return {
         "items": [

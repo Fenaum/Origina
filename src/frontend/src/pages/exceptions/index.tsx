@@ -1,7 +1,13 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AppLayout } from "@/components/app/AppLayout";
 import { useAuth } from "@/state/auth";
-import type { ExceptionFactor, ExceptionOut, ExceptionSeverity, ExceptionStatus } from "@/types/api";
+import type {
+  ExceptionFactor,
+  ExceptionOut,
+  ExceptionSeverity,
+  ExceptionStatus,
+  PaginatedResponse,
+} from "@/types/api";
 import {
   PRIMARY_CATEGORIES,
   EXCEPTION_TYPES,
@@ -528,7 +534,7 @@ export default function PreFileExceptionsPage() {
   const [saving, setSaving] = useState(false);
   const [filterStatus, setFilterStatus] = useState<ExceptionStatus | "all">("all");
 
-  async function load() {
+  const load = useCallback(async () => {
     if (!token) return;
     setLoading(true);
     setError(null);
@@ -538,15 +544,20 @@ export default function PreFileExceptionsPage() {
         { headers: { Authorization: `Bearer ${token}` } },
       );
       if (!res.ok) throw new Error(`${res.status}`);
-      setExceptions(await res.json() as ExceptionOut[]);
+      // Backend returns the pagination envelope {items, total} — unwrap to the
+      // flat array the rest of this component expects.
+      const envelope = (await res.json()) as PaginatedResponse<ExceptionOut>;
+      setExceptions(envelope.items ?? []);
     } catch {
       setError("Could not load exceptions.");
     } finally {
       setLoading(false);
     }
-  }
+  }, [token]);
 
-  useEffect(() => { void load(); }, [token]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   async function handleCreate(form: FormState) {
     if (!token) return;

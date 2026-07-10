@@ -129,7 +129,7 @@ export default function GuidelinePage() {
               <span className="mkt-eyebrow-pill">Resources</span>
               <h1>Lending Guidelines</h1>
               <p style={{ fontSize: "1.125rem", maxWidth: "640px", margin: "0 auto" }}>
-                Comprehensive guidelines for Origina's Non-QM loan products. Review eligibility
+                Comprehensive guidelines for Origina&apos;s Non-QM loan products. Review eligibility
                 requirements, documentation standards, and program details to streamline your
                 submissions.
               </p>
@@ -174,7 +174,7 @@ export default function GuidelinePage() {
               <h2>Need Clarification?</h2>
               <p>
                 Our team is available to discuss guideline questions and help determine the best
-                product for your borrower's situation. Contact your account executive for
+                product for your borrower&apos;s situation. Contact your account executive for
                 personalized guidance.
               </p>
             </div>

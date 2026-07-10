@@ -9,6 +9,7 @@ from app.models.borrowers import Address, Borrower, BorrowerIncomeType, Borrower
 from app.models.conditions import Condition, ConditionStatus
 from app.models.credit import CreditEvent, CreditLiability, CreditReport
 from app.models.decisioning import EligibilityRun, PricingRun
+from app.models.events import DomainEvent, EventType
 from app.models.document import Document
 from app.models.escrow import EscrowDetail
 from app.models.intake import IntakeAnswer, IntakeHandoff, IntakeSession
@@ -56,6 +57,7 @@ __all__ = [
     "CreditLiability",
     "CreditReport",
     "Document",
+    "DomainEvent",
     "EligibilityRun",
     "EscrowDetail",
     "IntakeAnswer",

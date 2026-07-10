@@ -3,7 +3,7 @@
 // filter. Also exposes a drilldown context (the chart bar / KPI that the user
 // clicked) and the active saved view ID.
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
 import {
   DEFAULT_FILTER,
@@ -164,22 +164,26 @@ export type UseAnalyticsFiltersResult = {
 
 export function useAnalyticsFilters(): UseAnalyticsFiltersResult {
   const router = useRouter();
-  const [filter, setFilterState] = useState<AnalyticsFilter>(DEFAULT_FILTER);
-  const [drilldown, setDrilldownState] = useState<string | null>(null);
-  const [viewId, setViewIdState] = useState<string | null>(null);
-  const [hydrated, setHydrated] = useState(false);
 
-  // Hydrate from URL on mount + whenever the query changes (back button, share link).
-  useEffect(() => {
-    if (!router.isReady) return;
+  // Derive filter state directly from the URL — no mirroring, no useEffect cascade.
+  // setFilter/updateFilter write to the URL; the next render recomputes from there.
+  const filter = useMemo<AnalyticsFilter>(() => {
+    if (!router.isReady) return DEFAULT_FILTER;
     const partial = urlToFilter(router.query as Record<string, string | string[] | undefined>);
-    setFilterState({ ...DEFAULT_FILTER, ...partial });
-    const ctx = router.query.drilldown;
-    setDrilldownState(typeof ctx === "string" ? ctx : null);
-    const vid = router.query.view;
-    setViewIdState(typeof vid === "string" ? vid : null);
-    setHydrated(true);
+    return { ...DEFAULT_FILTER, ...partial };
   }, [router.isReady, router.query]);
+
+  const drilldown = useMemo<string | null>(() => {
+    if (!router.isReady) return null;
+    const ctx = router.query.drilldown;
+    return typeof ctx === "string" ? ctx : null;
+  }, [router.isReady, router.query.drilldown]);
+
+  const viewId = useMemo<string | null>(() => {
+    if (!router.isReady) return null;
+    const vid = router.query.view;
+    return typeof vid === "string" ? vid : null;
+  }, [router.isReady, router.query.view]);
 
   const writeUrl = useCallback(
     (next: AnalyticsFilter, ctx: string | null, vid: string | null) => {
@@ -199,7 +203,6 @@ export function useAnalyticsFilters(): UseAnalyticsFiltersResult {
 
   const setFilter = useCallback(
     (next: AnalyticsFilter) => {
-      setFilterState(next);
       writeUrl(next, drilldown, viewId);
     },
     [drilldown, viewId, writeUrl],
@@ -207,18 +210,13 @@ export function useAnalyticsFilters(): UseAnalyticsFiltersResult {
 
   const updateFilter = useCallback(
     (updater: (prev: AnalyticsFilter) => AnalyticsFilter) => {
-      setFilterState((prev) => {
-        const next = updater(prev);
-        writeUrl(next, drilldown, viewId);
-        return next;
-      });
+      writeUrl(updater(filter), drilldown, viewId);
     },
-    [drilldown, viewId, writeUrl],
+    [filter, drilldown, viewId, writeUrl],
   );
 
   const setDrilldown = useCallback(
     (ctx: string | null) => {
-      setDrilldownState(ctx);
       writeUrl(filter, ctx, viewId);
     },
     [filter, viewId, writeUrl],
@@ -226,16 +224,12 @@ export function useAnalyticsFilters(): UseAnalyticsFiltersResult {
 
   const setViewId = useCallback(
     (vid: string | null) => {
-      setViewIdState(vid);
       writeUrl(filter, drilldown, vid);
     },
     [filter, drilldown, writeUrl],
   );
 
   const reset = useCallback(() => {
-    setFilterState(DEFAULT_FILTER);
-    setDrilldownState(null);
-    setViewIdState(null);
     writeUrl(DEFAULT_FILTER, null, null);
   }, [writeUrl]);
 
@@ -264,9 +258,6 @@ export function useAnalyticsFilters(): UseAnalyticsFiltersResult {
       view: viewId ?? undefined,
     };
   }, [filter, drilldown, viewId]);
-
-  // Touch hydrated so consumers can avoid URL flicker on first paint.
-  void hydrated;
 
   return {
     filter,

@@ -21,6 +21,23 @@ JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "change-me-in-production")
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "480"))
 
+# ── Auth cookies (Sprint 5 §5.1) ───────────────────────────────────────────────
+# httpOnly cookie name + secure flag. Secure is False in local/dev so the cookie
+# can travel over plain HTTP; True in any other environment.
+COOKIE_NAME: str = os.getenv("COOKIE_NAME", "origina_token")
+COOKIE_SECURE: bool = APP_ENV not in ("local", "development")
+COOKIE_SAMESITE: str = os.getenv("COOKIE_SAMESITE", "lax")
+COOKIE_PATH: str = os.getenv("COOKIE_PATH", "/")
+
+# ── Tenant bootstrap (Sprint 5 §5.3) ───────────────────────────────────────────
+# Generate with: python -c "import secrets; print(secrets.token_hex(32))"
+# Leave empty to disable the /tenants/bootstrap endpoint.
+ADMIN_SECRET: str = os.getenv("ADMIN_SECRET", "")
+
+# ── Rate limiting (Sprint 5 §5.1) ──────────────────────────────────────────────
+# How many /auth/login attempts per IP per window before 429 kicks in.
+LOGIN_RATE_LIMIT: str = os.getenv("LOGIN_RATE_LIMIT", "10/minute")
+
 # Guard: reject the hardcoded default in any non-local environment.
 # In local dev, the default is allowed so the server starts without a .env file.
 # In staging/production (APP_ENV != "local"), the server must not start with
@@ -62,3 +79,14 @@ ALLOWED_MIME_TYPES: frozenset = frozenset({
     "application/msword",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 })
+
+# ── Email notifications (Sprint 4 §4.4) ────────────────────────────────────────
+# Disabled by default. Set SMTP_HOST in .env to enable; the consumer silently
+# skips emails when NOTIFICATIONS_ENABLED is false. Never expose real creds
+# in this file — read from the environment at boot.
+SMTP_HOST:     str = os.getenv("SMTP_HOST", "")
+SMTP_PORT:     int = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USER:     str = os.getenv("SMTP_USER", "")
+SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "")
+SMTP_FROM:     str = os.getenv("SMTP_FROM", "noreply@origina.dev")
+NOTIFICATIONS_ENABLED: bool = bool(SMTP_HOST)
