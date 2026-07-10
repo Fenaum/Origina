@@ -195,6 +195,16 @@ Sprint 1–4 tests must remain green (regression). Sprint 5 adds:
 - `requirements.txt` — slowapi==0.1.9
 - `.env.example` — ADMIN_SECRET entry
 
+### What slipped (post-close audit 2026-07-10)
+
+Three Phase 5.2 tasks were in the task table but did not ship — carried forward rather than silently dropped:
+
+- **Migration-based test runner** — `conftest.py` still builds the test schema via `create_all()` + inline DDL instead of replaying `db/migrations/*.sql`. Already tracked in the CLAUDE.md tech-debt table.
+- **`test_rbac_coverage.py`** (role × route matrix for non-loan endpoints) — never written; only `/users/` has RBAC tests. Added to the tech-debt table; candidate for Sprint 6.
+- **CI documentation in TESTING.md** — completed post-close (TESTING.md §10 now documents the real workflow + "how to read a failing CI run").
+
+The post-close audit also found that **`ci.yml` had never actually run** (it was uncommitted, along with all Sprint 3–5 work on the `sprint-3` branch) and contained three defects that would have made the first run red: the backend job ran pytest from `src/backend/` where `tests/` doesn't exist, the frontend job never invoked vitest, and the 90% condition-lifecycle gate was missing. All three fixed post-close — both CI jobs now call `./scripts/run_tests.sh`, the same entry point as local runs. **The "CI runs on every PR" claim is not verified until the branch is pushed and the first run goes green.**
+
 ### Lessons learned
 - httpx ASGITransport stores response cookies under `testserver.local` but sends the next request to `testserver`. The domains don't match in the test client, so cookie-jar assertions need to re-send the cookie via the explicit Cookie header. Real-browser behavior is unaffected.
 - slowapi's limiter is in-process state. Tests that burst /auth/login pollute later tests that also login — added an autouse fixture that calls `storage.reset()` between tests.

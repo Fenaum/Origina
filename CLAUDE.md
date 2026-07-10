@@ -325,7 +325,10 @@ Login → POST /auth/login → JWT in localStorage
 | ~~JWT in localStorage → httpOnly cookie~~ | ~~High — security~~ | ✅ Done in Sprint 5 |
 | Role vocabulary split (frontend role names ≠ backend role constants) | High — RBAC correctness | Low — Sprint 2 |
 | Bare `list[X]` on non-loan list endpoints (conditions, tasks, notes, users, audit, documents) | Medium — API consistency | ✅ Done in Sprint 2 |
-| Test schema doesn't install triggers (`create_all()` skips PL/pgSQL) | Low — test infra friction | Low — Sprint 3 inline-install stopgap in place; migration-based runner still pending |
+| Test schema doesn't install triggers (`create_all()` skips PL/pgSQL) | Low — test infra friction | Low — Sprint 3 inline-install stopgap in place; migration-based runner still pending (slipped from Sprint 5.2) |
+| RBAC route coverage — `test_rbac_coverage.py` role × route matrix never written; only `/users/` has RBAC tests | Medium — authz regressions invisible | Low — slipped from Sprint 5.2; candidate for Sprint 6 |
+| First green CI run unverified — `ci.yml` fixed 2026-07-10 but Sprint 3–5 work not yet pushed/PR'd | High — all "green" claims are local-only until CI runs | Low — push branch, open PR, watch first run |
+| Frontend bugs BUG-2026-07-09-001/002/003 have manual-only regression coverage (gate says every bug gets a named test) | Low — regressions could return silently | Low — three small vitest tests, or amend the gate for UI-rendering bugs |
 | Business logic inline in routers (status.py, conditions.py, loans.py) | Medium — platform boundary | Migrate opportunistically when touching each domain |
 | ~~Feature test coverage below 70% gate~~ | ~~Medium — refactor risk~~ | ✅ Done in Sprint 5 — CI enforces `--cov-fail-under=70`; current 70.30% |
 | Mixed data-fetching idioms (React Query + useEffect + Zustand) | Medium — velocity | All NEW fetching uses React Query; migrate old hooks only when touching them |

@@ -9,14 +9,18 @@ tests/
 ├── README.md                  ← you are here
 ├── backend/                   ← pytest suite (Python / FastAPI / SQLAlchemy)
 │   ├── __init__.py
-│   ├── conftest.py            ← fixtures: schema isolation, ASGI client, seed stub
+│   ├── conftest.py            ← fixtures: schema isolation, ASGI client, rate-limiter reset
 │   ├── pytest.ini             ← asyncio_mode=auto, testpaths, markers
-│   └── test_health.py         ← smoke tests (foundation tier)
+│   └── test_*.py              ← one file per feature area (19 files, 134+ tests)
 └── frontend/                  ← vitest suite (React / RTL / jsdom)
     ├── setup.ts               ← @testing-library/jest-dom matchers
-    ├── vitest.config.ts       ← jsdom env + @/* alias
-    └── LoanPipelineTable.test.tsx  ← smoke tests (foundation tier)
+    └── *.test.tsx             ← one file per component (7 files, 13+ tests)
 ```
+
+The vitest config lives at `src/frontend/vitest.config.ts` (not in this
+directory) so `vitest/config` resolves from npm's working directory — it
+points back here for the test files. See
+[docs/TESTING.md §3](../docs/TESTING.md) for the reasoning.
 
 ## Running
 
@@ -72,11 +76,11 @@ npm run test:watch    # interactive
    before moving the item to "What We Did Well". This is enforced by the
    new Definition of Done rule.
 
-## Coverage gates (planned)
+## Coverage gates (enforced by `run_tests.sh` and CI since Sprint 5)
 
-See ROADMAP §D:
+See ROADMAP §D and [docs/TESTING.md §9–10](../docs/TESTING.md):
 
-- `pytest --cov=app/api --cov-fail-under=70`
-- `pytest --cov=app/services/condition_lifecycle --cov-fail-under=90`
+- `pytest --cov=app.api --cov=app.services --cov-fail-under=70`
+- `pytest --cov=app.services.condition_lifecycle --cov-fail-under=90`
 - Every workspace section has at least one frontend smoke test
 - Every bug in `BUILD_HISTORY.md` has a named regression test

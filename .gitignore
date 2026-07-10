@@ -22,3 +22,6 @@ node_modules/
 .env
 # Terminal session logs
 even-terminal-*.log
+
+# Coverage artifacts
+.coverage
