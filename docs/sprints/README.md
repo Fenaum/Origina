@@ -35,6 +35,7 @@ All sprints for Origina LOS. Each sprint has a goal, a set of phases, and a defi
 | 3 | [Full Workspace](sprint-3-full-workspace.md) | Every workspace section functional | ✅ **Complete** | 8 | 2026-07-09 |
 | 4 | [Manager Layer](sprint-4-manager-layer.md) | Team visibility, notifications, assignments | ✅ **Complete** | 9 | 2026-07-09 |
 | 5 | [Production Hardening](sprint-5-production-hardening.md) | Real lender can pilot it | ✅ **Complete** | 10–12 | 2026-07-10 |
+| 6 | Sprint 6 ([active](../CURRENT_SPRINT.md)) | Phase 6.0: Sprint 1–5 audit closeout; remaining scope TBD (owner spec pending) | 🔄 **In progress** | 13– | — |
 
 ---
 
