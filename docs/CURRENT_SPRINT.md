@@ -263,7 +263,7 @@ Sprint 1–5 B-gate tests remain green (regression). Sprint 6 adds:
 - [x] `tests/backend/test_intake_multi_tenant.py` — BUG-001 deliberate regression (3 tests, multi-tenant seed)
 - [ ] One regression test per UAT-1 P0/P1 finding — _pending owner UAT findings; phase closed without any P0/P1 having landed_
 
-Green CI run URL: _Sprint 6 branch is local-only; first CI run will fire when pushed to `sprint-6`._
+Green CI run URL: _Push to GitHub was attempted from the local Codex CLI but neither SSH key nor GitHub MCP push permissions were available in this environment (`git push origin sprint-6` failed with `Permission denied (publickey)`, the GitHub MCP connector exposes only read tools, and `gh` CLI is not installed). The commit `ba8f948` lives on the local `sprint-6` branch ready to push manually: `git push origin sprint-6`._
 
 ---
 
