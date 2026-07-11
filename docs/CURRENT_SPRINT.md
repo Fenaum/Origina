@@ -1,8 +1,9 @@
-# Current Sprint — Sprint 6
+# Current Sprint — Sprint 6: Closeout & UAT Response
 
-> **Sprint index:** [docs/sprints/README.md](sprints/README.md)
+> **Sprint index:** [docs/sprints/README.md](sprints/README.md) | **Program plan:** [docs/sprints/MILESTONES.md](sprints/MILESTONES.md)
 > **Previous sprint:** [Sprint 5 — Production Hardening (archived)](sprints/sprint-5-production-hardening.md)
 > **Full backlog:** [ROADMAP.md](ROADMAP.md) | **Session log:** [BUILD_HISTORY.md](BUILD_HISTORY.md)
+> **Detailed build spec:** [docs/sprints/sprint-6-build-spec.md](sprints/sprint-6-build-spec.md) ← read this before coding
 >
 > **Update this at the start of every session** — mark the active phase, note the session goal, update status.
 
@@ -10,7 +11,7 @@
 
 ## Sprint Goal
 
-**Phase 6.0 (carry-over closeout) is defined below.** The rest of the sprint scope is TBD — awaiting owner-authored sprint spec (`docs/sprints/sprint-6-build-spec.md`). Phase 6.0 can be worked immediately; it clears the debts the Sprint 1–5 audit surfaced so the new scope starts from a verified baseline.
+**Milestone 2 (Operational Depth), sprint 1 of 5.** Clear the Sprint 1–5 audit debts (Phase 6.0), burn down UAT-1 findings as they arrive (Phase 6.1), and close the workspace data gaps that Sprint 8's URLA work builds on (Phase 6.2). Full task detail in the [build spec](sprints/sprint-6-build-spec.md).
 
 ---
 
@@ -32,8 +33,13 @@
 
 ---
 
-### Phase 6.1+ — TBD
-**Status:** ⏳ Awaiting owner-authored sprint spec
+### Phase 6.1 — UAT-1 Burn-Down
+**Status:** ⏳ Waiting on UAT-1 findings (owner running UAT of Sprints 1–5)
+**Spec:** [sprint-6-build-spec.md §6.1](sprints/sprint-6-build-spec.md) — reactive phase: every P0/P1 finding gets a fix + named regression test; P2s get a written destination.
+
+### Phase 6.2 — Workspace Data Gaps
+**Status:** 🔄 Not started
+**Spec:** [sprint-6-build-spec.md §6.2](sprints/sprint-6-build-spec.md) — `GET /loans/{id}` detail endpoint (kills the `limit=1000` hack), frontend switch, read-only Borrower + Property panels in WorkspaceHome.
 
 ---
 
@@ -50,7 +56,8 @@
 | Phase | Status | Session |
 |---|---|---|
 | 6.0 — Sprint 1–5 Closeout | 🔄 Not started | — |
-| 6.1+ — TBD (owner spec pending) | ⏳ | — |
+| 6.1 — UAT-1 Burn-Down | ⏳ Waiting on findings | — |
+| 6.2 — Workspace Data Gaps | 🔄 Not started | — |
 
 ---
 
