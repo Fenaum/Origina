@@ -83,10 +83,12 @@ tests/backend/test_health.py::test_schema_name_is_unique_per_session PASSED
 ```
 tests/backend/
 ├── __init__.py        # marks the dir as a package
-├── conftest.py        # fixtures: schema isolation, ASGI client, seed stub
+├── conftest.py        # fixtures: schema isolation, ASGI client, rate-limiter reset
 ├── pytest.ini         # asyncio_mode=auto, testpaths, markers, addopts
-└── test_health.py     # foundation smoke tests (5 tests)
+└── test_*.py          # one file per feature area (19 files, 134+ tests as of Sprint 5)
 ```
+
+Each sprint's B-gate tests live in named files (`test_auth_cookie.py`, `test_condition_lifecycle.py`, `test_pagination_envelope.py`, …). The authoritative list of which file gates which sprint is the B-Gate Tests Checklist in [CURRENT_SPRINT.md](CURRENT_SPRINT.md) and the sprint archives in `docs/sprints/`.
 
 ### Configuration (`pytest.ini`)
 
@@ -322,12 +324,27 @@ See [ROADMAP §D](ROADMAP.md#d-coverage-gates-for-priority-3--priority-4).
 
 ### Local coverage run
 
+The unified runner enforces both gates — this is the same command CI runs:
+
 ```bash
+./scripts/run_tests.sh backend
+```
+
+Under the hood it runs two pytest passes:
+
+```bash
+# Gate 1 — overall API + services coverage ≥ 70%
 .venv/bin/python3 -m pytest tests/backend/ \
-  --cov=app/api \
-  --cov=app/services/condition_lifecycle \
+  --cov=app.api \
+  --cov=app.services \
   --cov-report=term-missing \
   --cov-fail-under=70
+
+# Gate 2 — condition lifecycle state machine ≥ 90%
+.venv/bin/python3 -m pytest tests/backend/test_condition_lifecycle.py \
+  --cov=app.services.condition_lifecycle \
+  --cov-report=term-missing \
+  --cov-fail-under=90
 ```
 
 ### Gates
@@ -343,39 +360,29 @@ See [ROADMAP §D](ROADMAP.md#d-coverage-gates-for-priority-3--priority-4).
 
 ## 10. CI integration
 
-The unified runner (`scripts/run_tests.sh`) is intended to run on every PR. Suggested GitHub Actions workflow:
+CI lives at [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) (added Sprint 5 §5.2). It runs on every push to `main` / `feature/**` / `sprint-**` and on every PR targeting `main`. Two parallel jobs:
 
-```yaml
-# .github/workflows/test.yml
-name: Tests
-on: [pull_request]
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: origina
-          POSTGRES_PASSWORD: origina123
-          POSTGRES_DB: originadb
-        ports: ["5432:5432"]
-        options: --health-cmd pg_isready --health-interval 5s
-    env:
-      DATABASE_URL: postgresql://origina:origina123@localhost:5432/originadb
-      JWT_SECRET_KEY: ci-only-secret-do-not-use-anywhere-else
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: { python-version: "3.13" }
-      - uses: actions/setup-node@v4
-        with: { node-version: "20" }
-      - run: pip install -r requirements.txt
-      - run: cd src/frontend && npm ci && cd ../..
-      - run: ./scripts/run_tests.sh
-```
+| Job | Steps | Fails when |
+|---|---|---|
+| **backend** | Postgres 16 service → `pip install` → `scripts/db_init.sh` → `./scripts/run_tests.sh backend` | Any pytest failure, overall `app.api`+`app.services` coverage < 70%, or `condition_lifecycle` coverage < 90% |
+| **frontend** | `npm ci` → `npm run lint` → `npx tsc --noEmit` → `./scripts/run_tests.sh frontend` → `npm run build` | Any lint error, type error, vitest failure, or build failure |
 
-(The workflow file is not yet created — that's the next milestone once the harness is proven locally.)
+Both jobs call the **same `scripts/run_tests.sh` entry point used locally** — if CI is red, the identical command reproduces it on your machine.
+
+### How to read a failing CI run
+
+1. **Open the failing job** (Actions tab → the red run → `backend` or `frontend`). The failing step is expanded automatically.
+2. **Identify which gate broke:**
+   - `FAILED tests/backend/test_...` → a test regression. Reproduce with `./scripts/run_tests.sh backend`, or narrow to the file: `.venv/bin/python3 -m pytest tests/backend/test_<file>.py -v`.
+   - `Required test coverage of 70% not reached` → new code in `app/api/` or `app/services/` without tests. The `term-missing` report above the failure lists uncovered line numbers per file.
+   - `Required test coverage of 90% not reached` (second pytest pass) → `condition_lifecycle.py` changed without matching tests.
+   - Frontend `✖ eslint` / `error TS` → run `npm run lint` / `npx tsc --noEmit` from `src/frontend/`.
+   - Vitest `FAIL tests/frontend/...` → `./scripts/run_tests.sh frontend` reproduces it.
+3. **Common environment-only failures:**
+   - `db_init.sh` step fails → usually a new migration with a syntax error or an out-of-order dependency; run `scripts/db_reset.sh` locally to replay all migrations from scratch.
+   - `npm ci` fails → `package-lock.json` out of sync with `package.json`; run `npm install` locally and commit the lockfile.
+   - Passes locally, fails in CI → stale local state; CI uses `npm ci` and a fresh Postgres, so replay locally with `scripts/db_reset.sh` + `rm -rf src/frontend/node_modules && npm ci`.
+4. **Red builds block merge** — fix forward on the branch; the `concurrency` group cancels superseded runs automatically.
 
 ---
 

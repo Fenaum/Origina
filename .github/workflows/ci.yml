@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, feature/**]
+    branches: [main, feature/**, sprint-**]
   pull_request:
     branches: [main]
 
@@ -14,7 +14,7 @@ concurrency:
 jobs:
   # ── Backend ─────────────────────────────────────────────────────────────
   backend:
-    name: Backend tests + coverage
+    name: Backend tests + coverage gates
     runs-on: ubuntu-latest
 
     services:
@@ -51,20 +51,14 @@ jobs:
       - name: Initialize database schema
         run: bash scripts/db_init.sh
 
-      - name: Run backend tests with coverage gate
-        # Sprint 5 §5.2 — fail PR if coverage drops below the gate (70%).
-        run: |
-          cd src/backend
-          pytest tests/backend/ \
-            --cov=app.api \
-            --cov=app/services \
-            --cov-report=term-missing \
-            --cov-fail-under=70 \
-            -v --tb=short
+      - name: Run backend tests with coverage gates
+        # Sprint 5 §5.2 — same entry point as local runs. Enforces both gates:
+        #   app.api + app.services ≥ 70%, condition_lifecycle ≥ 90%.
+        run: ./scripts/run_tests.sh backend
 
   # ── Frontend ────────────────────────────────────────────────────────────
   frontend:
-    name: Frontend lint + type check + tests
+    name: Frontend lint + type check + tests + build
     runs-on: ubuntu-latest
 
     steps:
@@ -84,6 +78,9 @@ jobs:
 
       - name: TypeScript check
         run: cd src/frontend && npx tsc --noEmit
+
+      - name: Vitest suite
+        run: ./scripts/run_tests.sh frontend
 
       - name: Build check
         run: cd src/frontend && npm run build
