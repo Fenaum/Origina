@@ -82,6 +82,45 @@ export type LoanOut = {
   terms: LoanTermsOut | null;
 };
 
+// ── Loan detail (Sprint 6 §6.2) ───────────────────────────────────────────────
+// Single-fetch response for the workspace home panel. Replaces the
+// multi-endpoint waterfall + the pipeline-with-limit=1000 hack that
+// `getLoanById` used to do.
+export type LoanDetailOut = LoanOut & {
+  primary_borrower: BorrowerSummaryOut | null;
+  co_borrowers: BorrowerSummaryOut[];
+  subject_property: PropertySummaryOut | null;
+  other_properties: PropertySummaryOut[];
+};
+
+export type BorrowerSummaryOut = {
+  id: string;
+  loan_id: string;
+  type: "primary_borrower" | "co_borrower" | "guarantor" | "other";
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  phone: string | null;
+  ssn_last4: string | null;
+  dob: string | null;
+  income_type: string | null;
+  income_amount: number | null;
+  employer_name: string | null;
+};
+
+export type PropertySummaryOut = {
+  id: string;
+  loan_id: string;
+  is_subject: boolean;
+  address1: string | null;
+  address2: string | null;
+  city: string | null;
+  state: string | null;
+  postal_code: string | null;
+  property_type: string | null;
+  occupancy: string | null;
+};
+
 export type LoanFinancialsOut = {
   loan_id: string;
   loan_amount: number | null;

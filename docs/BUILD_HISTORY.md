@@ -10,11 +10,132 @@ The current file starts at **Session 31 (Sprint 3 — Full Workspace)**.
 
 ---
 
+
+## Session 35 — Sprint 6: Closeout & UAT Response
+
+**Type:** Audit closeout (Phase 6.0) + workspace data gap fill (Phase 6.2). Phase 6.1
+remains pending — the owner's UAT-1 is running and no P0/P1 findings had landed by sprint close.
+
+### What was done
+
+**Phase 6.0.1 — BUG-2026-07-11-001 fix.**
+- `src/backend/app/api/v1/intake.py` — `_platform_tenant_id()` switched from `Query.scalar()`
+  to `select(...).limit(1).scalar_one_or_none()`. `Query.scalar()` raises
+  `MultipleResultsFound` when the schema has 2+ tenants; the `Limit 1` keeps
+  the "oldest tenant wins" semantics and removes the failure mode.
+
+**Phase 6.0.2 — Intake lifecycle test un-skipped + new regression.**
+- `tests/backend/test_coverage_gaps.py::test_intake_session_lifecycle` — blanket `try/except Exception` removed.
+- `tests/backend/test_intake_multi_tenant.py` — new (3 tests) deliberately seeds a second tenant before
+  calling `/intake/sessions` so the BUG-001 fix has direct multi-tenant coverage.
+
+**Phase 6.0.3 — RBAC coverage matrix.**
+- `tests/backend/test_rbac_coverage.py` — new (1 parametrized test) walks role × route cells across
+  `admin_settings`, `users`, `conditions`, `exceptions`, and explicitly-unguarded routes. Asserts the
+  expected 200/403 status per the `require_roles(...)` declarations.
+
+**Phase 6.0.4 — Vitest regression for BUG-001/002/003.**
+- `tests/frontend/BugRegressions.test.tsx` — new (3 tests).
+- BUG-2026-07-11-002 surfaced via the regression test — the original BUG-002 fix
+  replaced `⌘↵` but left `…` (U+2026) in the placeholder. Replaced with `...`
+  and logged the second-place bug.
+
+**Phase 6.0.5 — Migration-based test runner (slipped).**
+- Attempted and analyzed. Hit `UndefinedObject: type "party_type" does not exist`
+  on the second migration file. Root cause: ENUMs created in `DO $$` blocks
+  inside `030_types.sql` get created in `public` (dev DB pre-existing types
+  + psycopg2 search_path quirk), then subsequent migrations reference them
+  by bare name and fail. Fix requires schema-qualifying every ENUM reference
+  in the migration files — out of scope for a "closeout" sprint. Documented
+  in CURRENT_SPRINT.md "What slipped" with the concrete fix path.
+
+**Phase 6.2.1 — `GET /loans/{id}/detail` endpoint.**
+- `src/backend/app/api/v1/loans.py` — added the endpoint joining loan header + financials + terms
+  + primary borrower + co-borrowers + subject property + other properties.
+- `src/backend/app/schemas/loan_schema.py` — `LoanDetailOut` + `BorrowerSummaryOut` + `PropertySummaryOut`.
+
+**Phase 6.2.2 — Frontend switches to the detail endpoint.**
+- `src/frontend/src/services/loanService.ts::getLoanById` — no longer fetches
+  the pipeline with `limit=1000`. Calls `/loans/{id}/detail` and projects.
+- `src/frontend/src/hooks/useLoanDetail.ts` — single-fetch via the detail endpoint.
+  Builds the legacy `LoanDetail.borrowers` and `LoanDetail.property` shape from
+  the slim summary types so WorkspaceParties / WorkspaceIncome /
+  WorkspaceBorrowerURLA keep working unchanged.
+- `src/frontend/src/types/api.ts` — `LoanDetailOut` + summary types.
+
+**Phase 6.2.3 — Borrower + Property panels extracted.**
+- `src/frontend/src/components/loans/workspace/BorrowerPanel.tsx` — read-only.
+- `src/frontend/src/components/loans/workspace/PropertyPanel.tsx` — read-only.
+- `src/frontend/src/components/loans/workspace/WorkspaceHome.tsx` — delegates to the
+  new panels; `INCOME_LABELS`, `borrowerName`, and `propertyAddress` helpers removed
+  (lint-clean).
+
+**Phase 6.2.4 — Vitest smoke tests for the panels.**
+- `tests/frontend/WorkspacePanels.test.tsx` — new (6 tests) covers populated case,
+  empty case, and fallback occupancy case for each panel.
+
+### Validation
+
+- `pytest tests/backend/ -v` → **142 passed, 1 skipped** (3 new + 3 + 1 + 3 + 6 new tests across 4 files)
+- `pytest tests/backend/ --cov=app.api --cov=app.services --cov-fail-under=70 -q` → gate green
+- `tests/backend/test_condition_lifecycle.py --cov=app.services.condition_lifecycle --cov-fail-under=90 -q` → gate green
+- `cd src/frontend && npm run lint` → 0 problems
+- `cd src/frontend && npx tsc --noEmit` → clean
+- `cd src/frontend && npm run test` → **22 passed** across 9 files
+- `cd src/frontend && npm run build` → clean
+- `./scripts/run_tests.sh` → Backend: PASS · Frontend: PASS
+
+### Files touched
+
+**New:**
+- `tests/backend/test_intake_multi_tenant.py`
+- `tests/backend/test_rbac_coverage.py`
+- `tests/backend/test_loan_detail.py`
+- `tests/frontend/BugRegressions.test.tsx`
+- `tests/frontend/WorkspacePanels.test.tsx`
+- `src/frontend/src/components/loans/workspace/BorrowerPanel.tsx`
+- `src/frontend/src/components/loans/workspace/PropertyPanel.tsx`
+
+**Modified:**
+- `src/backend/app/api/v1/intake.py` — BUG-001 fix
+- `src/backend/app/api/v1/loans.py` — detail endpoint
+- `src/backend/app/schemas/loan_schema.py` — new schemas
+- `src/frontend/src/services/loanService.ts` — getLoanById
+- `src/frontend/src/hooks/useLoanDetail.ts` — single-fetch
+- `src/frontend/src/types/api.ts` — new types
+- `src/frontend/src/components/loans/workspace/WorkspaceHome.tsx` — delegate to panels
+- `tests/backend/test_coverage_gaps.py` — intake lifecycle un-skipped
+- `docs/BUILD_HISTORY.md` — BUG-001 + BUG-002 entries
+- `docs/CURRENT_SPRINT.md` — completion summary + slipped items
+
+### What slipped
+
+Phase 6.0.5 (migration-based test runner). Replaced by an in-depth
+analysis of why the production migrations don't replay against a fresh
+schema — see the "What slipped" section of CURRENT_SPRINT.md for the
+root cause, the fix path, and why this is a separate piece of work.
+
+### Lessons learned
+
+- The Sprint 5 BUILD_HISTORY entry for BUG-2026-07-09-002 claimed the
+  placeholder was replaced with ASCII `...` but the source still had
+  `…` (U+2026). The vitest regression test added in Sprint 6.0.4
+  caught it on the first run — confirming the gate "every bug gets a
+  named regression test" earns its keep.
+- Multi-statement SQL files + `search_path` + psycopg2 have a quirk:
+  leading `--` comments in the SQL appear to reset context for
+  `SET search_path` evaluation in some clients. Worth documenting
+  alongside the migration-qualification fix in Sprint 7.
+
+
 ## Bug Log
 
 | ID | Date | Severity | Title | Fix |
 |----|------|----------|-------|-----|
+| BUG-2026-07-11-001 | 2026-07-11 | High | `_platform_tenant_id` raises `MultipleResultsFound` whenever the schema has 2+ tenants — masked by blanket `try/except` in `tests/backend/test_coverage_gaps.py` | Switched to `select(...).limit(1).scalar_one_or_none()` so anonymous intake picks the oldest tenant deterministically without exploding in multi-tenant tests |
+
 | BUG-2026-07-09-001 | 2026-07-09 | High | ProtectedRoute redirect loop — `it_admin` users stuck on "Redirecting…" after role-vocabulary reconciliation | `ADMIN_ROLES = ["it_admin", "admin"]` so admins pass every page guard, plus a `target !== router.pathname` guard that bails out instead of redirecting into a denied page |
+| BUG-2026-07-11-002 | 2026-07-11 | Low | BUG-2026-07-09-002 fix was incomplete — placeholder still had U+2026 `…` ellipsis | Replaced `…` with `...` so the placeholder is now pure ASCII |
 | BUG-2026-07-09-002 | 2026-07-09 | Low | Activity-rail placeholder renders as garbled Unicode (⌘↵ → 萧←) because the UI font lacks the keyboard-symbol codepoints | Placeholder changed to ASCII: "Post a note... (Cmd+Enter to send)" |
 | BUG-2026-07-09-003 | 2026-07-09 | High | Pre-File Exceptions page crashes with `exceptions is not iterable` because the frontend reads the backend's pagination envelope as a bare array | Parse `res.json()` as `PaginatedResponse<ExceptionOut>` and assign `.items ?? []` — same envelope-unwrap pattern used by `WorkspaceExceptions.tsx`, `conditionsService`, `auditService`, and `decisioningService` |
 | BUG-2026-07-09-004 | 2026-07-09 | High | Analytics date-range columns ambiguous once chart SQL JOINs extra tables (`_chart_action_needed` and friends) — `?date_preset=...` crashed | Qualified every date column with `l.<col>` in `analytics_filters.py`; pre-Sprint-4 the SQL was only correct because the chart SQL happened to JOIN nothing | 
@@ -98,6 +219,50 @@ The current file starts at **Session 31 (Sprint 3 — Full Workspace)**.
 **Fix:** Validator now accepts both scalar `str` and `list[str]` for `text`-typed fields. Mirrors the `IN` / `NOT IN` / `= ANY` semantics the SQL supports.
 
 **Regression coverage:** `tests/backend/test_analytics_summary.py::test_summary_with_status_filter` and `test_summary_with_loan_program_filter` — both pass arrays and assert 200. Also caught the SQL bug (BUG-005) once validation let the request through.
+
+### BUG-2026-07-11-001 — `_platform_tenant_id` raised `MultipleResultsFound` on multi-tenant schemas
+
+**Reported by:** uncovered while closing out Sprint 1–5 audit debt (Sprint 6.0.2). `tests/backend/test_coverage_gaps.py::test_intake_session_lifecycle` was being skipped with a blanket `except Exception`.
+
+**Symptom:** `POST /api/v1/intake/sessions` (and any other intake endpoint that resolves the platform tenant) raised `sqlalchemy.exc.MultipleResultsFound: Multiple rows were found when exactly one was required`. The endpoint returned 500 even in the simple smoke case.
+
+**Root cause:** `_platform_tenant_id()` in `app/api/v1/intake.py` used `db.query(Tenant.id).order_by(Tenant.created_at.asc()).scalar()`. `Query.scalar()` returns the first column of the first row but raises `MultipleResultsFound` whenever the underlying query yields 2+ rows. The test schema regularly contains 2+ tenants (multi-tenant isolation tests seed a second tenant), so the anonymous intake flow was an unstable 500 in tests despite being the most basic "does the platform pick a tenant?" check. The blank `except Exception` in the failing test had been hiding it for at least one sprint.
+
+**Fix:** Switched to `db.execute(select(Tenant.id).order_by(Tenant.created_at.asc()).limit(1)).scalar_one_or_none()`. `LIMIT 1` keeps the "oldest tenant wins" semantics while making the query safe under any number of tenants.
+
+**Regression coverage:** `tests/backend/test_coverage_gaps.py::test_intake_session_lifecycle` (un-skipped) and the new `tests/backend/test_intake_multi_tenant.py::test_intake_session_creates_with_two_tenants` — the latter deliberately seeds a second tenant before calling `/intake/sessions` to prove the bug stays fixed.
+
+
+### BUG-2026-07-11-002 — BUG-2026-07-09-002 fix was incomplete (placeholder still had `…`)
+
+**Reported by:** vitest regression test added in Sprint 6.0.4 caught that the
+ACTIVITY RAIL composer placeholder still contained U+2026 `…` ellipsis after
+the original fix.
+
+**Symptom:** The original BUG-2026-07-09-002 was reported as the placeholder
+rendering garbled because of `⌘` and `↵` codepoints that the page font
+couldn't render. The fix description claimed the entire placeholder was
+replaced with ASCII including `Post a note...`, but the source file still
+contained `…` (U+2026 HORIZONTAL ELLIPSIS). The original fix removed the
+keyboard-symbol glyphs; the ellipsis survived.
+
+**Root cause:** Manual fix from Sprint 2 closure only updated the visible
+"⌘↵" portion of the placeholder string. The `…` between `note` and the
+parenthetical was kept because most fonts do render U+2026 correctly — but
+the BUILD_HISTORY entry claimed "ASCII only" so any reader assumed it was.
+The system fonts in some Linux/CI environments and many older WebKit
+installations fall back to a generic CJK-looking glyph for U+2026 the same
+way they did for U+2318.
+
+**Fix:** Replaced the lone `…` with `...` so the placeholder is now strictly
+ASCII. Re-running the vitest regression test proves the fix holds.
+
+**Regression coverage:** `tests/frontend/BugRegressions.test.tsx::
+BUG-2026-07-09-002 — WorkspaceConversation composer placeholder >
+uses only ASCII characters in the placeholder` — scans the component
+source and asserts every codepoint is < 0x80. Will fail loudly if anyone
+re-introduces Unicode characters in the placeholder.
+
 
 ## Session 31 — Sprint 2 Closure: Bug Log, Archives, BUILD_HISTORY Reset
 

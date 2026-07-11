@@ -2,9 +2,10 @@ import { useEffect } from "react";
 import { useRouter } from "next/router";
 import { LoadingSpinner } from "@/components/feedback/LoadingSpinner";
 import { useLoanDetail } from "@/hooks/useLoanDetail";
+import { BorrowerPanel } from "@/components/loans/workspace/BorrowerPanel";
+import { PropertyPanel } from "@/components/loans/workspace/PropertyPanel";
 import { useRecentLoansStore } from "@/state/recentLoansStore";
 import { loanProgramLabels, loanStatusLabels, type LoanSummary } from "@/types/loan";
-import type { BorrowerOut } from "@/types/api";
 
 type Props = { loan: LoanSummary };
 
@@ -21,15 +22,6 @@ const PURPOSE_LABELS: Record<string, string> = {
   other: "Other",
 };
 
-const INCOME_LABELS: Record<string, string> = {
-  w2: "W-2",
-  self_employed: "Self-Employed",
-  bank_statement: "Bank Statement",
-  "1099": "1099",
-  rental: "Rental",
-  assets: "Asset Depletion",
-  pension_retirement: "Pension / Retirement",
-};
 
 const MOCK_TEAM = [
   { role: "Account Executive", name: "Marcus Webb", email: "m.webb@origina.dev", status: "Assigned" },
@@ -66,10 +58,6 @@ function fmtDate(value: string | null | undefined): string {
   return new Intl.DateTimeFormat("en-US", { dateStyle: "medium" }).format(date);
 }
 
-function borrowerName(borrower: BorrowerOut | null): string {
-  if (!borrower) return "-";
-  return [borrower.first_name, borrower.last_name].filter(Boolean).join(" ") || "-";
-}
 
 function riskTone(kind: "ltv" | "dti" | "dscr" | "fico", value: number | null | undefined) {
   if (value == null) return "";
@@ -110,9 +98,6 @@ export function WorkspaceHome({ loan }: Props) {
 
   const purpose = loanData?.purpose ? (PURPOSE_LABELS[loanData.purpose] ?? loanData.purpose) : "-";
   const product = loan.loanProgram ? (loanProgramLabels[loan.loanProgram] ?? loan.loanProgram) : "-";
-  const propertyAddress = property
-    ? [property.address1, property.city, property.state, property.postal_code].filter(Boolean).join(", ")
-    : "-";
 
   const workflow = [
     {
@@ -158,26 +143,16 @@ export function WorkspaceHome({ loan }: Props) {
       <div className="home-command-grid">
         <section className="home-panel home-panel--tall">
           <PanelHeader title="Borrower & Property" actionLabel="Open URLA" onAction={() => goTo("borrower-urla")} />
-          <div className="home-block">
-            <h4>Borrowers</h4>
-            <FieldRow label="Primary" value={borrowerName(primary)} />
-            <FieldRow label="Co-borrower" value={borrowerName(coBorrower)} />
-            <FieldRow label="Email" value={primary?.email ?? "-"} />
-            <FieldRow label="Phone" value={primary?.phone ?? "-"} />
-            <FieldRow label="FICO" value={financials?.fico_score != null ? String(financials.fico_score) : "-"} tone={riskTone("fico", financials?.fico_score)} />
-            <FieldRow label="Monthly income" value={fmtMoney(primary?.income_amount ?? financials?.monthly_income)} />
-            <FieldRow label="Income type" value={primary?.income_type ? (INCOME_LABELS[primary.income_type] ?? primary.income_type) : "-"} />
-            <FieldRow label="Employer" value={primary?.employer_name ?? "-"} />
-          </div>
-          <div className="home-block">
-            <h4>Subject Property</h4>
-            <FieldRow label="Address" value={propertyAddress} />
-            <FieldRow label="Occupancy" value={property?.occupancy ?? loanData?.occupancy_type ?? "-"} />
-            <FieldRow label="Type" value={property?.property_type ?? "-"} />
-            <FieldRow label="Units" value="-" />
-            <FieldRow label="Appraised value" value={fmtMoney(financials?.appraised_value)} />
-            <FieldRow label="Purchase price" value={fmtMoney(financials?.purchase_price)} />
-          </div>
+          <BorrowerPanel
+            primary={primary}
+            coBorrower={coBorrower}
+            financials={financials ?? null}
+          />
+          <PropertyPanel
+            subjectProperty={property ?? null}
+            fallbackOccupancy={loanData?.occupancy_type ?? null}
+            financials={financials ?? null}
+          />
         </section>
 
         <section className="home-panel home-panel--tall">

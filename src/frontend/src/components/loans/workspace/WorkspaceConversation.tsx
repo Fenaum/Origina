@@ -115,7 +115,7 @@ export function WorkspaceConversation({ loan }: Props) {
 
           <form className="conversation-composer" onSubmit={handleSubmit}>
             <textarea
-              placeholder={`Post a note about ${loan.loanNumber}… (Cmd+Enter to send)`}
+              placeholder={`Post a note about ${loan.loanNumber}... (Cmd+Enter to send)`}
               value={body}
               onChange={(e) => setBody(e.target.value)}
               onKeyDown={handleKeyDown}
