@@ -3,6 +3,7 @@ from os import getenv
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
@@ -44,8 +45,15 @@ def _platform_tenant_id(db: Session) -> UUID:
         except ValueError as exc:
             raise HTTPException(status_code=500, detail="Invalid PLATFORM_TENANT_ID") from exc
 
-    tenant_id = db.query(Tenant.id).order_by(Tenant.created_at.asc()).scalar()
-    if not tenant_id:
+    # Bug fix (BUG-2026-07-11-001): `Query.scalar()` raises
+    # MultipleResultsFound whenever the schema has 2+ tenants — common in
+    # multi-tenant isolation tests. Switched to a LIMIT 1 SELECT so
+    # anonymous intake picks the oldest tenant deterministically without
+    # exploding when the schema already contains more than one.
+    tenant_id = db.execute(
+        select(Tenant.id).order_by(Tenant.created_at.asc()).limit(1)
+    ).scalar_one_or_none()
+    if tenant_id is None:
         raise HTTPException(status_code=500, detail="No tenant available for anonymous intake")
     return tenant_id
 

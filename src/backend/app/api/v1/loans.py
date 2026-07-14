@@ -8,15 +8,19 @@ from sqlalchemy.orm import Session
 from app.core.db import get_db
 from app.models.borrowers import Borrower
 from app.models.loan import Loan, LoanFinancials, LoanParty, LoanTerms
+from app.models.properties import Property
 from app.models.user import Tenant, User
 from app.models.workflow import LoanStatusEvent
 from app.models.conditions import Condition
 from app.models.document import Document
 from app.models.workflow import Note
+from app.schemas.borrower_schema import BorrowerOut
 from app.schemas.loan_schema import (
     ActivityEventOut,
     ArchiveLoanRequest,
+    BorrowerSummaryOut,
     LoanCreate,
+    LoanDetailOut,
     LoanFinancialsOut,
     LoanFinancialsUpdate,
     LoanNoteCreate,
@@ -31,6 +35,7 @@ from app.schemas.loan_schema import (
     LoanUpdate,
     MoveTenantRequest,
     PaginatedResponse,
+    PropertySummaryOut,
     SandboxOut,
 )
 from app.schemas.workflow_schema import StatusEventCreate, StatusEventOut
@@ -201,6 +206,132 @@ def get_loan(
     current_user: User = Depends(get_current_user),
 ):
     return _get_or_404(loan_id, db, current_user.tenant_id)
+
+
+@router.get("/{loan_id}/detail", response_model=LoanDetailOut)
+def get_loan_detail(
+    loan_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Sprint 6 §6.2 — single-fetch workspace load.
+
+    The workspace used to issue 4 parallel calls (`/loans/{id}`,
+    `/borrowers/?loan_id={id}`, `/loans/{id}/financials`, etc.) to render
+    one tab. That waterfall hidden behind `Promise.all` was a tech-debt
+    item — and worse, the `getLoanById` hook on the frontend fetched a
+    full pipeline page (`?limit=1000`) to find one loan.
+
+    This endpoint joins the loan header with its financials, terms,
+    borrowers (split primary / co-borrower), and properties (subject +
+    others) in one go. The schema still exposes the existing satellite
+    endpoints so callers that only need one piece don't have to fetch
+    the whole detail.
+    """
+    loan = _get_or_404(loan_id, db, current_user.tenant_id)
+
+    # Satellite tables — finance + terms. Both use loan_id as PK so a
+    # direct get() is the natural choice.
+    financials = db.get(LoanFinancials, loan_id)
+    terms = db.get(LoanTerms, loan_id)
+
+    # Borrowers — split into primary + co-borrower[ren]. The frontend
+    # workspace only needs a small surface (name, contact, FICO band),
+    # so we project to BorrowerSummaryOut and skip the full borrower
+    # row. Full records stay available via GET /borrowers/{id}.
+    borrower_rows = (
+        db.query(Borrower)
+        .filter(Borrower.loan_id == loan_id, Borrower.tenant_id == current_user.tenant_id)
+        .order_by(Borrower.created_at.asc())
+        .all()
+    )
+
+    primary = None
+    co_borrowers: list[BorrowerSummaryOut] = []
+    for row in borrower_rows:
+        summary = _to_borrower_summary(row)
+        if row.type == "primary_borrower" and primary is None:
+            primary = summary
+        else:
+            co_borrowers.append(summary)
+
+    # Properties — split subject + other. Subject = is_subject == True
+    # (or the first property if none marked subject, which is the
+    # convention used by the workspace home panel).
+    property_rows = (
+        db.query(Property)
+        .filter(Property.loan_id == loan_id, Property.tenant_id == current_user.tenant_id)
+        .order_by(Property.is_subject.desc(), Property.created_at.asc())
+        .all()
+    )
+
+    subject_property = None
+    other_properties: list[PropertySummaryOut] = []
+    for index, row in enumerate(property_rows):
+        summary = _to_property_summary(row)
+        if subject_property is None and (row.is_subject or index == 0):
+            subject_property = summary
+        else:
+            other_properties.append(summary)
+
+    return LoanDetailOut(
+        **{
+            k: v for k, v in loan.__dict__.items()
+            if not k.startswith("_")
+        },
+        primary_borrower=primary,
+        co_borrowers=co_borrowers,
+        subject_property=subject_property,
+        other_properties=other_properties,
+        financials=financials and _to_loan_financials_out(financials),
+        terms=terms and _to_loan_terms_out(terms),
+    )
+
+
+def _to_borrower_summary(row: Borrower) -> BorrowerSummaryOut:
+    """Project a Borrower ORM row to the slim summary shape used by
+    LoanDetailOut. Kept as a free function so we can swap the ORM field
+    list cheaply when the model grows."""
+    return BorrowerSummaryOut.model_validate({
+        "id": row.id,
+        "loan_id": row.loan_id,
+        "type": row.type,
+        "first_name": row.first_name,
+        "last_name": row.last_name,
+        "email": row.email,
+        "phone": row.phone,
+        "ssn_last4": row.ssn_last4,
+        "dob": row.dob,
+        "income_type": row.income_type,
+        "income_amount": row.income_amount,
+        "employer_name": row.employer_name,
+    })
+
+
+def _to_property_summary(row) -> PropertySummaryOut:
+    return PropertySummaryOut.model_validate({
+        "id": row.id,
+        "loan_id": row.loan_id,
+        "is_subject": row.is_subject,
+        "address1": row.address1,
+        "address2": row.address2,
+        "city": row.city,
+        "state": row.state,
+        "postal_code": row.postal_code,
+        "property_type": row.property_type,
+        "occupancy": row.occupancy,
+    })
+
+
+def _to_loan_financials_out(row) -> LoanFinancialsOut:
+    """Project a LoanFinancials ORM row to the public schema. Mirrors
+    the projection that LoanOut already does via Pydantic from_attributes,
+    but kept here so we can extend without changing all call sites."""
+    return LoanFinancialsOut.model_validate(row)
+
+
+def _to_loan_terms_out(row) -> LoanTermsOut:
+    return LoanTermsOut.model_validate(row)
 
 
 @router.patch("/{loan_id}", response_model=LoanOut)

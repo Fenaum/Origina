@@ -253,3 +253,55 @@ class LoanSubmitOut(BaseModel):
     borrower_name: Optional[str] = None
     loan_amount: Optional[Decimal] = None
     loan_program: Optional[str] = None
+
+
+
+# ── LoanDetail ─────────────────────────────────────────────────────────────────
+# Sprint 6 §6.2: single endpoint response that joins the loan header with
+# every satellite + adjacent record the workspace reads together. Kills the
+# `getLoanById` → pipeline-with-`limit=1000` hack on the frontend.
+class LoanDetailOut(LoanOut):
+    primary_borrower: Optional["BorrowerSummaryOut"] = None
+    co_borrowers: list["BorrowerSummaryOut"] = []
+    subject_property: Optional["PropertySummaryOut"] = None
+    other_properties: list["PropertySummaryOut"] = []
+
+
+class BorrowerSummaryOut(BaseModel):
+    """Compact borrower view for LoanDetailOut — keeps the detail payload
+    small but exposes the fields the workspace borrower panel renders.
+    Full BorrowerOut stays available via GET /borrowers/{id}."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    loan_id: UUID
+    type: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    ssn_last4: Optional[str] = None
+    dob: Optional[date] = None
+    income_type: Optional[str] = None
+    income_amount: Optional[Decimal] = None
+    employer_name: Optional[str] = None
+
+
+class PropertySummaryOut(BaseModel):
+    """Compact property view for LoanDetailOut — exposes the address lines
+    and occupancy/type fields the workspace property panel renders."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    loan_id: UUID
+    is_subject: bool
+    address1: Optional[str] = None
+    address2: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    postal_code: Optional[str] = None
+    property_type: Optional[str] = None
+    occupancy: Optional[str] = None
+
+
+LoanDetailOut.model_rebuild()

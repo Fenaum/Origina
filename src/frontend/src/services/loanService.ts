@@ -81,14 +81,45 @@ export async function getLoanById(
   loanId: string,
   token?: string,
 ): Promise<LoanSummary | null> {
+  // Sprint 6 §6.2 — switch to `GET /loans/{id}/detail` for authenticated
+  // callers. The previous implementation fetched the full pipeline page
+  // with `limit=1000` to find a single loan, which scaled badly and
+  // violated "don't scan, query".
+  //
+  // The summary row the workspace uses is also exposed by the detail
+  // endpoint via `primary_borrower` + `subject_property`. We project
+  // back to the existing `LoanSummary` shape so callers don't have to
+  // migrate in lockstep. Unauthenticated callers keep the mock fallback.
   if (!token) {
     return mockLoans.find((loan) => loan.id === loanId) ?? null;
   }
 
-  const data = await apiRequest<PaginatedResponse<LoanPipelineSummaryOut>>(
-    "/loans/pipeline?skip=0&limit=1000",
-    { token },
-  );
-  const row = data.items.find((r) => r.id === loanId);
-  return row ? toSummary(row) : null;
+  try {
+    const detail = await apiRequest<import("@/types/api").LoanDetailOut>(
+      `/loans/${loanId}/detail`,
+      { token },
+    );
+    const primary = detail.primary_borrower;
+    const subject = detail.subject_property;
+    return {
+      id: detail.id,
+      borrowerName: [primary?.first_name, primary?.last_name]
+        .filter(Boolean)
+        .join(" ") || "—",
+      loanNumber: detail.loan_number ?? "—",
+      channel: "Broker",
+      status: detail.status as LoanStatus,
+      loanAmount: Number(detail.financials?.loan_amount ?? 0),
+      loanProgram: (detail.loan_program ?? "other") as LoanProgram,
+      propertyState: subject?.state ?? "—",
+      submittedAt: detail.submitted_at ?? null,
+      updatedAt: detail.updated_at.split("T")[0],
+      owner: "—",
+      conditionsOpen: 0,
+      conditionsSubmitted: 0,
+      actionsNeeded: 0,
+    };
+  } catch {
+    return null;
+  }
 }

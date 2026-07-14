@@ -28,6 +28,10 @@ All sprints for Origina LOS. Each sprint has a goal, a set of phases, and a defi
 
 ## Sprint Index
 
+> **Program view:** [MILESTONES.md](MILESTONES.md) — a milestone every 5 sprints, closed by owner UAT + gate review.
+
+### Milestone 1 — Pilot-Ready ✅ (UAT-1 in progress)
+
 | # | Sprint | Goal | Status | Sessions | Completed |
 |---|---|---|---|---|---|
 | 1 | [Demo Unblocked](sprint-1-demo-unblocked.md) | First external demo is possible | ✅ **Complete** | 1–4 | 2026-07-07 |
@@ -35,6 +39,26 @@ All sprints for Origina LOS. Each sprint has a goal, a set of phases, and a defi
 | 3 | [Full Workspace](sprint-3-full-workspace.md) | Every workspace section functional | ✅ **Complete** | 8 | 2026-07-09 |
 | 4 | [Manager Layer](sprint-4-manager-layer.md) | Team visibility, notifications, assignments | ✅ **Complete** | 9 | 2026-07-09 |
 | 5 | [Production Hardening](sprint-5-production-hardening.md) | Real lender can pilot it | ✅ **Complete** | 10–12 | 2026-07-10 |
+
+### Milestone 2 — Operational Depth (start-to-fund without leaving Origina)
+
+| # | Sprint | Goal | Status | Spec |
+|---|---|---|---|---|
+| 6 | Closeout & UAT Response ([active](../CURRENT_SPRINT.md)) | Audit debts + UAT-1 burn-down + workspace data gaps | 🔄 **In progress** | [spec](sprint-6-build-spec.md) |
+| 7 | Document Platform v1 | S3 storage, doc→condition auto-linking, versioning | 📋 Planned | [spec](sprint-7-build-spec.md) |
+| 8 | URLA (1003) Foundation | Full application data model + section editor | 📋 Planned | [spec](sprint-8-build-spec.md) |
+| 9 | Processing & Funding | Milestone checklist, third-party panels, funding worksheet | 📋 Planned | [spec](sprint-9-build-spec.md) |
+| 10 | Decisioning + **M2 Gate** | Decision objects, condition auto-gen, UAT-2 | 📋 Planned | [spec](sprint-10-build-spec.md) |
+
+### Milestone 3 — Enterprise-Ready (multi-lender confidence) — DRAFT specs
+
+| # | Sprint | Goal | Status | Spec |
+|---|---|---|---|---|
+| 11 | Org Hierarchy & Custom Roles | Branches/teams, scoped visibility, permission bundles | 📝 Draft | [spec](sprint-11-build-spec.md) |
+| 12 | SLA Engine & Notifications | SLA timers on outbox, escalation, in-app SSE center | 📝 Draft | [spec](sprint-12-build-spec.md) |
+| 13 | SSO & Security Round 2 | OIDC, lockout/session policy, secrets + headers | 📝 Draft | [spec](sprint-13-build-spec.md) |
+| 14 | Audit, Retention & SOC 2 | Audit export, partitioning, control matrix | 📝 Draft | [spec](sprint-14-build-spec.md) |
+| 15 | API Preview + **M3 Gate** | API keys, read-only external API, first webhook, UAT-3 | 📝 Draft | [spec](sprint-15-build-spec.md) |
 
 ---
 

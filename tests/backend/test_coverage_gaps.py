@@ -977,32 +977,28 @@ async def test_exception_decide_with_conditions(client, seed_minimum):
 async def test_intake_session_lifecycle(client, seed_minimum):
     """Create a session, save an answer, fetch results.
 
-    Skips on 500/connection errors that don't reproduce in isolation — this
-    endpoint touches a platform-only tenant path that occasionally diverges
-    from the seeded test schema.
+    BUG-2026-07-11-001 fix: this test used to skip with
+    "Multiple rows were found when exactly one was required" because
+    `_platform_tenant_id()` called `.scalar()` without LIMIT 1. The
+    masked-by-blanket-except skip has been removed; if the bug regresses,
+    the assertion below will raise and surface the real error.
     """
     auth = _auth(seed_minimum["token"])
-    try:
-        s_r = await client.post("/api/v1/intake/sessions", headers=auth)
-        if s_r.status_code != 201:
-            pytest.skip(f"session create returned {s_r.status_code}: {s_r.text}")
-        session_id = s_r.json()["id"]
-        a_r = await client.post(
-            f"/api/v1/intake/sessions/{session_id}/answers",
-            json={"question_key": "credit_range", "value": "720-759"},
-            headers=auth,
-        )
-        if a_r.status_code not in (200, 201):
-            pytest.skip(f"answer save returned {a_r.status_code}: {a_r.text}")
-        r_r = await client.get(
-            f"/api/v1/intake/sessions/{session_id}/results",
-            headers=auth,
-        )
-        if r_r.status_code != 200:
-            pytest.skip(f"results returned {r_r.status_code}: {r_r.text}")
-        assert isinstance(r_r.json(), list)
-    except Exception as exc:
-        pytest.skip(f"intake lifecycle failed: {exc}")
+    s_r = await client.post("/api/v1/intake/sessions", headers=auth)
+    assert s_r.status_code == 201, s_r.text
+    session_id = s_r.json()["id"]
+    a_r = await client.post(
+        f"/api/v1/intake/sessions/{session_id}/answers",
+        json={"question_key": "credit_range", "value": "720-759"},
+        headers=auth,
+    )
+    assert a_r.status_code in (200, 201), a_r.text
+    r_r = await client.get(
+        f"/api/v1/intake/sessions/{session_id}/results",
+        headers=auth,
+    )
+    assert r_r.status_code == 200, r_r.text
+    assert isinstance(r_r.json(), list)
 
 
 @pytest.mark.integration

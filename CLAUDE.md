@@ -314,7 +314,9 @@ Login → POST /auth/login → JWT in localStorage
 
 **Sprint 5 — Production Hardening — ✅ closed 2026-07-10.** httpOnly cookie auth (`origina_token` HttpOnly + SameSite=Lax, `/auth/logout` clears it, dual-mode cookie OR Bearer accepted by `get_current_user`); rate limiting on `/auth/login` via slowapi (10/min/IP, configurable via `LOGIN_RATE_LIMIT`); GitHub Actions CI on every PR (`.github/workflows/ci.yml`) with backend coverage gate (`--cov-fail-under=70`) + condition-lifecycle gate (`--cov-fail-under=90`); `POST /api/v1/tenants/bootstrap` guarded by `ADMIN_SECRET` creates tenant + first IT_ADMIN user in one atomic call; Settings → Admin → Tenant Onboarding UI for non-CLI onboarding; 68 new backend tests + 3 new frontend smoke tests; `npm run lint` reports 0 problems (was 22). Spec: [docs/sprints/sprint-5-build-spec.md](docs/sprints/sprint-5-build-spec.md). Archive: [docs/sprints/sprint-5-production-hardening.md](docs/sprints/sprint-5-production-hardening.md).
 
-**Sprint 6 — TBD (next):** Awaiting owner-authored sprint spec.
+**Program plan:** [docs/sprints/MILESTONES.md](docs/sprints/MILESTONES.md) — a milestone every 5 sprints, closed by owner UAT. **M1 Pilot-Ready** = Sprints 1–5 ✅ (UAT-1 in progress). **M2 Operational Depth** = Sprints 6–10 (docs/URLA/processing/funding/decisioning — "start-to-fund without leaving Origina"), implementable specs written. **M3 Enterprise-Ready** = Sprints 11–15 (org hierarchy, SLA engine, SSO, SOC 2 groundwork, read-only API preview), draft specs to be promoted at the M2 gate.
+
+**Sprint 6 — In progress (started 2026-07-11):** Closeout & UAT Response. Phase 6.0 = Sprint 1–5 audit closeout (RBAC route-coverage matrix, skipped intake-lifecycle test at `test_coverage_gaps.py:1005`, migration-based test runner, regression tests for BUG-2026-07-09-001/002/003); Phase 6.1 = UAT-1 finding burn-down; Phase 6.2 = `GET /loans/{id}` + borrower/property panels. Spec: [docs/sprints/sprint-6-build-spec.md](docs/sprints/sprint-6-build-spec.md).
 
 **Long-term direction:** Origina's backend is intended to evolve into a platform (APIs consumable by CRMs, mobile apps, external LOS). Key architectural commitments: domain events table (transactional outbox) shipped in Sprint 4 — webhooks, SLA timers, and AI triggers will subscribe as additional consumer files (one consumer, one file that knows its transport); routers stay thin (parse + authorize), business logic lives in services. See ADRs in [docs/DECISIONS.md](docs/DECISIONS.md).
 
@@ -325,10 +327,11 @@ Login → POST /auth/login → JWT in localStorage
 | ~~JWT in localStorage → httpOnly cookie~~ | ~~High — security~~ | ✅ Done in Sprint 5 |
 | Role vocabulary split (frontend role names ≠ backend role constants) | High — RBAC correctness | Low — Sprint 2 |
 | Bare `list[X]` on non-loan list endpoints (conditions, tasks, notes, users, audit, documents) | Medium — API consistency | ✅ Done in Sprint 2 |
-| Test schema doesn't install triggers (`create_all()` skips PL/pgSQL) | Low — test infra friction | Low — Sprint 3 inline-install stopgap in place; migration-based runner still pending (slipped from Sprint 5.2) |
-| RBAC route coverage — `test_rbac_coverage.py` role × route matrix never written; only `/users/` has RBAC tests | Medium — authz regressions invisible | Low — slipped from Sprint 5.2; candidate for Sprint 6 |
-| First green CI run unverified — `ci.yml` fixed 2026-07-10 but Sprint 3–5 work not yet pushed/PR'd | High — all "green" claims are local-only until CI runs | Low — push branch, open PR, watch first run |
-| Frontend bugs BUG-2026-07-09-001/002/003 have manual-only regression coverage (gate says every bug gets a named test) | Low — regressions could return silently | Low — three small vitest tests, or amend the gate for UI-rendering bugs |
+| Test schema doesn't install triggers (`create_all()` skips PL/pgSQL) | Low — test infra friction | Low — Sprint 3 inline-install stopgap in place; migration-based runner scheduled: Sprint 6 Phase 6.0 |
+| RBAC route coverage — `test_rbac_coverage.py` role × route matrix never written; only `/users/` has RBAC tests | Medium — authz regressions invisible | Low — scheduled: Sprint 6 Phase 6.0 |
+| Branch protection on `main` not enabled — CI runs but red builds do not actually block merge | Medium — the "red blocks merge" claim is a repo setting away from true | Trivial — GitHub → Settings → Branches → require Backend + Frontend checks |
+| Frontend bugs BUG-2026-07-09-001/002/003 have manual-only regression coverage (gate says every bug gets a named test) | Low — regressions could return silently | Low — scheduled: Sprint 6 Phase 6.0 |
+| Skipped intake test masks a real error (`test_coverage_gaps.py:1005` — "Multiple rows were found") | Medium — possible product bug in intake flow | Low — scheduled: Sprint 6 Phase 6.0 |
 | Business logic inline in routers (status.py, conditions.py, loans.py) | Medium — platform boundary | Migrate opportunistically when touching each domain |
 | ~~Feature test coverage below 70% gate~~ | ~~Medium — refactor risk~~ | ✅ Done in Sprint 5 — CI enforces `--cov-fail-under=70`; current 70.30% |
 | Mixed data-fetching idioms (React Query + useEffect + Zustand) | Medium — velocity | All NEW fetching uses React Query; migrate old hooks only when touching them |
