@@ -44,8 +44,8 @@ All sprints for Origina LOS. Each sprint has a goal, a set of phases, and a defi
 
 | # | Sprint | Goal | Status | Spec |
 |---|---|---|---|---|
-| 6 | Closeout & UAT Response ([active](../CURRENT_SPRINT.md)) | Audit debts + UAT-1 burn-down + workspace data gaps | 🔄 **In progress** | [spec](sprint-6-build-spec.md) |
-| 7 | Document Platform v1 | S3 storage, doc→condition auto-linking, versioning | 📋 Planned | [spec](sprint-7-build-spec.md) |
+| 6 | Closeout & UAT Response | Audit debts + UAT-1 burn-down + workspace data gaps | ✅ **Complete** (2026-07-11) | [archive](sprint-6-closeout-uat-response.md) · [spec](sprint-6-build-spec.md) |
+| 7 | Document Platform v1 ([active](../CURRENT_SPRINT.md)) | S3 storage, doc→condition auto-linking, versioning | 🔄 **In progress** | [spec](sprint-7-build-spec.md) |
 | 8 | URLA (1003) Foundation | Full application data model + section editor | 📋 Planned | [spec](sprint-8-build-spec.md) |
 | 9 | Processing & Funding | Milestone checklist, third-party panels, funding worksheet | 📋 Planned | [spec](sprint-9-build-spec.md) |
 | 10 | Decisioning + **M2 Gate** | Decision objects, condition auto-gen, UAT-2 | 📋 Planned | [spec](sprint-10-build-spec.md) |
@@ -59,6 +59,18 @@ All sprints for Origina LOS. Each sprint has a goal, a set of phases, and a defi
 | 13 | SSO & Security Round 2 | OIDC, lockout/session policy, secrets + headers | 📝 Draft | [spec](sprint-13-build-spec.md) |
 | 14 | Audit, Retention & SOC 2 | Audit export, partitioning, control matrix | 📝 Draft | [spec](sprint-14-build-spec.md) |
 | 15 | API Preview + **M3 Gate** | API keys, read-only external API, first webhook, UAT-3 | 📝 Draft | [spec](sprint-15-build-spec.md) |
+
+### Milestone 4 — Platform (first external consumer) — OUTLINE specs (pre-draft)
+
+> Two milestones out — kept deliberately loose. Refined to DRAFT during M3, promoted at the M3 gate (Sprint 15.4). Entry criteria + pivot triggers in [MILESTONES.md](MILESTONES.md#m4--platform-sprints-1620--outline-pre-draft).
+
+| # | Sprint | Goal | Status | Spec |
+|---|---|---|---|---|
+| 16 | UAT-3 Response & External API GA | Versioning policy, read surface + PII policy, observability, quotas | 🗒️ Outline | [spec](sprint-16-build-spec.md) |
+| 17 | Event Platform & Async Jobs | Background worker, event catalog, DLQ/replay, subscription UI | 🗒️ Outline | [spec](sprint-17-build-spec.md) |
+| 18 | Write API v1 (Guarded) | Scoped writes (draft loan/docs/notes), idempotency, machine-actor audit, sandbox | 🗒️ Outline | [spec](sprint-18-build-spec.md) |
+| 19 | SDK, Docs & Partner Integration | TypeScript SDK, dev docs, first CRM integration (partner picked at M3 gate) | 🗒️ Outline | [spec](sprint-19-build-spec.md) |
+| 20 | Platform SLO + **M4 Gate** | SLO instrumentation, load/abuse testing, UAT-4 | 🗒️ Outline | [spec](sprint-20-build-spec.md) |
 
 ---
 

@@ -1,11 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/router";
 import { NotificationBell } from "@/components/app/NotificationBell";
-import { roleLabels, PREVIEW_ROLES, type UserRole } from "@/types/auth";
+import {
+  isAdminRole,
+  roleDashboardPaths,
+  roleLabels,
+  PREVIEW_ROLES,
+  type UserRole,
+} from "@/types/auth";
 import { useAuth } from "@/state/auth";
 import { useTheme } from "@/state/theme";
 
 export function TopHeader() {
+  const router = useRouter();
   const { user, effectiveRole, isPreviewMode, setPreviewRole, clearPreviewRole, logout } = useAuth();
   const { preference, resolvedTheme, cycle } = useTheme();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -34,6 +42,7 @@ export function TopHeader() {
     return null;
   }
 
+  const realUserRole = user.role;
   const initials = user.name
     .split(" ")
     .map((p: string) => p[0])
@@ -46,11 +55,13 @@ export function TopHeader() {
   function handleSelectRole(role: UserRole) {
     setPreviewRole(role);
     setRoleMenuOpen(false);
+    void router.push(roleDashboardPaths[role]);
   }
 
   function handleResetRole() {
     clearPreviewRole();
     setRoleMenuOpen(false);
+    void router.push(roleDashboardPaths[realUserRole]);
   }
 
   return (
@@ -67,7 +78,7 @@ export function TopHeader() {
           <button
             type="button"
             className="preview-banner-reset"
-            onClick={clearPreviewRole}
+            onClick={handleResetRole}
           >
             Return to Admin View
           </button>
@@ -83,7 +94,7 @@ export function TopHeader() {
         <div className="user-block">
           <NotificationBell />
 
-          {user.role === "admin" && (
+          {isAdminRole(user.role) && (
             <div className="role-switcher" ref={roleMenuRef}>
               <button
                 type="button"
@@ -191,7 +202,7 @@ export function TopHeader() {
                   Preferences
                 </Link>
 
-                {user.role === "admin" && (
+                {isAdminRole(user.role) && (
                   <Link href="/settings/admin" className="user-menu-item" role="menuitem" onClick={() => setUserMenuOpen(false)}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />

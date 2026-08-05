@@ -18,6 +18,7 @@ export type UserRole =
   | "underwriter"
   | "account_manager"
   | "it_admin"
+  | "capital_markets"
   // ── Legacy aliases kept for back-compat with existing pages ───────────
   | "admin"
   | "account_executive"
@@ -48,6 +49,7 @@ export const roleLabels: Record<UserRole, string> = {
   underwriter:      "Underwriter",
   account_manager:  "Account Manager",
   it_admin:         "IT Admin",
+  capital_markets:  "Capital Markets",
   // Legacy aliases
   admin:            "Admin",
   account_executive: "Account Executive",
@@ -69,6 +71,10 @@ export const roleDashboardPaths: Record<UserRole, string> = {
   underwriter:      "/dashboard/underwriter",
   account_manager:  "/dashboard/manager",
   it_admin:         "/dashboard/account-executive",
+  // Sprint 7 — CM PoC: dashboard page lands in Milestone 3 (B10).
+  // Route to /dashboard/manager as a safe default so CM users land
+  // somewhere they have access to; the real CM cockpit will replace this.
+  capital_markets:  "/dashboard/manager",
   // Legacy aliases — re-route to the same dashboards
   admin:            "/dashboard/account-executive",
   account_executive: "/dashboard/account-executive",
@@ -80,16 +86,39 @@ export const roleDashboardPaths: Record<UserRole, string> = {
 };
 
 
-// Roles available for the demo / preview switcher (kept stable for UX).
-export const PREVIEW_ROLES: UserRole[] = [
+/** Backend roles that may use the UI-only role preview controls. */
+export const ADMIN_ROLES: readonly UserRole[] = ["it_admin", "admin"];
+
+export function isAdminRole(role: UserRole | null | undefined): boolean {
+  return role !== null && role !== undefined && ADMIN_ROLES.includes(role);
+}
+
+// Roles available for the demo / preview switcher. Legacy roles remain here
+// because they still have distinct workspaces that are useful during UX review.
+export const PREVIEW_ROLES: readonly UserRole[] = [
   "loan_officer",
   "loan_processor",
   "underwriter",
   "account_manager",
-  "it_admin",
   "broker",
   "processor",
   "manager",
   "funder",
   "borrower",
+];
+
+export function isPreviewRole(role: string | null): role is UserRole {
+  return role !== null && PREVIEW_ROLES.some((previewRole) => previewRole === role);
+}
+
+/** Roles that can open the shared loan pipeline and loan workspaces. */
+export const LOAN_TEAM_ROLES: readonly UserRole[] = [
+  "loan_officer",
+  "broker",
+  "loan_processor",
+  "processor",
+  "underwriter",
+  "account_manager",
+  "manager",
+  "funder",
 ];

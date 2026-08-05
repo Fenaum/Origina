@@ -17,7 +17,8 @@ The platform has a working end-to-end demo path:
 **Sprint 3 — Full Workspace — closed 2026-07-09** ([archive](sprints/sprint-3-full-workspace.md)). Notes, audit log, status transitions, underwriting panels, documents all wired end-to-end.
 **Sprint 4 — Manager Layer — closed 2026-07-09** ([archive](sprints/sprint-4-manager-layer.md)). Pipeline assignments + filters, analytics date-filter bug fixes, manager dashboard tiles, domain-events outbox + email notifications.
 **Sprint 5 — Production Hardening — closed 2026-07-10** ([archive](sprints/sprint-5-production-hardening.md)). httpOnly cookie auth + rate limiting, GitHub Actions CI with coverage gates, multi-tenant onboarding via `POST /tenants/bootstrap` + admin UI.
-**Next:** [Sprint 6 — TBD](CURRENT_SPRINT.md). Awaiting owner-authored sprint spec.
+**Sprint 6 — Closeout & UAT Response — closed 2026-07-11** ([archive](sprints/sprint-6-closeout-uat-response.md)). Cleared Sprint 1–5 audit debts (RBAC route coverage matrix, intake-lifecycle test un-skipped after the BUG-001 fix, vitest regression for BUG-2026-07-09-001/002/003); added `GET /loans/{id}/detail` + extracted read-only `BorrowerPanel` + `PropertyPanel`. Phase 6.0.5 (migration-based test runner) slipped — see *What slipped* in the archive.
+**Next:** [Sprint 7 — Document Platform v1](CURRENT_SPRINT.md). S3-compatible storage, document→condition auto-linking, versioning. Spec: `docs/sprints/sprint-7-build-spec.md`.
 
 **What is real:** Auth (JWT with env-var secret), CORS locked to localhost, pipeline pagination (50/page with controls) + assignee filter + status filter, atomic 3-table loan submission with JOINed response, workspace financials via real API, full exception module (26 routes), controlled values architecture (18 sets, 144+ values), metadata API, task management, condition templates, marketing pages (guideline, product, about), notes/audit log/status-transition UI in workspace, documents upload + download + archive, account-manager team KPI dashboard, transactional outbox + SMTP email notifications (disabled when SMTP_HOST is empty), httpOnly cookie auth (`origina_token`, dual-mode cookie OR Bearer accepted) + slowapi rate limit on `/auth/login`, GitHub Actions CI on every PR with backend coverage gate (≥70%) + condition-lifecycle gate (≥90%), `POST /api/v1/tenants/bootstrap` (ADMIN_SECRET-guarded) for tenant + first admin creation in one atomic call, Settings → Admin → Tenant Onboarding UI.
 **What is mock:** Document upload (file bytes are stored to local disk, not S3), pricing (hardcoded scenarios), MISMO parsing (stub), settings pages (UI built, no backend save), SMTP transport (sender is wired but no production mail relay yet — `localhost` smoke tests rely on `notification_service` no-op when `SMTP_HOST` is empty).
@@ -95,6 +96,16 @@ The platform has a working end-to-end demo path:
   - `npm run lint` reports **0 problems** (was 22) — Sprint 5.0 baseline
 
 ---
+
+### Sprint 6 — Closeout & UAT Response (2026-07-11)
+- [x] RBAC route coverage matrix — `tests/backend/test_rbac_coverage.py` (1 parametrized test) walks role × representative route across `admin_settings`, `users`, `conditions`, `exceptions`, and unguarded routes (Sprint 6.0.3)
+- [x] Intake lifecycle test un-skipped — `tests/backend/test_coverage_gaps.py::test_intake_session_lifecycle` no longer masked by blanket `try/except`; root cause was BUG-2026-07-11-001 (`_platform_tenant_id` `MultipleResultsFound`) (Sprint 6.0.1, 6.0.2)
+- [x] Multi-tenant intake regression — `tests/backend/test_intake_multi_tenant.py` (3 tests) deliberately seeds a second tenant before calling `/intake/sessions` so the BUG-001 fix has direct multi-tenant coverage (Sprint 6.0.2)
+- [x] Named vitest regressions for BUG-2026-07-09-001/002/003 — `tests/frontend/BugRegressions.test.tsx` (3 tests). BUG-002 surfaced via the new test, fixed in-sprint, logged as BUG-2026-07-11-002 (Sprint 6.0.4)
+- [x] `GET /loans/{id}/detail` endpoint — joins loan header + financials + terms + borrowers (primary + co-borrower) + properties (subject + others); 404 cross-tenant (Sprint 6.2.1) — `tests/backend/test_loan_detail.py`
+- [x] `useLoanDetail` switches to the detail endpoint — `loanService.ts::getLoanById` no longer fetches the pipeline with `limit=1000`; detail endpoint projects to the legacy `LoanDetail` shape so existing workspace sections keep working unchanged (Sprint 6.2.2)
+- [x] Read-only Borrower + Property panels — extracted from `WorkspaceHome.tsx` into `src/components/loans/workspace/BorrowerPanel.tsx` and `PropertyPanel.tsx` (Sprint 6.2.3); URLA editing arrives with Sprint 8 (out of scope Sprint 6) — `tests/frontend/WorkspacePanels.test.tsx`
+
 
 ## Priority 1 — Demo-Blocking ✅ CLEARED 2026-07-07
 
@@ -254,8 +265,8 @@ An item can move from a Priority list to **"What We Did Well"** only when **all*
 - [x] Audit Log section — real `audit_log` table data (Sprint 3)
 - [ ] Loan creation form (`/loans/new/manual`) — multi-step, currently placeholder
 - [x] Status transition UI in workspace topbar (Sprint 3, in `WorkspaceStatus.tsx`)
-- [ ] Borrower panel in workspace home (co-borrowers, contact info)
-- [ ] Property panel (address, type, appraised value)
+- [x] Borrower panel in workspace home (co-borrowers, contact info) — Sprint 6 read-only (`BorrowerPanel.tsx`); URLA editing still Sprint 8 — `tests/frontend/WorkspacePanels.test.tsx`
+- [x] Property panel (address, type, appraised value) — Sprint 6 read-only (`PropertyPanel.tsx`); URLA editing still Sprint 8 — `tests/frontend/WorkspacePanels.test.tsx`
 - [x] Analytics: date range filter — Sprint 4 (`AnalyticsFilterBar` wired to backend; date-column + `IN(:list)` + validator fixes) — `tests/backend/test_analytics_summary.py`
 - [ ] Analytics: export to PDF/image
 - [x] Pipeline: assignment columns — Sprint 4 (`LoanSummary.owner` from `users.full_name` JOIN) — `tests/backend/test_pipeline_filters.py`
@@ -319,7 +330,7 @@ An item can move from a Priority list to **"What We Did Well"** only when **all*
 | Business logic inline in routers (`status.py`, `conditions.py`, `loans.py`) | Medium — platform boundary, testability | Medium | Routers parse + authorize; services decide + mutate. `analytics.py` is the template. Migrate opportunistically when touching each domain |
 | Mixed data-fetching idioms (React Query + useEffect + Zustand) | Medium — velocity, onboarding | Medium | Rule: all NEW fetching uses React Query; migrate old hooks only when touching them |
 | `audit_log` partitioning strategy undecided | Medium at scale | Low (decide) | Write the ADR (partition by `occurred_at`, monthly) before the table crosses ~10M rows — retrofitting partitioning on a hot table is painful |
-| `getLoanById` fetches pipeline with `limit=1000` | Low — perf smell | Low | Replace with `GET /loans/{id}` when workspace hooks are touched (Sprint 3) |
+| ~~`getLoanById` fetches pipeline with `limit=1000`~~ | ~~Low — perf smell~~ | ✅ Done — Sprint 6.2.2 replaced with `GET /loans/{id}/detail`; `useLoanDetail` calls it once, projects to the legacy `LoanDetail` shape |
 | `@shadcn/ui` package is a dummy v0.0.4 | Low | Low | Run `npx shadcn@latest init` when ready for UI primitives |
 | bcrypt 4.0.1 pinned | Low | Low | passlib incompatible with bcrypt 4.1+ |
 | `_legacy/` pages in routing | Low | Low | Not routed, reference only |

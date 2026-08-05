@@ -11,6 +11,7 @@ import { applyPipelineFilters, applyPipelineSort } from "@/data/pipelineFilters"
 import { listLoans } from "@/services/loanService";
 import { EMPTY_FILTERS, usePipelineStore } from "@/state/pipelineStore";
 import { useAuth } from "@/state/auth";
+import { LOAN_TEAM_ROLES } from "@/types/auth";
 import type { LoanStatus, LoanSummary } from "@/types/loan";
 
 const PAGE_SIZE = 50;
@@ -106,7 +107,7 @@ export default function LoanPipelinePage() {
   );
 
   return (
-    <AppLayout allowedRoles={["admin", "account_executive", "broker", "processor", "underwriter", "funder", "manager"]}>
+    <AppLayout allowedRoles={[...LOAN_TEAM_ROLES]}>
       <div className="pipeline-workspace">
         <PipelineToolbar
           totalCount={loans.length}

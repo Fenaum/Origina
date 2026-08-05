@@ -18,6 +18,15 @@ async def test_cors_allows_localhost(client):
 
 
 @pytest.mark.smoke
+async def test_cors_allows_alternate_localhost_port(client):
+    response = await client.options(
+        "/api/v1/health/",
+        headers={"Origin": "http://localhost:3001", "Access-Control-Request-Method": "GET"},
+    )
+    assert response.headers.get("access-control-allow-origin") == "http://localhost:3001"
+
+
+@pytest.mark.smoke
 async def test_cors_blocks_unknown_origin(client):
     response = await client.options(
         "/api/v1/health/",

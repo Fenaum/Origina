@@ -3,7 +3,7 @@ import { RoleDashboard } from "@/components/dashboard/RoleDashboard";
 
 export default function BrokerDashboardPage() {
   return (
-    <AppLayout allowedRoles={["broker"]}>
+    <AppLayout allowedRoles={["loan_officer", "broker"]}>
       <RoleDashboard role="broker" />
     </AppLayout>
   );

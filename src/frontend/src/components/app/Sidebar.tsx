@@ -2,7 +2,13 @@ import type { ReactElement } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { OriginaLogo } from "@/components/brand/OriginaLogo";
-import { roleDashboardPaths, roleLabels, type UserRole } from "@/types/auth";
+import {
+  isAdminRole,
+  LOAN_TEAM_ROLES,
+  roleDashboardPaths,
+  roleLabels,
+  type UserRole,
+} from "@/types/auth";
 import { useAuth } from "@/state/auth";
 import { useRecentLoansStore } from "@/state/recentLoansStore";
 
@@ -70,23 +76,7 @@ function IconShield() {
   );
 }
 
-// Sprint 2: backend role names are canonical. Each entry lists the canonical
-// role + any legacy aliases that should still see the same nav item.
 type RoleList = UserRole[];
-
-const ADMIN_ALIASES: RoleList = ["it_admin", "admin"];
-
-// "Loan team" — pipeline + operations
-const LOAN_TEAM: RoleList = [
-  "loan_officer",     // canonical
-  "broker",           // legacy alias of loan_officer
-  "loan_processor",   // canonical
-  "processor",        // legacy alias of loan_processor
-  "underwriter",      // canonical
-  "account_manager",  // canonical
-  "manager",          // legacy alias of account_manager
-  "funder",           // kept as a separate ops role for now
-];
 
 const READ_ONLY_AE: RoleList = [
   "account_manager", "manager", "funder",
@@ -101,12 +91,12 @@ const navItems: NavItem[] = [
   {
     label: "Loan Pipeline",
     href: "/loans",
-    roles: LOAN_TEAM,
+    roles: [...LOAN_TEAM_ROLES],
   },
   {
     label: "Analytics",
     href: "/analytics",
-    roles: [...LOAN_TEAM, ...READ_ONLY_AE.filter(r => !LOAN_TEAM.includes(r))],
+    roles: [...LOAN_TEAM_ROLES, ...READ_ONLY_AE.filter(r => !LOAN_TEAM_ROLES.includes(r))],
   },
   {
     label: "Exceptions",
@@ -163,11 +153,9 @@ export function Sidebar() {
         ? { ...item, href: roleDashboardPaths[effectiveRole] }
         : item,
     )
-    .filter((item) => !item.roles || item.roles.includes(effectiveRole) || (user.role === "admin" && !isPreviewMode) || (user.role === "it_admin" && !isPreviewMode));
+    .filter((item) => !item.roles || item.roles.includes(effectiveRole) || (isAdminRole(user.role) && !isPreviewMode));
 
-  const isAdmin = ADMIN_ALIASES.includes(effectiveRole);
-  // IT admin sees the admin sub-nav whenever they're signed in (not just previewing).
-  const showAdminSubnav = isAdmin && (user.role === "admin" || user.role === "it_admin");
+  const showAdminSubnav = isAdminRole(user.role) && !isPreviewMode;
 
   const visibleSettingsItems = SETTINGS_SUB_ITEMS.filter(
     (item) => !item.adminOnly || showAdminSubnav,

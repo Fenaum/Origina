@@ -16,7 +16,12 @@ import {
   setAuthToken,
   setUnauthorizedHandler,
 } from "@/services/apiClient";
-import type { SessionUser, UserRole } from "@/types/auth";
+import {
+  isAdminRole,
+  isPreviewRole,
+  type SessionUser,
+  type UserRole,
+} from "@/types/auth";
 
 type AuthContextValue = {
   user: SessionUser | null;
@@ -42,7 +47,8 @@ function getStoredToken(): string | null {
 
 function getStoredPreviewRole(): UserRole | null {
   if (typeof window === "undefined") return null;
-  return window.localStorage.getItem(PREVIEW_ROLE_KEY) as UserRole | null;
+  const storedRole = window.localStorage.getItem(PREVIEW_ROLE_KEY);
+  return isPreviewRole(storedRole) ? storedRole : null;
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -87,9 +93,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     fetchCurrentUser(stored)
       .then((profile) => {
         setUser(profile);
-        if (profile.role === "admin") {
-          const savedPreview = getStoredPreviewRole();
-          if (savedPreview) setPreviewRoleState(savedPreview);
+        if (isAdminRole(profile.role)) {
+          setPreviewRoleState(getStoredPreviewRole());
+        } else {
+          window.localStorage.removeItem(PREVIEW_ROLE_KEY);
+          setPreviewRoleState(null);
         }
       })
       .catch(() => {
@@ -107,9 +115,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     window.localStorage.setItem(TOKEN_KEY, access_token);
     setToken(access_token);
     setUser(profile);
-    if (profile.role === "admin") {
-      const savedPreview = getStoredPreviewRole();
-      if (savedPreview) setPreviewRoleState(savedPreview);
+    if (isAdminRole(profile.role)) {
+      setPreviewRoleState(getStoredPreviewRole());
+    } else {
+      window.localStorage.removeItem(PREVIEW_ROLE_KEY);
+      setPreviewRoleState(null);
     }
   }, []);
 
@@ -128,9 +138,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const setPreviewRole = useCallback((role: UserRole) => {
+    if (!isAdminRole(user?.role) || !isPreviewRole(role)) return;
     window.localStorage.setItem(PREVIEW_ROLE_KEY, role);
     setPreviewRoleState(role);
-  }, []);
+  }, [user?.role]);
 
   const clearPreviewRole = useCallback(() => {
     window.localStorage.removeItem(PREVIEW_ROLE_KEY);
@@ -139,12 +150,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const effectiveRole: UserRole | null = useMemo(() => {
     if (!user) return null;
-    if (user.role === "admin" && previewRole) return previewRole;
+    if (isAdminRole(user.role) && previewRole) return previewRole;
     return user.role;
   }, [user, previewRole]);
 
   const isPreviewMode = Boolean(
-    user?.role === "admin" && previewRole !== null,
+    isAdminRole(user?.role) && previewRole !== null,
   );
 
   const value = useMemo<AuthContextValue>(
