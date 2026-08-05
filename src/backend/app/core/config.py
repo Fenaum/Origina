@@ -50,11 +50,14 @@ if APP_ENV != "local" and JWT_SECRET_KEY == _INSECURE_DEFAULT:
     )
 
 # CORS — comma-separated list of allowed frontend origins.
-# Default: localhost:3000 for local dev.
+# Defaults: localhost:3000 and localhost:3001 for local dev.
 # Override with ALLOWED_ORIGINS env var in staging/prod.
 ALLOWED_ORIGINS: list[str] = [
     o.strip()
-    for o in os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
+    for o in os.getenv(
+        "ALLOWED_ORIGINS",
+        "http://localhost:3000,http://localhost:3001",
+    ).split(",")
     if o.strip()
 ]
 

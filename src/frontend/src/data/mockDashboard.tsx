@@ -322,6 +322,44 @@ export const dashboardMetrics: Record<UserRole, DashboardMetric[]> = {
       href: "/loans?status=conditions_review",
     },
   ],
+  capital_markets: [
+    {
+      label: "CM PoC — placeholder",
+      value: "—",
+      detail: "Real cockpit ships in Milestone 3 (B10)",
+      icon: <DollarIcon width={20} height={20} />,
+      trend: { direction: "flat", label: "Demo data, fictional investors" },
+      spark: sparkSteady,
+      tone: "default",
+    },
+    {
+      label: "Locked pipeline",
+      value: "—",
+      detail: "Seed: ~120 of 202 loans",
+      icon: <StackIcon width={20} height={20} />,
+      trend: { direction: "flat", label: "DEMO" },
+      spark: sparkSteady,
+      tone: "info",
+    },
+    {
+      label: "Open alerts",
+      value: "—",
+      detail: "Material-change watcher (placeholder)",
+      icon: <ClockIcon width={20} height={20} />,
+      trend: { direction: "flat", label: "DEMO" },
+      spark: sparkSteady,
+      tone: "warning",
+    },
+    {
+      label: "Best-ex runs",
+      value: "—",
+      detail: "Seed runs land with seed script",
+      icon: <ShieldIcon width={20} height={20} />,
+      trend: { direction: "flat", label: "DEMO" },
+      spark: sparkSteady,
+      tone: "accent",
+    },
+  ],
   loan_processor: [
     {
       label: "Active Files",
@@ -567,6 +605,11 @@ export const dashboardStatusItems: Record<UserRole, StatusItem[]> = {
     { label: "Chen file", value: "Stips outstanding", meta: "Loan #OR-1031", emphasis: "warning", monogram: "CH" },
     { label: "Patel refinance", value: "Packaged for UW", meta: "Loan #OR-1029", emphasis: "success", monogram: "PR" },
     { label: "Williams purchase", value: "Appraisal needed", meta: "Loan #OR-1033", emphasis: "info", monogram: "WP" },
+  ],
+  capital_markets: [
+    { label: "Locks", value: "Seed data only", meta: "Milestone 1", emphasis: "info", monogram: "LK" },
+    { label: "Material change", value: "Watcher stub", meta: "Milestone 2", emphasis: "warning", monogram: "MC" },
+    { label: "Best-ex", value: "Runs after seed", meta: "Milestone 2", emphasis: "info", monogram: "BX" },
   ],
   underwriter: [
     { label: "Queue priority", value: "6 purchase files", meta: "SLA focus", emphasis: "warning", monogram: "QP" },

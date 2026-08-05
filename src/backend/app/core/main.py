@@ -13,6 +13,7 @@ from app.api.v1 import (
     audit,
     auth,
     borrowers,
+    cm,
     conditions,
     credit,
     decisioning,
@@ -45,7 +46,7 @@ app = FastAPI(
 
 # ── CORS ───────────────────────────────────────────────────────────────────────
 # Locked-down allowlist driven by ALLOWED_ORIGINS in app.core.config.
-# Defaults to http://localhost:3000 for local dev; override in staging/prod
+# Defaults to localhost ports 3000 and 3001 for local dev; override in staging/prod
 # via the ALLOWED_ORIGINS env var (comma-separated).
 app.add_middleware(
     CORSMiddleware,
@@ -96,6 +97,7 @@ app.include_router(borrowers.router,      prefix=_V1)
 app.include_router(properties.router,     prefix=_V1)
 app.include_router(documents.router,      prefix=_V1)
 app.include_router(conditions.router,     prefix=_V1)
+app.include_router(cm.router,             prefix=_V1)
 app.include_router(exceptions.router,     prefix=_V1)
 app.include_router(workflow.router,       prefix=_V1)
 app.include_router(parties.router,        prefix=_V1)

@@ -1,6 +1,6 @@
 import { useRouter } from "next/router";
 import { useEffect } from "react";
-import { roleDashboardPaths, type UserRole } from "@/types/auth";
+import { isAdminRole, roleDashboardPaths, type UserRole } from "@/types/auth";
 import { useAuth } from "@/state/auth";
 
 type ProtectedRouteProps = {
@@ -8,18 +8,15 @@ type ProtectedRouteProps = {
   children: React.ReactNode;
 };
 
-// Sprint 2: admin role vocabulary was reconciled — the canonical backend name is
-// `it_admin`. The legacy `admin` alias is still accepted. Both should be
-// treated as superusers here so an admin who's preview-as-someone-else (or
-// just looking around the platform) can still see every dashboard.
-const ADMIN_ROLES: UserRole[] = ["it_admin", "admin"];
-
 export function ProtectedRoute({ allowedRoles, children }: ProtectedRouteProps) {
   const router = useRouter();
-  const { isAuthenticated, isLoading, user, effectiveRole } = useAuth();
+  const { isAuthenticated, isLoading, user, effectiveRole, isPreviewMode } = useAuth();
 
-  const isAdmin = !!user && ADMIN_ROLES.includes(user.role);
-  const roleAllowed = !allowedRoles || !effectiveRole || isAdmin || allowedRoles.includes(effectiveRole);
+  // A real admin bypasses UI route guards in the normal admin workspace. In
+  // preview mode we intentionally apply the selected role's guard so the UI
+  // behaves like that role. Backend RBAC still evaluates the real admin.
+  const hasAdminUiAccess = isAdminRole(user?.role) && !isPreviewMode;
+  const roleAllowed = !allowedRoles || !effectiveRole || hasAdminUiAccess || allowedRoles.includes(effectiveRole);
 
   useEffect(() => {
     if (isLoading) return;

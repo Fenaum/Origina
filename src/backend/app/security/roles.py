@@ -9,6 +9,12 @@ PROCESSOR = "loan_processor"
 UNDERWRITER = "underwriter"
 ACCOUNT_MANAGER = "account_manager"
 IT_ADMIN = "it_admin"
+# Capital Markets — Sprint 7 PoC. Per docs/DECISIONS.md (8 ADRs added
+# 2026-08-04) and the Milestone-1 PIN: this is the only new role added
+# for the CM PoC. All /cm/* routes are gated to CAPITAL_MARKETS + IT_ADMIN.
+# The approver≠requester authority check is enforced in CM service code for
+# the PoC (PIN 2); a future split into CM + CM_MANAGER is a Phase-3 decision.
+CAPITAL_MARKETS = "capital_markets"
 
 
 def require_roles(*allowed: str):

@@ -3,7 +3,7 @@ import { RoleDashboard } from "@/components/dashboard/RoleDashboard";
 
 export default function ProcessorDashboardPage() {
   return (
-    <AppLayout allowedRoles={["processor", "admin"]}>
+    <AppLayout allowedRoles={["loan_processor", "processor"]}>
       <RoleDashboard role="processor" />
     </AppLayout>
   );

@@ -5,6 +5,7 @@ import { SettingsLayout } from "@/components/settings/SettingsLayout";
 import { SectionCard } from "@/components/settings/SectionCard";
 import { useOrganization, useUpdateOrganization } from "@/services/settingsService";
 import { useAuth } from "@/state/auth";
+import { isAdminRole } from "@/types/auth";
 
 const ADMIN_SECTIONS = [
   {
@@ -64,7 +65,7 @@ export default function AdminSettingsPage() {
   const { user } = useAuth();
   // Gate on the real (server-authenticated) role — preview mode is UI-only
   // and must not lock an admin out of the admin sub-page.
-  const isAdmin = user?.role === "admin";
+  const isAdmin = isAdminRole(user?.role);
 
   const { data, isLoading, error } = useOrganization();
   const updateMutation = useUpdateOrganization();

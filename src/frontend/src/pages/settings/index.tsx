@@ -1,11 +1,11 @@
 import { SettingsHub, type SettingsHubCard } from "@/components/settings/SettingsHub";
 import { HubIcon } from "@/components/settings/settingsNav";
 import { useAuth } from "@/state/auth";
+import { isAdminRole } from "@/types/auth";
 
 export default function SettingsIndex() {
-  const { user, effectiveRole } = useAuth();
-  const isAdmin = effectiveRole === "it_admin" || effectiveRole === "admin";
-  const showAdmin = isAdmin && user?.role === "admin";
+  const { user, isPreviewMode } = useAuth();
+  const showAdmin = isAdminRole(user?.role) && !isPreviewMode;
 
   const cards: SettingsHubCard[] = [
     {

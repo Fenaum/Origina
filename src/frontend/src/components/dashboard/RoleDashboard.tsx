@@ -27,6 +27,11 @@ const dashboardCopy: Record<UserRole, DashboardCopy> = {
     statusHint: "Operational signals to triage",
     statusHref: "/settings",
   },
+  capital_markets: {
+    title: "Capital Markets (PoC)",
+    description: "Locks, best-execution, allocation, and alerts. Real cockpit ships in Milestone 3 (B10).",
+    statusHint: "Demo data — fictional investors, deterministic shocks only",
+  },
   account_manager: {
     title: "Account Manager Dashboard",
     description: "Partner relationships, pipeline progress, and outreach priorities.",
@@ -99,9 +104,10 @@ function formatToday(date: Date): string {
 }
 
 export function RoleDashboard({ role, children }: { role: UserRole; children?: React.ReactNode }) {
-  const copy = dashboardCopy[role];
   const [isLoading, setIsLoading] = useState(process.env.NODE_ENV !== "production");
-  const { user } = useAuth();
+  const { user, effectiveRole, isPreviewMode } = useAuth();
+  const displayRole = isPreviewMode && effectiveRole ? effectiveRole : role;
+  const copy = dashboardCopy[displayRole];
 
   const today = useMemo(() => new Date(), []);
 
@@ -127,7 +133,7 @@ export function RoleDashboard({ role, children }: { role: UserRole; children?: R
     <>
       <PageHeader
         variant="hero"
-        eyebrow={roleLabels[role]}
+        eyebrow={roleLabels[displayRole]}
         greeting={greeting}
         title={copy.title}
         description={copy.description}
@@ -145,12 +151,12 @@ export function RoleDashboard({ role, children }: { role: UserRole; children?: R
         <DashboardPageSkeleton />
       ) : (
         <>
-          <DashboardGrid metrics={dashboardMetrics[role]} />
+          <DashboardGrid metrics={dashboardMetrics[displayRole]} />
           <StatusList
             title="Work Requiring Attention"
             hint={copy.statusHint}
             viewAllHref={copy.statusHref}
-            items={dashboardStatusItems[role]}
+            items={dashboardStatusItems[displayRole]}
           />
           {children}
         </>
