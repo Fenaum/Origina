@@ -120,6 +120,24 @@ def get_loan_summary(
     return summary
 
 
+# ── /cm/loans (list — drives Pipeline + Lock queue modules) ──────────────────
+
+
+@router.get("/loans", dependencies=[_CM_GUARD])
+def list_cm_loans(
+    status: str | None = None,
+    limit: int = 200,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """GET /cm/loans — list loans with at least one lock (the CM-active book).
+    Optional ?status=... filter narrows to a single lock status (used by the
+    Lock queue module to filter to REQUESTED / REPRICE_REQUIRED / EXPIRED)."""
+    return pipeline_repo.list_cm_loans(
+        db, tenant_id=current_user.tenant_id, status=status, limit=limit,
+    )
+
+
 # ── /cm/locks ─────────────────────────────────────────────────────────────────
 
 
