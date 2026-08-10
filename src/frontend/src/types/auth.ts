@@ -71,10 +71,10 @@ export const roleDashboardPaths: Record<UserRole, string> = {
   underwriter:      "/dashboard/underwriter",
   account_manager:  "/dashboard/manager",
   it_admin:         "/dashboard/account-executive",
-  // Sprint 7 — CM PoC: dashboard page lands in Milestone 3 (B10).
-  // Route to /dashboard/manager as a safe default so CM users land
-  // somewhere they have access to; the real CM cockpit will replace this.
-  capital_markets:  "/dashboard/manager",
+  // Sprint 7 — CM PoC: dashboard page lives at /dashboard/capital-markets
+  // (the CM Cockpit — see Milestone 3 B10 + docs/CAPITAL_MARKETS_WORKSPACE_
+  // ARCHITECTURE.md §6.1).
+  capital_markets:  "/dashboard/capital-markets",
   // Legacy aliases — re-route to the same dashboards
   admin:            "/dashboard/account-executive",
   account_executive: "/dashboard/account-executive",

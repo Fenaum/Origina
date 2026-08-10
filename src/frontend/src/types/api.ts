@@ -744,3 +744,290 @@ export type AuditLogResponse = {
 export type ApiError = {
   detail: string;
 };
+
+// ── Capital Markets (CM) — mirrors src/backend/app/services/cm/*_repo.py + 
+//    src/backend/app/api/v1/cm.py out-shapes (migrations 135–141).
+//    Per ADR 8 (Reproducibility as a CI-Enforced Invariant) every persisted
+//    decision carries snapshot + version metadata so the frontend can render
+//    "what was this priced against" hints. ──────────────────────────────────
+
+// ── Pipeline / cockpit ────────────────────────────────────────────────────────
+export type CMPipelineBalances = {
+  locked: number;
+  floating: number;
+  expected_funded: number;
+  total_under_lock: number;
+};
+
+export type CMPipelineSummary = {
+  balances: CMPipelineBalances;
+  lock_counts: Record<string, number>;
+  open_alerts: number;
+};
+
+// ── Locks ─────────────────────────────────────────────────────────────────────
+export type LockStatus =
+  | "requested"
+  | "confirmed"
+  | "extended"
+  | "reprice_required"
+  | "expired"
+  | "cancelled"
+  | "funded_delivered";
+
+export type CMLockOut = {
+  id: string;
+  loan_id: string;
+  rate_sheet_id: string;
+  snapshot_hash: string;
+  snapshot_versions: Record<string, string>;
+  rate_bps: number;
+  base_price: number;
+  llpa_adjustments: Record<string, unknown>;
+  srp_bps: number;
+  delivery_fee: number;
+  adjusted_price: number;
+  net_price: number;
+  calc_version: string;
+  lock_period_days: number;
+  requested_at: string | null;
+  confirmed_at: string | null;
+  expires_at: string | null;
+  requested_by: string | null;
+  confirmed_by: string | null;
+  status: LockStatus;
+  reprice_required_at: string | null;
+  prior_lock_id: string | null;
+};
+
+export type CMLockRequestBody = {
+  loan_id: string;
+  investor_program_id: string;
+  lock_period_days: number;
+};
+
+// ── Loan CM summary ──────────────────────────────────────────────────────────
+export type CMEligibilityHit = {
+  rule_code: string;
+  op: string;
+  expected: number;
+  observed: number;
+  severity: string;
+  source: string;
+  passed: boolean;
+};
+
+export type CMEligibilityResult = {
+  investor_program_id: string;
+  investor_name: string;
+  program_name: string;
+  passed: boolean;
+  failing_rules: CMEligibilityHit[];
+};
+
+export type CMBestExRankedRow = {
+  rank: number;
+  investor_program_id: string;
+  investor_name: string;
+  program_name: string;
+  eligibility_passed: boolean;
+  failing_rules: CMEligibilityHit[];
+  base_price: number;
+  llpa_adjustments: Record<string, unknown>;
+  srp_bps: number;
+  delivery_fee: number;
+  net_proceeds: number;
+  net_price: number;
+  rate_bps: number;
+  margin_bps: number;
+};
+
+export type CMBestExRunOut = {
+  run_id: string;
+  loan_id: string;
+  chosen: CMBestExRankedRow | null;
+  ranked: CMBestExRankedRow[];
+  rationale: string;
+  snapshot_hash: string;
+  variance_to_second: number | null;
+  calc_version: string;
+  evaluated_at: string;
+};
+
+export type CMAlertOut = {
+  id: string;
+  alert_type: string;
+  severity: string;
+  status: "open" | "ack" | "resolved";
+  loan_id: string | null;
+  message: string;
+  related_entity_type: string | null;
+  related_entity_id: string | null;
+  raised_at: string;
+  acknowledged_at: string | null;
+  resolved_at: string | null;
+};
+
+export type CMLoanCMSummary = {
+  loan_id: string;
+  loan_number: string | null;
+  current_lock: CMLockOut | null;
+  lock_history: CMLockOut[];
+  latest_best_ex: CMBestExRunOut | null;
+  best_ex_history: CMBestExRunOut[];
+  open_alerts: CMAlertOut[];
+  pool_membership: { pool_id: string; pool_name: string }[];
+};
+
+// ── Pools ─────────────────────────────────────────────────────────────────────
+export type CMPoolWaStats = {
+  loan_count: number;
+  total_balance: number;
+  avg_fico: number | null;
+  avg_ltv: number | null;
+  avg_dscr: number | null;
+  avg_rate_bps: number | null;
+  weighted_rate_bps: number | null;
+};
+
+export type CMPoolOut = {
+  id: string;
+  name: string;
+  status: string;
+  pool_type: string;
+  target_investor_program_id: string | null;
+  wa_stats: CMPoolWaStats;
+  loan_count: number;
+  created_at: string;
+};
+
+// ── Allocation ────────────────────────────────────────────────────────────────
+export type CMAllocationOut = {
+  id: string;
+  loan_id: string;
+  pool_id: string | null;
+  best_execution_run_id: string;
+  investor_program_id: string;
+  status: "active" | "superseded" | "cancelled";
+  prior_allocation_id: string | null;
+  override_reason: string | null;
+  override_actor_user_id: string | null;
+  notes: string | null;
+  allocated_by: string;
+  allocated_at: string;
+};
+
+export type CMAllocationRequestBody = {
+  loan_id: string;
+  best_execution_run_id: string;
+  investor_program_id: string;
+  pool_id?: string | null;
+  override_reason?: string | null;
+  override_actor_user_id?: string | null;
+  notes?: string | null;
+};
+
+// ── Material-change watcher (PoC demo control) ───────────────────────────────
+export type CMMaterialChangeHit = {
+  field: string;
+  impact: string;
+  severity: "warn" | "block";
+  observed_value: unknown;
+  snapshot_value: unknown;
+  description: string;
+};
+
+export type CMMaterialChangeResult = {
+  loan_id: string;
+  prior_hash: string;
+  current_hash: string;
+  changed: boolean;
+  hits: CMMaterialChangeHit[];
+  flags_raised: number;
+  alerts_raised: number;
+};
+
+// ── Audit chain ───────────────────────────────────────────────────────────────
+export type CMAuditLockEvent = {
+  kind: "lock_event";
+  id: string;
+  lock_id: string;
+  event_type: string;
+  payload: Record<string, unknown> | null;
+  actor_user_id: string | null;
+  occurred_at: string;
+};
+
+export type CMAuditEligibility = {
+  kind: "eligibility";
+  id: string;
+  investor_program_id: string;
+  passed: boolean;
+  failing_rules: CMEligibilityHit[];
+  evaluated_at: string;
+};
+
+export type CMAuditBestEx = {
+  kind: "best_ex_run";
+  id: string;
+  chosen_investor_program_id: string | null;
+  rationale: string;
+  evaluated_at: string;
+};
+
+export type CMAuditAllocation = {
+  kind: "allocation";
+  id: string;
+  investor_program_id: string;
+  status: string;
+  override_reason: string | null;
+  allocated_by: string;
+  allocated_at: string;
+};
+
+export type CMAuditLogRow = {
+  kind: "audit_log";
+  actor_user_id: string | null;
+  entity_type: string;
+  entity_id: string;
+  action: string;
+  occurred_at: string;
+  diff: Record<string, unknown>;
+};
+
+export type CMAuditEntry =
+  | CMAuditLockEvent
+  | CMAuditEligibility
+  | CMAuditBestEx
+  | CMAuditAllocation
+  | CMAuditLogRow;
+
+export type CMAuditChain = CMAuditEntry[];
+
+// ── Demo control: shift market ±25bp (Sprint 7 §14.4 demo-only shortcut) ────
+export type MarketShiftDelta = -25 | -10 | 0 | 10 | 25;
+
+// ── /cm/loans list row (Pipeline + Lock queue modules) ──────────────────────
+export type CMListLoanLock = {
+  id: string;
+  status: LockStatus;
+  rate_bps: number | null;
+  net_price: number | null;
+  lock_period_days: number;
+  snapshot_hash: string;
+  expires_at: string | null;
+  reprice_required_at: string | null;
+  prior_lock_id: string | null;
+};
+
+export type CMListLoanRow = {
+  loan_id: string;
+  loan_number: string | null;
+  loan_amount: number | null;
+  loan_program: string | null;
+  fico_score: number | null;
+  ltv: number | null;
+  property_state: string | null;
+  lock: CMListLoanLock;
+  open_alert_count: number;
+};

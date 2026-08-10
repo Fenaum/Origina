@@ -182,3 +182,79 @@ def loan_cm_summary(db: Session, *, tenant_id: UUID, loan_id: UUID) -> dict[str,
         ],
         "pool_membership": [{"pool_id": str(p.id), "name": p.name} for p in memberships],
     }
+
+
+# ── list_cm_loans — for the CM Pipeline / Lock queue modules ────────────────
+
+def list_cm_loans(
+    db: Session, *, tenant_id: UUID, status: str | None = None, limit: int = 200,
+) -> list[dict[str, Any]]:
+    """Return one row per CM-active loan (loan with at least one lock).
+
+    Drives the Pipeline and Lock queue modules. Aggregates the most-recent
+    lock per loan (the "current" lock) and the count of open alerts.
+    """
+    from app.models.capital_markets import Alert, Lock
+    from app.models.loan import Loan, LoanFinancials
+
+    # Latest lock per loan — use a window function via subquery.
+    # PoC scale: <300 loans with locks, so a correlated subquery is fine.
+    latest_lock_subq = (
+        db.query(
+            Lock.loan_id.label("loan_id"),
+            func.max(Lock.requested_at).label("max_requested_at"),
+        )
+        .filter(Lock.tenant_id == tenant_id)
+        .group_by(Lock.loan_id)
+        .subquery()
+    )
+
+    rows = (
+        db.query(Lock, Loan, LoanFinancials)
+        .join(latest_lock_subq, latest_lock_subq.c.loan_id == Lock.loan_id)
+        .join(Loan, Loan.id == Lock.loan_id)
+        .outerjoin(LoanFinancials, LoanFinancials.loan_id == Loan.id)
+        .filter(
+            Lock.tenant_id == tenant_id,
+            Lock.requested_at == latest_lock_subq.c.max_requested_at,
+        )
+        .filter(Loan.tenant_id == tenant_id)
+        .order_by(Lock.requested_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+    out: list[dict[str, Any]] = []
+    for lock, loan, fin in rows:
+        if status is not None and lock.status != status:
+            continue
+        open_alert_count = (
+            db.query(func.count(Alert.id))
+            .filter(
+                Alert.tenant_id == tenant_id,
+                Alert.loan_id == loan.id,
+                Alert.status == "open",
+            )
+            .scalar()
+        ) or 0
+        out.append({
+            "loan_id": str(loan.id),
+            "loan_number": loan.loan_number,
+            "loan_amount": float(fin.loan_amount) if fin and fin.loan_amount is not None else None,
+            "loan_program": loan.loan_program,
+            "fico_score": int(fin.fico_score) if fin and fin.fico_score is not None else None,
+            "ltv": float(fin.ltv) if fin and fin.ltv is not None else None,
+            "lock": {
+                "id": str(lock.id),
+                "status": lock.status,
+                "rate_bps": float(lock.rate_bps) if lock.rate_bps is not None else None,
+                "net_price": float(lock.net_price) if lock.net_price is not None else None,
+                "lock_period_days": lock.lock_period_days,
+                "snapshot_hash": lock.snapshot_hash,
+                "expires_at": lock.expires_at.isoformat() if lock.expires_at else None,
+                "reprice_required_at": lock.reprice_required_at.isoformat() if lock.reprice_required_at else None,
+                "prior_lock_id": str(lock.prior_lock_id) if lock.prior_lock_id else None,
+            },
+            "open_alert_count": int(open_alert_count),
+        })
+    return out

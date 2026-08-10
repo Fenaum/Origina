@@ -127,6 +127,32 @@ const navItems: NavItem[] = [
     roles: ["loan_officer", "broker"],
   },
 
+  // ── Capital Markets (CM) — Sprint 7 PoC ────────────────────────────────────
+  {
+    label: "CM Cockpit",
+    href: "/dashboard/capital-markets",
+    roles: ["capital_markets"],
+  },
+  {
+    label: "CM Pipeline",
+    href: "/cm/pipeline",
+    roles: ["capital_markets"],
+  },
+  {
+    label: "Lock Queue",
+    href: "/cm/locks",
+    roles: ["capital_markets"],
+  },
+  {
+    label: "Allocation & Pools",
+    href: "/cm/pools",
+    roles: ["capital_markets"],
+  },
+  {
+    label: "Alerts",
+    href: "/cm/alerts",
+    roles: ["capital_markets"],
+  },
 ];
 
 
